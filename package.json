@@ -1,0 +1,30 @@
+{
+    "name": "bug-replay",
+    "type": "module",
+    "version": "1.0.0",
+    "description": "浏览器 Bug 复现录制回放插件 — 一键录制现场，.rrt 离线回放",
+    "author": "BugReplay Team",
+    "license": "MIT",
+    "scripts": {
+        "dev": "vite build --watch --mode development",
+        "build": "vite build --mode production",
+        "type-check": "tsc --noEmit",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
+    },
+    "dependencies": {
+        "rrweb": "^2.0.0-alpha.13",
+        "rrweb-player": "^2.0.0-alpha.13",
+        "webextension-polyfill": "^0.12.0"
+    },
+    "devDependencies": {
+        "@antfu/eslint-config": "^4.15.0",
+        "@crxjs/vite-plugin": "^2.0.0-beta.25",
+        "@types/node": "^26.0.1",
+        "@types/webextension-polyfill": "^0.12.1",
+        "eslint": "^9.29.0",
+        "eslint-plugin-format": "1.0.1",
+        "typescript": "^5.5.0",
+        "vite": "^5.4.0"
+    }
+}

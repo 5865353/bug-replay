@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BugReplay</title>
+    <link rel="stylesheet" href="popup.css" />
+</head>
+
+<body>
+    <div id="bugreplay-popup">
+        <header class="popup-header">
+            <h1 class="popup-title">🐛 BugReplay</h1>
+            <span id="status-badge" class="status-badge status-idle">就绪</span>
+        </header>
+
+        <main class="popup-main">
+            <!-- 录制控制区 -->
+            <section class="recording-controls">
+                <button id="btn-record" class="btn btn-primary">
+                    ⏺ 开始录制
+                </button>
+                <button id="btn-pause" class="btn btn-secondary" disabled>
+                    ⏸ 暂停
+                </button>
+                <button id="btn-stop" class="btn btn-danger" disabled>
+                    ⏹ 停止
+                </button>
+            </section>
+
+            <!-- 当前录制信息 -->
+            <section id="current-session" class="current-session" style="display:none;">
+                <div class="session-info">
+                    <span class="recording-indicator"></span>
+                    <span id="session-timer" class="session-timer">00:00</span>
+                </div>
+                <div id="session-title" class="session-title"></div>
+            </section>
+
+            <!-- 历史会话列表 -->
+            <section class="sessions-section">
+                <h2 class="section-title">📋 历史录制</h2>
+                <div id="sessions-list" class="sessions-list">
+                    <p class="empty-state">暂无录制记录</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="popup-footer">
+            <button id="btn-export" class="btn btn-outline" disabled>
+                📥 导出 .rrt
+            </button>
+        </footer>
+    </div>
+
+    <script type="module" src="popup.ts"></script>
+</body>
+
+</html>

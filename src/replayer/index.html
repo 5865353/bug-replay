@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BugReplay - 回放</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #1e1e2e;
+            color: #cdd6f4;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #replayer-app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ---- Header ---- */
+        .replayer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: #181825;
+            border-bottom: 1px solid #313244;
+        }
+
+        .replayer-title {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .replayer-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            background: #313244;
+            color: #cdd6f4;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: #45475a;
+        }
+
+        .btn-primary {
+            background: #cba6f7;
+            color: #1e1e2e;
+        }
+
+        .btn-primary:hover {
+            background: #b4befe;
+        }
+
+        /* ---- Main Layout ---- */
+        .replayer-main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ---- Player Area ---- */
+        .player-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #11111b;
+        }
+
+        .player-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #rrweb-player {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ---- Timeline ---- */
+        .timeline {
+            padding: 8px 16px;
+            background: #181825;
+            border-top: 1px solid #313244;
+        }
+
+        .timeline-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: #cdd6f4;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .btn-icon:hover {
+            background: #313244;
+        }
+
+        .time-display {
+            font-size: 12px;
+            font-variant-numeric: tabular-nums;
+            color: #a6adc8;
+            min-width: 42px;
+            text-align: center;
+        }
+
+        .time-separator {
+            color: #6c7086;
+            font-size: 12px;
+        }
+
+        .speed-select {
+            margin-left: auto;
+            padding: 2px 8px;
+            border: 1px solid #45475a;
+            border-radius: 4px;
+            background: transparent;
+            color: #a6adc8;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .timeline-bar-container {
+            position: relative;
+            height: 6px;
+            background: #313244;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .timeline-progress {
+            height: 100%;
+            background: #cba6f7;
+            border-radius: 3px;
+            transition: width 0.1s linear;
+            width: 0%;
+        }
+
+        .timeline-thumb {
+            position: absolute;
+            top: 50%;
+            width: 14px;
+            height: 14px;
+            background: #cba6f7;
+            border: 2px solid #1e1e2e;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        .timeline-bar-container:hover .timeline-thumb {
+            opacity: 1;
+        }
+
+
+        /* ---- Sidebar ---- */
+        .sidebar {
+            width: 360px;
+            display: flex;
+            flex-direction: column;
+            background: #1e1e2e;
+            border-left: 1px solid #313244;
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid #313244;
+        }
+
+        .sidebar-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            background: none;
+            border: none;
+            color: #6c7086;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .sidebar-tab.active {
+            color: #cdd6f4;
+            border-bottom-color: #cba6f7;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .sidebar-search {
+            padding: 8px;
+            border-bottom: 1px solid #313244;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #45475a;
+            border-radius: 6px;
+            background: #11111b;
+            color: #cdd6f4;
+            font-size: 12px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #cba6f7;
+        }
+
+        .sidebar-item {
+            padding: 6px 8px;
+            border-bottom: 1px solid #313244;
+            font-size: 12px;
+            transition: background 0.15s;
+        }
+
+        .sidebar-item.past {
+            opacity: 0.5;
+        }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            flex-wrap: wrap;
+        }
+
+        .item-header:hover {
+            background: #313244;
+            margin: -4px -8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .item-time {
+            color: #6c7086;
+            font-variant-numeric: tabular-nums;
+            min-width: 45px;
+        }
+
+        .item-method {
+            font-weight: 700;
+            min-width: 36px;
+        }
+
+        .item-status {
+            font-weight: 600;
+            min-width: 28px;
+        }
+
+        .status-ok { color: #a6e3a1; }
+        .status-redirect { color: #f9e2af; }
+        .status-error { color: #f38ba8; }
+
+        .item-duration {
+            color: #6c7086;
+            min-width: 42px;
+            text-align: right;
+        }
+
+        .item-summary {
+            color: #cdd6f4;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .item-expand {
+            color: #6c7086;
+            font-size: 10px;
+        }
+
+        .item-detail {
+            padding: 8px;
+            margin-top: 6px;
+            background: #11111b;
+            border-radius: 6px;
+            font-size: 11px;
+            color: #bac2de;
+        }
+
+        .detail-section {
+            margin-bottom: 6px;
+        }
+
+        .detail-section strong {
+            color: #cba6f7;
+        }
+
+        .detail-code {
+            background: #1e1e2e;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 4px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 11px;
+            color: #a6adc8;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .error-text {
+            color: #f38ba8;
+        }
+
+        .log-level {
+            font-weight: 700;
+            font-size: 10px;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c7086;
+            font-size: 13px;
+            padding: 20px;
+        }
+
+        .sidebar-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c7086;
+            font-size: 13px;
+        }
+
+        /* ---- Drop Zone ---- */
+        .drop-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex-direction: column;
+            gap: 16px;
+            color: #6c7086;
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+        }
+
+        .drop-zone-text {
+            font-size: 16px;
+        }
+
+        .drop-zone-hint {
+            font-size: 13px;
+            color: #45475a;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="replayer-app">
+        <header class="replayer-header">
+            <div class="replayer-title" id="metadata-title">🐛 BugReplay - 回放</div>
+            <div class="replayer-actions">
+                <label class="btn btn-primary">
+                    📂 打开 .rrt 文件
+                    <input type="file" id="file-input" accept=".rrt,.json" style="display:none" />
+                </label>
+                <button id="btn-toggle-annotations" class="btn" title="切换标注图层">
+                    🖊 标注
+                </button>
+            </div>
+        </header>
+
+        <div class="replayer-main">
+            <!-- 回放区域 -->
+            <div class="player-area">
+                <div class="player-container">
+                    <div id="drop-zone" class="drop-zone">
+                        <div class="drop-zone-icon">📂</div>
+                        <div class="drop-zone-text">拖放 .rrt 文件到此处</div>
+                        <div class="drop-zone-hint">或点击上方"打开 .rrt 文件"按钮</div>
+                    </div>
+                    <div id="rrweb-player" style="display:none;"></div>
+                </div>
+
+                <!-- 时间轴（由 Timeline 组件动态生成） -->
+                <div class="timeline" id="timeline" style="display:none;"></div>
+            </div>
+
+            <!-- 侧边栏（由 Sidebar 组件动态生成） -->
+            <aside class="sidebar" id="sidebar" style="display:none;"></aside>
+        </div>
+    </div>
+
+    <script type="module" src="replayer.ts"></script>
+</body>
+
+</html>
