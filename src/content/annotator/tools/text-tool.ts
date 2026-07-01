@@ -5,7 +5,6 @@
  * - 双击已有 IText：Fabric 原生编辑（无需额外处理）
  */
 
-import type { CanvasLayer } from '../canvas-layer';
 import type { Canvas, TPointerEventInfo } from 'fabric';
 import { BaseTool } from './base-tool';
 

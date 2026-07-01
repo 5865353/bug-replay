@@ -5,8 +5,7 @@
  * 行为完全像一个普通的 Line 对象：可选中/拖拽/缩放。
  */
 
-import { Line, classRegistry } from 'fabric';
-import type { FabricObjectProps, SerializedObjectProps, ObjectEvents } from 'fabric';
+import { classRegistry, Line } from 'fabric';
 
 export class ArrowLine extends Line {
     static type = 'ArrowLine';

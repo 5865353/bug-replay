@@ -5,8 +5,7 @@
  * - 点击已有对象：交给 Fabric 选中/拖拽/缩放，不创建新对象
  */
 
-import type { CanvasLayer } from '../canvas-layer';
-import type { Canvas, TPointerEventInfo, FabricObject } from 'fabric';
+import type { Canvas, TPointerEventInfo } from 'fabric';
 import { Rect } from 'fabric';
 import { BaseTool } from './base-tool';
 
@@ -49,10 +48,16 @@ export class RectTool extends BaseTool {
         this.isDrawing = true;
 
         this.preview = new Rect({
-            left: ptr.x, top: ptr.y, width: 0, height: 0,
-            fill: `${this.color}18`, stroke: this.color,
-            strokeWidth: 2, strokeDashArray: [6, 3],
-            selectable: false, evented: false,
+            left: ptr.x,
+            top: ptr.y,
+            width: 0,
+            height: 0,
+            fill: `${this.color}18`,
+            stroke: this.color,
+            strokeWidth: 2,
+            strokeDashArray: [6, 3],
+            selectable: false,
+            evented: false,
         });
         this.fc!.add(this.preview);
     };

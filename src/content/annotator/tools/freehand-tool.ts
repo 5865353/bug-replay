@@ -5,7 +5,6 @@
  * - 点击已有对象：交给 Fabric 选中/拖拽（临时关掉绘制模式）
  */
 
-import type { CanvasLayer } from '../canvas-layer';
 import type { Canvas, TPointerEventInfo } from 'fabric';
 import { BaseTool } from './base-tool';
 

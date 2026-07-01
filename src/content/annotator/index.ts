@@ -1,4 +1,4 @@
-﻿/**
+/**
  * src/content/annotator/index.ts — Annotator 统一入口 (Fabric.js)
  */
 import type { Annotation, AnnotationToolType } from '@shared/types';
@@ -31,10 +31,13 @@ export class Annotator {
             this.options.onChange(this.canvasLayer.toAnnotations());
         });
         this.toolbar = new Toolbar({
-            onPause: () => options.onPause?.(), onResume: () => options.onResume?.(), onStop: () => options.onStop?.(),
+            onPause: () => options.onPause?.(),
+            onResume: () => options.onResume?.(),
+            onStop: () => options.onStop?.(),
             onToolSelect: (tool: AnnotationToolType | null) => this.switchTool(tool),
             onColorChange: () => { if (this.activeTool) { const t = this.getActiveToolType(); if (t) this.switchTool(t); } },
-            onUndo: () => this.undo(), onClearAll: () => this.clearAll(),
+            onUndo: () => this.undo(),
+            onClearAll: () => this.clearAll(),
         });
     }
 

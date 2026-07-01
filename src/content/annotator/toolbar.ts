@@ -266,7 +266,8 @@ export class Toolbar {
             if (this.selectedTool === config.type) {
                 this.deselectAllTools();
                 this.callbacks.onToolSelect(null);
-            } else {
+            }
+            else {
                 this.selectTool(config.type);
                 this.callbacks.onToolSelect(config.type);
             }
@@ -288,7 +289,7 @@ export class Toolbar {
             this.selectedColor = input.value;
             this.callbacks.onColorChange(input.value);
         });
-        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('click', e => e.stopPropagation());
         return input;
     }
 
@@ -338,7 +339,8 @@ export class Toolbar {
             if (type === this.selectedTool) {
                 btn.style.borderColor = this.selectedColor;
                 btn.style.background = `${this.selectedColor}18`;
-            } else {
+            }
+            else {
                 btn.style.borderColor = 'transparent';
                 btn.style.background = 'transparent';
             }

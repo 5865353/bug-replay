@@ -10,8 +10,9 @@
  */
 
 import type { RRTPackage } from '@shared/types';
+import type { SubmitResult } from './base-platform';
 import { formatTimePrecise, safeStringify } from '@shared/utils';
-import { BasePlatform, type SubmitResult } from './base-platform';
+import { BasePlatform } from './base-platform';
 
 // ============================================================
 // 禅道配置接口
@@ -120,7 +121,7 @@ export class ZentaoPlatform extends BasePlatform {
                 title: meta.title || 'Bug Report (BugReplay)',
                 steps,
                 severity: this.config.severity ?? 3, // 默认 3（一般）
-                pri: this.config.priority ?? 3,       // 默认 3（一般）
+                pri: this.config.priority ?? 3, // 默认 3（一般）
             };
 
             // 可选字段
@@ -330,4 +331,3 @@ export class ZentaoPlatform extends BasePlatform {
             .replace(/"/g, '&quot;');
     }
 }
-

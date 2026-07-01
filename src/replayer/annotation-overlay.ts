@@ -6,7 +6,7 @@
  */
 
 import type { Annotation } from '@shared/types';
-import { Canvas, Rect, Line, Polygon, IText, Path, Text, classRegistry } from 'fabric';
+import { Canvas, classRegistry, IText, Line, Path, Polygon, Rect, Text } from 'fabric';
 
 classRegistry.setClass(Rect, 'Rect');
 classRegistry.setClass(Line, 'Line');
@@ -42,9 +42,10 @@ export class AnnotationOverlay {
         });
 
         console.log(
-            `[BugReplay] AnnotationOverlay init: ${annotations.length} annotations, ` +
-            `container=${container.clientWidth}x${container.clientHeight}`,
+            `[BugReplay] AnnotationOverlay init: ${annotations.length} annotations, `
+            + `container=${container.clientWidth}x${container.clientHeight}`,
         );
+
 
         window.addEventListener('resize', this.handleResize);
     }
@@ -66,6 +67,14 @@ export class AnnotationOverlay {
     /** 获取 wrapper 元素（供外部缩放同步） */
     getWrapper(): HTMLDivElement | null { return this.wrapperEl; }
 
+    /** 调整 canvas 尺寸（供外部缩放同步调用） */
+    resize(w: number, h: number): void {
+        if (!this.canvas) return;
+        this.canvas.setWidth(w);
+        this.canvas.setHeight(h);
+        this.canvas.requestRenderAll();
+    }
+
     destroy(): void {
         window.removeEventListener('resize', this.handleResize);
         this.canvas?.dispose();
@@ -83,8 +92,10 @@ export class AnnotationOverlay {
             case 'arrow': {
                 const { startX, startY, endX, endY, color, lineWidth } = ann.data;
                 const line = new Line([startX, startY, endX, endY], {
-                    stroke: color, strokeWidth: lineWidth,
-                    selectable: false, evented: false,
+                    stroke: color,
+                    strokeWidth: lineWidth,
+                    selectable: false,
+                    evented: false,
                 });
                 this.canvas!.add(line);
                 const angle = Math.atan2(endY - startY, endX - startX);
@@ -94,8 +105,11 @@ export class AnnotationOverlay {
                     { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
                     { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
                 ], {
-                    fill: color, stroke: color, strokeWidth: 2,
-                    selectable: false, evented: false,
+                    fill: color,
+                    stroke: color,
+                    strokeWidth: 2,
+                    selectable: false,
+                    evented: false,
                 });
                 this.canvas!.add(tri);
                 if (ann.stepNumber) this.addStepBadge(ann);
@@ -147,9 +161,6 @@ export class AnnotationOverlay {
     }
 
     private handleResize = (): void => {
-        if (!this.canvas || !this.container) return;
-        this.canvas.setWidth(this.container.clientWidth);
-        this.canvas.setHeight(this.container.clientHeight);
-        this.canvas.requestRenderAll();
+        // 缩放由 syncContentScale 统一管理，这里不再干预
     };
 }

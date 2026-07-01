@@ -10,8 +10,9 @@
  */
 
 import type { RRTPackage } from '@shared/types';
+import type { SubmitResult } from './base-platform';
 import { formatTimePrecise, safeStringify } from '@shared/utils';
-import { BasePlatform, type SubmitResult } from './base-platform';
+import { BasePlatform } from './base-platform';
 
 // ============================================================
 // Jira 配置接口
@@ -367,4 +368,3 @@ export class JiraPlatform extends BasePlatform {
         return lines.join('\n');
     }
 }
-

@@ -8,9 +8,10 @@
  */
 
 import type { Annotation, AnnotationToolType } from '@shared/types';
+import type { FabricObject } from 'fabric';
 import { DEFAULT_ANNOTATION_CONFIG } from '@shared/types';
 import { generateUUID } from '@shared/utils';
-import { Canvas, type FabricObject, Rect, Line, Polygon, IText, PencilBrush, Path, classRegistry } from 'fabric';
+import { Canvas, classRegistry, IText, Line, Path, PencilBrush, Polygon, Rect } from 'fabric';
 
 // 注册 Fabric 类以支持 fromJSON 反序列化
 classRegistry.setClass(Rect, 'Rect');
@@ -26,7 +27,7 @@ export class CanvasLayer {
     private canvas: Canvas | null = null;
     private wrapperEl: HTMLDivElement | null = null;
     private sessionId = '';
-    private annotationMetadata = new WeakMap<FabricObject, { type: AnnotationToolType; stepNumber?: number }>();
+    private annotationMetadata = new WeakMap<FabricObject, { type: AnnotationToolType; stepNumber?: number; createdAt: number }>();
     private stepCounter = 0;
 
     // 回调
@@ -314,20 +315,20 @@ export class CanvasLayer {
     // 私有方法
     // ============================================================
 
-    /** 跟踪对象元数据，自动分配步骤编号 */
+    /** 跟踪对象元数据，自动分配步骤编号，记录绘制时刻 */
     private trackObject(obj: FabricObject, type: AnnotationToolType, stepNumber?: number): void {
         const num = stepNumber ?? ++this.stepCounter;
-        this.annotationMetadata.set(obj, { type, stepNumber: num });
+        this.annotationMetadata.set(obj, { type, stepNumber: num, createdAt: Date.now() });
     }
 
     /** Fabric 对象 → Annotation */
     private fabricToAnnotation(
         obj: FabricObject,
-        meta: { type: AnnotationToolType; stepNumber?: number },
+        meta: { type: AnnotationToolType; stepNumber?: number; createdAt?: number },
     ): Annotation | null {
         const base = {
             id: generateUUID(),
-            timestamp: Date.now(),
+            timestamp: meta.createdAt ?? Date.now(),
             sessionId: this.sessionId,
             stepNumber: meta.stepNumber,
         };
@@ -404,20 +405,26 @@ export class CanvasLayer {
         switch (ann.type) {
             case 'rect': {
                 return new Rect({
-                    left: ann.data.x, top: ann.data.y,
-                    width: ann.data.width, height: ann.data.height,
+                    left: ann.data.x,
+                    top: ann.data.y,
+                    width: ann.data.width,
+                    height: ann.data.height,
                     fill: ann.data.fillColor || `${ann.data.strokeColor}20`,
                     stroke: ann.data.strokeColor,
                     strokeWidth: ann.data.strokeWidth,
-                    rx: 4, ry: 4,
-                    selectable: true, evented: true,
+                    rx: 4,
+                    ry: 4,
+                    selectable: true,
+                    evented: true,
                 });
             }
             case 'arrow': {
                 const { startX, startY, endX, endY, color, lineWidth } = ann.data;
                 const line = new Line([startX, startY, endX, endY], {
-                    stroke: color, strokeWidth: lineWidth,
-                    selectable: true, evented: true,
+                    stroke: color,
+                    strokeWidth: lineWidth,
+                    selectable: true,
+                    evented: true,
                 });
                 const angle = Math.atan2(endY - startY, endX - startX);
                 const h = 14;
@@ -426,8 +433,11 @@ export class CanvasLayer {
                     { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
                     { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
                 ], {
-                    fill: color, stroke: color, strokeWidth: 2,
-                    selectable: false, evented: false,
+                    fill: color,
+                    stroke: color,
+                    strokeWidth: 2,
+                    selectable: false,
+                    evented: false,
                 });
                 this.canvas!.add(line);
                 this.canvas!.add(tri);
@@ -435,13 +445,15 @@ export class CanvasLayer {
             }
             case 'text': {
                 return new IText(ann.data.text, {
-                    left: ann.data.x, top: ann.data.y,
+                    left: ann.data.x,
+                    top: ann.data.y,
                     fontSize: ann.data.fontSize,
                     fontFamily: ann.data.fontFamily,
                     fill: ann.data.color,
                     backgroundColor: ann.data.backgroundColor || `${ann.data.color}15`,
                     padding: 6,
-                    selectable: true, evented: true,
+                    selectable: true,
+                    evented: true,
                     editable: false, // 回放时不可编辑
                 });
             }
@@ -456,9 +468,13 @@ export class CanvasLayer {
                     })
                     .join(' ');
                 return new Path(pathData, {
-                    left: points[0].x, top: points[0].y,
-                    stroke: color, strokeWidth: lineWidth,
-                    fill: '', selectable: true, evented: true,
+                    left: points[0].x,
+                    top: points[0].y,
+                    stroke: color,
+                    strokeWidth: lineWidth,
+                    fill: '',
+                    selectable: true,
+                    evented: true,
                 });
             }
         }
@@ -489,4 +505,3 @@ export class CanvasLayer {
         this.canvas.requestRenderAll();
     };
 }
-

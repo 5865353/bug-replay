@@ -11,7 +11,6 @@
 
 import type {
     BackgroundToContentMessage,
-    ContentToBackgroundMessage,
     RecordingSession,
 } from '@shared/types';
 

@@ -16,10 +16,10 @@ import type {
     RecordingSession,
 } from '@shared/types';
 
-import { EXTENSION_NAME } from '@shared/constants';
-import browser from 'webextension-polyfill';
 import type { JiraConfig } from '../platforms/jira';
 import type { ZentaoConfig } from '../platforms/zentao';
+import { EXTENSION_NAME } from '@shared/constants';
+import browser from 'webextension-polyfill';
 import { JiraPlatform } from '../platforms/jira';
 import { ZentaoPlatform } from '../platforms/zentao';
 import { buildRRTPackage, copyRRTToClipboard, downloadRRTFile } from './rrt-builder';
@@ -30,10 +30,62 @@ import { StorageManager } from './storage-manager';
 // ============================================================
 
 const storageManager = new StorageManager();
-let activeRecordingTabId: number | null = null;
+let activeRecordingTabIds = new Set<number>();
+let activeRecordingOrigin = '';
+let activeSessionId = '';
 let isPaused = false;
 
 console.log(`[${EXTENSION_NAME}] Service Worker initialized`);
+
+// ============================================================
+// 跨标签页录制：监听新标签页
+// ============================================================
+
+browser.tabs.onCreated.addListener(async (tab) => {
+    if (!isPaused && activeRecordingTabIds.size > 0 && tab.id !== undefined) {
+        // 等待页面开始加载后检查 URL
+        // onUpdated 会处理实际注入
+    }
+});
+
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // 只在正在录制且新页面加载完成时处理
+    if (isPaused || activeRecordingTabIds.size === 0) return;
+    if (tabId === undefined) return;
+
+    // 跳过已记录的 tab
+    if (activeRecordingTabIds.has(tabId)) return;
+
+    // 只在页面开始加载时检查（status: 'loading'）
+    if (changeInfo.status !== 'loading') return;
+
+    const url = tab.url || changeInfo.url || '';
+    if (!url) return;
+
+    try {
+        const targetOrigin = new URL(url).origin;
+        if (targetOrigin === activeRecordingOrigin) {
+            console.log(`[${EXTENSION_NAME}] 🔗 检测到同源新标签页: tab ${tabId}, ${url}`);
+            activeRecordingTabIds.add(tabId);
+
+            // 等页面完全加载后再注入
+            setTimeout(async () => {
+                try {
+                    await sendMessageToTab(tabId, {
+                        action: 'RECORDING_STARTED',
+                        payload: { sessionId: activeSessionId },
+                    });
+                    console.log(`[${EXTENSION_NAME}] ✅ 跨标签页录制已启动: tab ${tabId}`);
+                }
+                catch (err) {
+                    console.warn(`[${EXTENSION_NAME}] ⚠️ 无法注入新标签页:`, err);
+                    activeRecordingTabIds.delete(tabId);
+                }
+            }, 1000);
+        }
+    }
+    catch { /* invalid URL, skip */ }
+});
 
 // ============================================================
 // 工具：确保 content script 已注入目标 tab
@@ -59,8 +111,12 @@ async function sendMessageToTab(
         const url = tab.url || '';
 
         const RESTRICTED_PREFIXES = [
-            'chrome://', 'chrome-extension://',
-            'moz-extension://', 'about:', 'edge://', 'brave://',
+            'chrome://',
+            'chrome-extension://',
+            'moz-extension://',
+            'about:',
+            'edge://',
+            'brave://',
         ];
 
         for (const prefix of RESTRICTED_PREFIXES) {
@@ -153,14 +209,21 @@ async function handleMessage(
             try {
                 const tabs = await browser.tabs.query({ active: true, currentWindow: true });
                 const tabId = tabs[0]?.id;
-
                 if (tabId === undefined) {
                     return { action: 'ERROR', payload: '未找到活跃页面', requestId };
                 }
 
-                console.log(`[${EXTENSION_NAME}] SW: sending RECORDING_STARTED to tab ${tabId}`);
+                // 记录录制源 origin（用于跨标签页检测）
+                const url = tabs[0]?.url || '';
+                try { activeRecordingOrigin = new URL(url).origin; }
+                catch { activeRecordingOrigin = ''; }
+
+                // 生成 session ID（由第一个 tab 的 content script 创建）
+                activeSessionId = '';
+
+                console.log(`[${EXTENSION_NAME}] SW: sending RECORDING_STARTED to tab ${tabId}, origin=${activeRecordingOrigin}`);
                 await sendMessageToTab(tabId, { action: 'RECORDING_STARTED' });
-                activeRecordingTabId = tabId;
+                activeRecordingTabIds = new Set([tabId]);
                 isPaused = false;
                 console.log(`[${EXTENSION_NAME}] SW: RECORDING_STARTED sent successfully`);
             }
@@ -174,8 +237,7 @@ async function handleMessage(
 
         case 'STOP_RECORDING': {
             const data = payload as RecordingSession | { sessionId: string } | undefined;
-            
-            // 新方式：content script 通过 chrome.storage 传递大数据
+
             if (data && 'sessionId' in data && !('events' in data)) {
                 const key = `temp_session_${data.sessionId}`;
                 const stored = await browser.storage.local.get(key);
@@ -183,7 +245,9 @@ async function handleMessage(
                 if (session) {
                     await storageManager.saveSession(session);
                     await browser.storage.local.remove(key);
-                    activeRecordingTabId = null;
+                    activeRecordingTabIds.clear();
+                    activeRecordingOrigin = '';
+                    activeSessionId = '';
                     isPaused = false;
                     console.log(`[${EXTENSION_NAME}] Session saved: ${session.id}`);
 
@@ -193,11 +257,12 @@ async function handleMessage(
                     }).catch(() => {});
                 }
             }
-            // 旧方式：直接传递完整 session
             else if (data && 'events' in data) {
                 const session = data as RecordingSession;
                 await storageManager.saveSession(session);
-                activeRecordingTabId = null;
+                activeRecordingTabIds.clear();
+                activeRecordingOrigin = '';
+                activeSessionId = '';
                 isPaused = false;
                 console.log(`[${EXTENSION_NAME}] Session saved: ${session.id}`);
 
@@ -207,61 +272,42 @@ async function handleMessage(
                 }).catch(() => {});
             }
             else {
-                // Popup 发来的停止指令 → 转发给 content script
-                try {
-                    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-                    if (tabs[0]?.id !== undefined) {
-                        await sendMessageToTab(tabs[0].id, {
-                            action: 'RECORDING_STOPPED',
-                        });
+                // Popup 发来的停止指令 → 广播给所有录制中的 tab
+                const tabIds = [...activeRecordingTabIds];
+                for (const tid of tabIds) {
+                    try {
+                        await sendMessageToTab(tid, { action: 'RECORDING_STOPPED' });
                     }
-                }
-                catch (err: unknown) {
-                    const msg = err instanceof Error ? err.message : String(err);
-                    console.error(`[${EXTENSION_NAME}] SW: failed to send RECORDING_STOPPED:`, msg);
+                    catch { /* tab may be closed */ }
                 }
             }
-            return {
-                action: 'RECORDING_STOPPED',
-                payload: data && 'sessionId' in data ? { sessionId: (data as { sessionId: string }).sessionId } : undefined,
-                requestId,
-            };
-        }
-
-        case 'GET_RECORDING_STATUS': {
-            return {
-                action: 'RECORDING_STATUS',
-                payload: { isRecording: activeRecordingTabId !== null, isPaused },
-                requestId,
-            };
+            return { action: 'RECORDING_STOPPED', requestId };
         }
 
         case 'PAUSE_RECORDING': {
             isPaused = true;
-            try {
-                const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-                if (tabs[0]?.id !== undefined) {
-                    await sendMessageToTab(tabs[0].id, { action: 'RECORDING_PAUSED' });
-                }
-            }
-            catch (err: unknown) {
-                console.error(`[${EXTENSION_NAME}] SW: failed to send RECORDING_PAUSED:`, err);
+            for (const tid of activeRecordingTabIds) {
+                try { await sendMessageToTab(tid, { action: 'RECORDING_PAUSED' }); }
+                catch { /* */ }
             }
             return { action: 'RECORDING_PAUSED', requestId };
         }
 
         case 'RESUME_RECORDING': {
             isPaused = false;
-            try {
-                const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-                if (tabs[0]?.id !== undefined) {
-                    await sendMessageToTab(tabs[0].id, { action: 'RECORDING_RESUMED' });
-                }
-            }
-            catch (err: unknown) {
-                console.error(`[${EXTENSION_NAME}] SW: failed to send RECORDING_RESUMED:`, err);
+            for (const tid of activeRecordingTabIds) {
+                try { await sendMessageToTab(tid, { action: 'RECORDING_RESUMED' }); }
+                catch { /* */ }
             }
             return { action: 'RECORDING_RESUMED', requestId };
+        }
+
+        case 'GET_RECORDING_STATUS': {
+            return {
+                action: 'RECORDING_STATUS',
+                payload: { isRecording: activeRecordingTabIds.size > 0, isPaused },
+                requestId,
+            };
         }
 
         // ---- 会话管理 ----

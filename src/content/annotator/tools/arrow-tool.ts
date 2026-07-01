@@ -7,7 +7,6 @@
 
 import type { Canvas, TPointerEventInfo } from 'fabric';
 import { Line } from 'fabric';
-import type { CanvasLayer } from '../canvas-layer';
 import { BaseTool } from './base-tool';
 
 export class ArrowTool extends BaseTool {
@@ -72,7 +71,8 @@ export class ArrowTool extends BaseTool {
         this.preview = new Line([this.startX, this.startY, ex, ey], {
             stroke: this.color,
             strokeWidth: 2,
-            selectable: false, evented: false,
+            selectable: false,
+            evented: false,
             strokeDashArray: [6, 3],
         });
         this.fc!.add(this.preview);
