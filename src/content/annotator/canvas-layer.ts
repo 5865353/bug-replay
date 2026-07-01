@@ -1,197 +1,492 @@
 /**
  * src/content/annotator/canvas-layer.ts
  *
- * Canvas 覆盖层 — 在页面上覆盖全屏透明 Canvas，用于渲染标注和接收绘图事件
+ * 基于 Fabric.js 的标注画布层
+ * - 在页面上覆盖全屏 Fabric.Canvas
+ * - 所有标注对象可选中、拖拽、缩放、删除
+ * - 支持序列化/反序列化为 Annotation[] 格式
  */
 
-import type { Annotation } from '@shared/types';
+import type { Annotation, AnnotationToolType } from '@shared/types';
+import { DEFAULT_ANNOTATION_CONFIG } from '@shared/types';
+import { generateUUID } from '@shared/utils';
+import { Canvas, type FabricObject, Rect, Line, Polygon, IText, PencilBrush, Path, classRegistry } from 'fabric';
+
+// 注册 Fabric 类以支持 fromJSON 反序列化
+classRegistry.setClass(Rect, 'Rect');
+classRegistry.setClass(Line, 'Line');
+classRegistry.setClass(IText, 'IText');
+classRegistry.setClass(Polygon, 'Polygon');
+
+// ============================================================
+// CanvasLayer
+// ============================================================
 
 export class CanvasLayer {
-    private canvas: HTMLCanvasElement | null = null;
-    private ctx: CanvasRenderingContext2D | null = null;
-    /** 已确认标注的快照（用于撤销/恢复） */
-    private snapshot: ImageData | null = null;
+    private canvas: Canvas | null = null;
+    private wrapperEl: HTMLDivElement | null = null;
+    private sessionId = '';
+    private annotationMetadata = new WeakMap<FabricObject, { type: AnnotationToolType; stepNumber?: number }>();
+    private stepCounter = 0;
 
-    /**
-     * 创建覆盖层 Canvas
-     */
-    show(): void {
+    // 回调
+    private onChangeCallback: (() => void) | null = null;
+
+    /** 设置数据变更回调（通知 Annotator 更新数据） */
+    onObjectsChanged(cb: () => void): void {
+        this.onChangeCallback = cb;
+    }
+
+    // ============================================================
+    // 显示 / 隐藏
+    // ============================================================
+
+    show(sessionId: string): void {
         if (this.canvas) return;
+        this.sessionId = sessionId;
 
-        this.canvas = document.createElement('canvas');
-        this.canvas.id = 'bugreplay-canvas-layer';
-        this.canvas.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 2147483646;
-      pointer-events: auto;
-      cursor: crosshair;
-    `;
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        // 外层容器
+        this.wrapperEl = document.createElement('div');
+        this.wrapperEl.id = 'bugreplay-canvas-layer';
+        this.wrapperEl.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 2147483646; pointer-events: none;
+        `;
+        document.body.appendChild(this.wrapperEl);
 
-        this.ctx = this.canvas.getContext('2d');
-        document.body.appendChild(this.canvas);
+        // Fabric Canvas
+        const canvasEl = document.createElement('canvas');
+        canvasEl.id = 'bugreplay-fabric-canvas';
+        this.wrapperEl.appendChild(canvasEl);
 
-        // 监听视口变化，同步更新 canvas 尺寸
+        this.canvas = new Canvas(canvasEl, {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            selection: false,
+            preserveObjectStacking: true,
+            stopContextMenu: true,
+            renderOnAddRemove: true,
+        });
+
+        // Fabric 创建 .canvas-container 包裹 canvas，设为 pointer-events: none
+        // 画布始终渲染（绘图预览、最终图形都可见），但不拦截点击
+        setTimeout(() => {
+            const container = this.wrapperEl?.querySelector('.canvas-container') as HTMLElement | null;
+            if (container) container.style.pointerEvents = 'none';
+        }, 0);
+
+        // Delete 键删除选中对象
+        this.canvas.on('object:modified', () => this.notifyChange());
+        document.addEventListener('keydown', this.handleKeyDown);
+
+        // 响应式缩放
         window.addEventListener('resize', this.handleResize);
     }
 
-    /**
-     * 销毁覆盖层 Canvas
-     */
     hide(): void {
+        document.removeEventListener('keydown', this.handleKeyDown);
+        window.removeEventListener('resize', this.handleResize);
         if (this.canvas) {
-            this.canvas.remove();
+            this.canvas.dispose();
             this.canvas = null;
-            this.ctx = null;
-            this.snapshot = null;
-            window.removeEventListener('resize', this.handleResize);
+        }
+        if (this.wrapperEl) {
+            this.wrapperEl.remove();
+            this.wrapperEl = null;
+        }
+        this.annotationMetadata = new WeakMap();
+    }
+
+    // ============================================================
+    // 添加标注对象
+    // ============================================================
+
+    /** 添加矩形 */
+    addRect(x: number, y: number, width: number, height: number, color: string): FabricObject {
+        const rect = new Rect({
+            left: Math.min(x, x + width),
+            top: Math.min(y, y + height),
+            width: Math.abs(width),
+            height: Math.abs(height),
+            fill: `${color}20`,
+            stroke: color,
+            strokeWidth: DEFAULT_ANNOTATION_CONFIG.strokeWidth,
+            rx: 4,
+            ry: 4,
+            selectable: true,
+            evented: true,
+        });
+        this.canvas!.add(rect);
+        this.trackObject(rect, 'rect');
+        this.canvas!.setActiveObject(rect);
+        this.canvas!.requestRenderAll();
+        this.notifyChange();
+        return rect;
+    }
+
+    /** 添加箭头：独立的 Line + 三角形 Polygon */
+    addArrow(fromX: number, fromY: number, toX: number, toY: number, color: string): FabricObject {
+        const line = new Line([fromX, fromY, toX, toY], {
+            stroke: color,
+            strokeWidth: DEFAULT_ANNOTATION_CONFIG.strokeWidth,
+            selectable: true,
+            evented: true,
+        });
+        this.canvas!.add(line);
+
+        // 三角形箭头头部
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        const h = 14;
+        const px = toX;
+        const py = toY;
+        const tri = new Polygon([
+            { x: px, y: py },
+            { x: px - h * Math.cos(angle - Math.PI / 6), y: py - h * Math.sin(angle - Math.PI / 6) },
+            { x: px - h * Math.cos(angle + Math.PI / 6), y: py - h * Math.sin(angle + Math.PI / 6) },
+        ], {
+            fill: color,
+            stroke: color,
+            strokeWidth: 2,
+            selectable: false,
+            evented: false,
+        });
+        this.canvas!.add(tri);
+
+        this.trackObject(line, 'arrow');
+        this.trackObject(tri, 'arrow');
+        this.canvas!.setActiveObject(line);
+        this.canvas!.requestRenderAll();
+        this.notifyChange();
+        return line;
+    }
+
+    /** 添加文本 */
+    addText(x: number, y: number, text: string, color: string): FabricObject {
+        const displayText = text || '输入批注...';
+        const itext = new IText(displayText, {
+            left: x,
+            top: y,
+            fontSize: DEFAULT_ANNOTATION_CONFIG.fontSize,
+            fontFamily: DEFAULT_ANNOTATION_CONFIG.fontFamily,
+            fill: color,
+            backgroundColor: `${color}15`,
+            padding: 6,
+            selectable: true,
+            evented: true,
+            editable: true,
+        });
+        this.canvas!.add(itext);
+        this.trackObject(itext, 'text');
+        this.canvas!.setActiveObject(itext);
+        this.canvas!.requestRenderAll();
+        this.notifyChange();
+
+        // 进入编辑模式（全选占位文本方便替换）
+        setTimeout(() => {
+            this.canvas!.setActiveObject(itext);
+            itext.enterEditing();
+            if (text === '') itext.selectAll();
+        }, 50);
+
+        return itext;
+    }
+
+    /** 启用自由画笔模式，返回清理函数 */
+    enableFreehand(color: string): () => void {
+        const canvas = this.canvas!;
+        canvas.isDrawingMode = true;
+        canvas.freeDrawingBrush = new PencilBrush(canvas);
+        canvas.freeDrawingBrush.color = color;
+        canvas.freeDrawingBrush.width = DEFAULT_ANNOTATION_CONFIG.strokeWidth;
+        this.setInteractive(true);
+
+        const onPathCreated = (e: { path: FabricObject }) => {
+            e.path.set({ selectable: true, evented: true });
+            this.trackObject(e.path, 'freehand');
+            this.notifyChange();
+            canvas.requestRenderAll();
+        };
+        canvas.on('path:created', onPathCreated);
+
+        return () => {
+            canvas.isDrawingMode = false;
+            canvas.off('path:created', onPathCreated);
+            this.setInteractive(false);
+            canvas.requestRenderAll();
+        };
+    }
+
+    // ============================================================
+    // 撤销 / 清除 / 选中状态
+    // ============================================================
+
+    /** 撤销最后一个对象 */
+    undoLast(): boolean {
+        const objects = this.canvas!.getObjects();
+        if (objects.length === 0) return false;
+        const last = objects[objects.length - 1]!;
+        this.canvas!.remove(last);
+        this.annotationMetadata.delete(last);
+        this.notifyChange();
+        return true;
+    }
+
+    /** 清除所有对象 */
+    clearAll(): void {
+        this.canvas!.clear();
+        this.annotationMetadata = new WeakMap();
+        this.notifyChange();
+    }
+
+    /** 是否有选中对象 */
+    hasSelection(): boolean {
+        return !!this.canvas?.getActiveObject();
+    }
+
+    /** 删除选中对象 */
+    deleteSelected(): void {
+        const obj = this.canvas?.getActiveObject();
+        if (obj) {
+            this.canvas!.remove(obj);
+            this.annotationMetadata.delete(obj);
+            this.canvas!.discardActiveObject();
+            this.canvas!.requestRenderAll();
+            this.notifyChange();
         }
     }
 
-    /**
-     * 清空 Canvas
-     */
-    clear(): void {
-        if (this.ctx && this.canvas) {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        }
+    /** 取消选中 */
+    deselectAll(): void {
+        this.canvas?.discardActiveObject();
+        this.canvas?.requestRenderAll();
     }
 
-    /**
-     * 获取 Canvas 元素（工具需要绑定事件）
-     */
-    getCanvas(): HTMLCanvasElement | null {
+    /** 暴露 Fabric Canvas 给工具使用 */
+    getFabricCanvas(): Canvas | null {
         return this.canvas;
     }
 
-    /**
-     * 获取 Canvas 上下文（供工具使用）
-     */
-    getContext(): CanvasRenderingContext2D | null {
-        return this.ctx;
-    }
-
-    /**
-     * 保存当前 Canvas 状态为快照
-     */
-    saveSnapshot(): void {
-        if (this.ctx && this.canvas) {
-            this.snapshot = this.ctx.getImageData(
-                0, 0,
-                this.canvas.width,
-                this.canvas.height,
-            );
+    /** 切换画布是否拦截点击。默认关闭，工具激活时才开启 */
+    setInteractive(enabled: boolean): void {
+        const container = this.wrapperEl?.querySelector('.canvas-container') as HTMLElement | null;
+        if (container) {
+            container.style.pointerEvents = enabled ? 'auto' : 'none';
         }
     }
 
-    /**
-     * 恢复到上次快照状态
-     */
-    restoreSnapshot(): void {
-        if (this.ctx && this.snapshot) {
-            this.ctx.putImageData(this.snapshot, 0, 0);
+    // ============================================================
+    // 序列化 / 反序列化
+    // ============================================================
+
+    /** 导出为 Annotation[]（用于 .rrt 存储） */
+    toAnnotations(): Annotation[] {
+        const annotations: Annotation[] = [];
+        const objects = this.canvas!.getObjects();
+
+        for (const obj of objects) {
+            const meta = this.annotationMetadata.get(obj);
+            if (!meta) continue;
+
+            const annotation = this.fabricToAnnotation(obj, meta);
+            if (annotation) annotations.push(annotation);
         }
+
+        return annotations;
     }
 
-    /**
-     * 在 Canvas 上绘制标注
-     */
-    drawAnnotation(annotation: Annotation): void {
-        const ctx = this.ctx;
-        if (!ctx) return;
+    /** 从 Annotation[] 恢复标注 */
+    loadAnnotations(annotations: Annotation[]): void {
+        this.canvas!.clear();
+        this.annotationMetadata = new WeakMap();
 
-        switch (annotation.type) {
+        for (const ann of annotations) {
+            const obj = this.annotationToFabric(ann);
+            if (obj) {
+                this.canvas!.add(obj);
+                this.trackObject(obj, ann.type, ann.stepNumber);
+            }
+        }
+
+        this.canvas!.requestRenderAll();
+    }
+
+    // ============================================================
+    // 私有方法
+    // ============================================================
+
+    /** 跟踪对象元数据，自动分配步骤编号 */
+    private trackObject(obj: FabricObject, type: AnnotationToolType, stepNumber?: number): void {
+        const num = stepNumber ?? ++this.stepCounter;
+        this.annotationMetadata.set(obj, { type, stepNumber: num });
+    }
+
+    /** Fabric 对象 → Annotation */
+    private fabricToAnnotation(
+        obj: FabricObject,
+        meta: { type: AnnotationToolType; stepNumber?: number },
+    ): Annotation | null {
+        const base = {
+            id: generateUUID(),
+            timestamp: Date.now(),
+            sessionId: this.sessionId,
+            stepNumber: meta.stepNumber,
+        };
+
+        switch (meta.type) {
             case 'rect': {
-                const { x, y, width, height, strokeColor, strokeWidth, fillColor } = annotation.data;
-                if (fillColor) {
-                    ctx.fillStyle = fillColor;
-                    ctx.fillRect(x, y, width, height);
-                }
-                ctx.strokeStyle = strokeColor;
-                ctx.lineWidth = strokeWidth;
-                ctx.setLineDash([]);
-                ctx.strokeRect(x, y, width, height);
-                break;
+                const r = obj as Rect;
+                return {
+                    ...base,
+                    type: 'rect',
+                    data: {
+                        x: r.left!,
+                        y: r.top!,
+                        width: r.width! * (r.scaleX ?? 1),
+                        height: r.height! * (r.scaleY ?? 1),
+                        strokeColor: String(r.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
+                        strokeWidth: r.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
+                        fillColor: String(r.fill ?? ''),
+                    },
+                };
             }
             case 'arrow': {
-                const { startX, startY, endX, endY, color, lineWidth } = annotation.data;
-                const headLength = 12;
-                const angle = Math.atan2(endY - startY, endX - startX);
-
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
-
-                // 箭头头部
-                ctx.beginPath();
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(
-                    endX - headLength * Math.cos(angle - Math.PI / 6),
-                    endY - headLength * Math.sin(angle - Math.PI / 6),
-                );
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(
-                    endX - headLength * Math.cos(angle + Math.PI / 6),
-                    endY - headLength * Math.sin(angle + Math.PI / 6),
-                );
-                ctx.stroke();
-                break;
-            }
-            case 'freehand': {
-                const { points, color, lineWidth } = annotation.data;
-                if (points.length < 2) return;
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    ctx.lineTo(points[i].x, points[i].y);
-                }
-                ctx.stroke();
-                break;
+                const l = obj as Line;
+                return {
+                    ...base,
+                    type: 'arrow',
+                    data: {
+                        startX: (l.x1 ?? 0) + (l.left ?? 0),
+                        startY: (l.y1 ?? 0) + (l.top ?? 0),
+                        endX: (l.x2 ?? 0) + (l.left ?? 0),
+                        endY: (l.y2 ?? 0) + (l.top ?? 0),
+                        color: String(l.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
+                        lineWidth: l.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
+                    },
+                };
             }
             case 'text': {
-                // 文本不在此绘制（已在 DOM 层显示标注编号标记点）
-                const { x, y, color } = annotation.data;
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(x + 8, y + 16, 5, 0, Math.PI * 2);
-                ctx.fill();
-                break;
+                const t = obj as IText;
+                return {
+                    ...base,
+                    type: 'text',
+                    data: {
+                        x: t.left!,
+                        y: t.top!,
+                        text: t.text ?? '',
+                        fontSize: t.fontSize ?? DEFAULT_ANNOTATION_CONFIG.fontSize,
+                        fontFamily: t.fontFamily ?? DEFAULT_ANNOTATION_CONFIG.fontFamily,
+                        color: String(t.fill ?? DEFAULT_ANNOTATION_CONFIG.textColor),
+                        backgroundColor: String(t.backgroundColor ?? ''),
+                    },
+                };
+            }
+            case 'freehand': {
+                const path = obj as FabricObject & { path?: Array<[string, number, number]> };
+                const rawPath = path.path ?? [];
+                const points = rawPath
+                    .filter((cmd): cmd is [string, number, number] => cmd[0] === 'M' || cmd[0] === 'L' || cmd[0] === 'Q')
+                    .map(cmd => ({ x: cmd[1] + obj.left!, y: cmd[2] + obj.top! }));
+                return {
+                    ...base,
+                    type: 'freehand',
+                    data: {
+                        points: points.length > 0 ? points : [{ x: obj.left!, y: obj.top! }],
+                        color: String(obj.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
+                        lineWidth: obj.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
+                    },
+                };
             }
         }
-
-        // 绘制完成后保存快照
-        this.saveSnapshot();
     }
 
-    /**
-     * 根据标注列表重新绘制所有标注
-     */
-    redrawAll(annotations: Annotation[]): void {
-        this.clear();
-        this.snapshot = null;
-        for (const annotation of annotations) {
-            this.drawAnnotation(annotation);
+    /** Annotation → Fabric 对象 */
+    private annotationToFabric(ann: Annotation): FabricObject | null {
+        switch (ann.type) {
+            case 'rect': {
+                return new Rect({
+                    left: ann.data.x, top: ann.data.y,
+                    width: ann.data.width, height: ann.data.height,
+                    fill: ann.data.fillColor || `${ann.data.strokeColor}20`,
+                    stroke: ann.data.strokeColor,
+                    strokeWidth: ann.data.strokeWidth,
+                    rx: 4, ry: 4,
+                    selectable: true, evented: true,
+                });
+            }
+            case 'arrow': {
+                const { startX, startY, endX, endY, color, lineWidth } = ann.data;
+                const line = new Line([startX, startY, endX, endY], {
+                    stroke: color, strokeWidth: lineWidth,
+                    selectable: true, evented: true,
+                });
+                const angle = Math.atan2(endY - startY, endX - startX);
+                const h = 14;
+                const tri = new Polygon([
+                    { x: endX, y: endY },
+                    { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
+                    { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
+                ], {
+                    fill: color, stroke: color, strokeWidth: 2,
+                    selectable: false, evented: false,
+                });
+                this.canvas!.add(line);
+                this.canvas!.add(tri);
+                return line;
+            }
+            case 'text': {
+                return new IText(ann.data.text, {
+                    left: ann.data.x, top: ann.data.y,
+                    fontSize: ann.data.fontSize,
+                    fontFamily: ann.data.fontFamily,
+                    fill: ann.data.color,
+                    backgroundColor: ann.data.backgroundColor || `${ann.data.color}15`,
+                    padding: 6,
+                    selectable: true, evented: true,
+                    editable: false, // 回放时不可编辑
+                });
+            }
+            case 'freehand': {
+                const { points, color, lineWidth } = ann.data;
+                if (points.length === 0) return null;
+                const pathData = points
+                    .map((p, i) => {
+                        const relX = p.x - points[0].x;
+                        const relY = p.y - points[0].y;
+                        return i === 0 ? `M ${relX} ${relY}` : `L ${relX} ${relY}`;
+                    })
+                    .join(' ');
+                return new Path(pathData, {
+                    left: points[0].x, top: points[0].y,
+                    stroke: color, strokeWidth: lineWidth,
+                    fill: '', selectable: true, evented: true,
+                });
+            }
         }
     }
 
-    /**
-     * 视口变化时更新 Canvas 尺寸
-     */
+    private notifyChange(): void {
+        this.onChangeCallback?.();
+    }
+
+    private handleKeyDown = (e: KeyboardEvent): void => {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+            // 避免在文本编辑时删除
+            const active = document.activeElement;
+            if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true')) {
+                return;
+            }
+            this.deleteSelected();
+        }
+        if (e.key === 'Escape') {
+            this.deselectAll();
+        }
+    };
+
     private handleResize = (): void => {
         if (!this.canvas) return;
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this.canvas.setWidth(window.innerWidth);
+        this.canvas.setHeight(window.innerHeight);
+        this.canvas.requestRenderAll();
     };
 }
+

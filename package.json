@@ -6,20 +6,20 @@
     "author": "BugReplay Team",
     "license": "MIT",
     "scripts": {
-        "dev": "vite build --watch --mode development",
+        "dev": "vite --mode development",
         "build": "vite build --mode production",
         "type-check": "tsc --noEmit",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix"
     },
     "dependencies": {
+        "fabric": "^6.9.1",
         "rrweb": "^2.0.0-alpha.13",
-        "rrweb-player": "^2.0.0-alpha.13",
         "webextension-polyfill": "^0.12.0"
     },
     "devDependencies": {
         "@antfu/eslint-config": "^4.15.0",
-        "@crxjs/vite-plugin": "^2.0.0-beta.25",
+        "@crxjs/vite-plugin": "^2.7.0",
         "@types/node": "^26.0.1",
         "@types/webextension-polyfill": "^0.12.1",
         "eslint": "^9.29.0",

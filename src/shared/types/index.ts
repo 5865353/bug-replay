@@ -65,7 +65,8 @@ export type ContentToBackgroundAction
         | 'SUBMIT_TO_PLATFORM'
         | 'GET_SESSIONS'
         | 'DELETE_SESSION'
-        | 'UPDATE_SESSION_META';
+        | 'UPDATE_SESSION_META'
+        | 'GET_RECORDING_STATUS';
 
 /** Content Script → Service Worker 消息体 */
 export interface ContentToBackgroundMessage {
@@ -85,6 +86,7 @@ export type BackgroundToContentAction
         | 'SESSIONS_LIST'
         | 'SESSION_DELETED'
         | 'SESSION_UPDATED'
+        | 'RECORDING_STATUS'
         | 'ERROR';
 
 /** Service Worker → Content Script 消息体 */

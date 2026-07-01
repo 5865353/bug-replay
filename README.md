@@ -184,10 +184,10 @@ pnpm build
         "extensionVersion": "1.0.0"
     },
     "environment": { /* 环境快照 */ },
-    "rrwebEvents": [ /* rrweb 事件流 */ ],
-    "networkLogs": [ /* 网络日志 */ ],
-    "consoleLogs": [ /* 控制台日志 */ ],
-    "annotations": [ /* 标注数据 */ ]
+    "rrwebEvents": [],
+    "networkLogs": [],
+    "consoleLogs": [],
+    "annotations": []
 }
 ```
 

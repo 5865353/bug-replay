@@ -71,10 +71,12 @@ class ContentScriptController {
 
             case 'RECORDING_PAUSED':
                 this.recorder.pause();
+                this.annotator.setPaused();
                 break;
 
             case 'RECORDING_RESUMED':
                 this.recorder.resume();
+                this.annotator.setResumed();
                 break;
 
             default:
@@ -89,13 +91,24 @@ class ContentScriptController {
         try {
             this.currentSession = await this.recorder.start();
 
-            // 显示标注工具栏
+            // 创建标注器并显示——工具栏同时包含录制控制和标注工具
             this.annotator = new Annotator({
                 sessionId: this.currentSession.id,
                 onChange: (annotations) => {
                     if (this.currentSession) {
                         this.currentSession.annotations = annotations;
                     }
+                },
+                onPause: () => {
+                    this.recorder.pause();
+                    browser.runtime.sendMessage({ action: 'PAUSE_RECORDING' }).catch(() => {});
+                },
+                onResume: () => {
+                    this.recorder.resume();
+                    browser.runtime.sendMessage({ action: 'RESUME_RECORDING' }).catch(() => {});
+                },
+                onStop: async () => {
+                    await this.stopRecording();
                 },
             });
             this.annotator.show();
@@ -111,19 +124,18 @@ class ContentScriptController {
     private async stopRecording(): Promise<void> {
         try {
             const session = await this.recorder.stop();
-
-            // 合并标注数据
             session.annotations = this.annotator.getAnnotations();
-
-            // 隐藏标注工具栏
             this.annotator.hide();
 
-            // 发送完整会话数据给 Service Worker 存储
-            const message: ContentToBackgroundMessage = {
+            // 通过 chrome.storage 传递大体积数据，避免 sendMessage 大小限制
+            const key = `temp_session_${session.id}`;
+            await browser.storage.local.set({ [key]: session });
+
+            // 通知 SW 读取并存储
+            await browser.runtime.sendMessage({
                 action: 'STOP_RECORDING',
-                payload: session,
-            };
-            await browser.runtime.sendMessage(message);
+                payload: { sessionId: session.id },
+            });
 
             this.currentSession = null;
         }

@@ -15,21 +15,21 @@ import { formatTime } from '@shared/utils';
 export type SidebarTab = 'console' | 'network';
 
 export class Sidebar {
-    private container: HTMLElement;
-    private tabBtns: Record<SidebarTab, HTMLButtonElement>;
-    private contentEl: HTMLElement;
-    private searchInput: HTMLInputElement;
-    private searchQuery = '';
+  private container: HTMLElement;
+  private tabBtns: Record<SidebarTab, HTMLButtonElement>;
+  private contentEl: HTMLElement;
+  private searchInput: HTMLInputElement;
+  private searchQuery = '';
 
-    private activeTab: SidebarTab = 'console';
-    private networkLogs: NetworkLog[] = [];
-    private consoleLogs: ConsoleLog[] = [];
-    private currentTime = 0;
-    private expandedItems = new Set<string>();
+  private activeTab: SidebarTab = 'console';
+  private networkLogs: NetworkLog[] = [];
+  private consoleLogs: ConsoleLog[] = [];
+  private currentTime = 0;
+  private expandedItems = new Set<string>();
 
-    constructor(container: HTMLElement) {
-        this.container = container;
-        this.container.innerHTML = `
+  constructor(container: HTMLElement) {
+    this.container = container;
+    this.container.innerHTML = `
             <div class="sidebar-tabs">
                 <button class="sidebar-tab active" data-tab="console">📋 控制台</button>
                 <button class="sidebar-tab" data-tab="network">🌐 网络</button>
@@ -40,76 +40,82 @@ export class Sidebar {
             <div id="sidebar-content" class="sidebar-content"></div>
         `;
 
-        this.tabBtns = {
-            console: this.container.querySelector('[data-tab="console"]')!,
-            network: this.container.querySelector('[data-tab="network"]')!,
-        };
-        this.contentEl = this.container.querySelector('#sidebar-content')!;
-        this.searchInput = this.container.querySelector('.search-input')!;
+    this.tabBtns = {
+      console: this.container.querySelector('[data-tab="console"]')!,
+      network: this.container.querySelector('[data-tab="network"]')!
+    };
+    this.contentEl = this.container.querySelector('#sidebar-content')!;
+    this.searchInput = this.container.querySelector('.search-input')!;
 
-        this.tabBtns.console.addEventListener('click', () => this.switchTab('console'));
-        this.tabBtns.network.addEventListener('click', () => this.switchTab('network'));
-        this.searchInput.addEventListener('input', () => {
-            this.searchQuery = this.searchInput.value.toLowerCase();
-            this.render();
-        });
+    this.tabBtns.console.addEventListener('click', () =>
+      this.switchTab('console')
+    );
+    this.tabBtns.network.addEventListener('click', () =>
+      this.switchTab('network')
+    );
+    this.searchInput.addEventListener('input', () => {
+      this.searchQuery = this.searchInput.value.toLowerCase();
+      this.render();
+    });
+  }
+
+  /**
+   * 设置数据
+   */
+  setData(networkLogs: NetworkLog[], consoleLogs: ConsoleLog[]): void {
+    this.networkLogs = networkLogs;
+    this.consoleLogs = consoleLogs;
+    this.render();
+  }
+
+  /**
+   * 根据回放时间高亮当前条目
+   */
+  highlightTime(time: number): void {
+    this.currentTime = time;
+    // 更新样式而非重新渲染（性能优化）
+    this.updateHighlight();
+  }
+
+  /**
+   * 切换面板
+   */
+  switchTab(tab: SidebarTab): void {
+    this.activeTab = tab;
+    this.tabBtns.console.classList.toggle('active', tab === 'console');
+    this.tabBtns.network.classList.toggle('active', tab === 'network');
+    this.render();
+  }
+
+  // ---- 渲染 ----
+
+  private render(): void {
+    if (this.activeTab === 'console') {
+      this.renderConsole();
+    } else {
+      this.renderNetwork();
+    }
+    this.updateHighlight(); 
+  }
+
+  private renderConsole(): void {
+    const logs = this.filterConsoleLogs();
+    if (logs.length === 0) {
+      this.contentEl.innerHTML =
+        '<div class="empty-state">无匹配的控制台日志</div>';
+      return;
     }
 
-    /**
-     * 设置数据
-     */
-    setData(networkLogs: NetworkLog[], consoleLogs: ConsoleLog[]): void {
-        this.networkLogs = networkLogs;
-        this.consoleLogs = consoleLogs;
-        this.render();
-    }
+    this.contentEl.innerHTML = logs
+      .map((log, idx) => {
+        const color = CONSOLE_LEVEL_COLORS[log.level];
+        const levelBadge = `<span class="log-level" style="color:${color}">[${log.level.toUpperCase()}]</span>`;
+        const args = log.args.join(' ');
+        const isExpanded = this.expandedItems.has(log.id);
+        const startTime = logs[0].timestamp;
+        const relativeTime = formatTime(log.timestamp - startTime);
 
-    /**
-     * 根据回放时间高亮当前条目
-     */
-    highlightTime(time: number): void {
-        this.currentTime = time;
-        // 更新样式而非重新渲染（性能优化）
-        this.updateHighlight();
-    }
-
-    /**
-     * 切换面板
-     */
-    switchTab(tab: SidebarTab): void {
-        this.activeTab = tab;
-        this.tabBtns.console.classList.toggle('active', tab === 'console');
-        this.tabBtns.network.classList.toggle('active', tab === 'network');
-        this.render();
-    }
-
-    // ---- 渲染 ----
-
-    private render(): void {
-        if (this.activeTab === 'console') {
-            this.renderConsole();
-        } else {
-            this.renderNetwork();
-        }
-        this.updateHighlight();
-    }
-
-    private renderConsole(): void {
-        const logs = this.filterConsoleLogs();
-        if (logs.length === 0) {
-            this.contentEl.innerHTML = '<div class="empty-state">无匹配的控制台日志</div>';
-            return;
-        }
-
-        this.contentEl.innerHTML = logs.map((log, idx) => {
-            const color = CONSOLE_LEVEL_COLORS[log.level];
-            const levelBadge = `<span class="log-level" style="color:${color}">[${log.level.toUpperCase()}]</span>`;
-            const args = log.args.join(' ');
-            const isExpanded = this.expandedItems.has(log.id);
-            const startTime = logs[0].timestamp;
-            const relativeTime = formatTime(log.timestamp - startTime);
-
-            return `
+        return `
                 <div class="sidebar-item console-item" data-id="${log.id}" data-time="${log.timestamp}">
                     <div class="item-header">
                         <span class="item-time">${relativeTime}</span>
@@ -120,37 +126,47 @@ export class Sidebar {
                     ${isExpanded ? `<div class="item-detail"><pre>${this.escapeHtml(args)}</pre></div>` : ''}
                 </div>
             `;
-        }).join('');
+      })
+      .join('');
 
-        // 绑定点击事件
-        this.contentEl.querySelectorAll('.console-item .item-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const id = (header.parentElement as HTMLElement).dataset.id!;
-                if (this.expandedItems.has(id)) {
-                    this.expandedItems.delete(id);
-                } else {
-                    this.expandedItems.add(id);
-                }
-                this.render();
-            });
+    // 绑定点击事件
+    this.contentEl
+      .querySelectorAll('.console-item .item-header')
+      .forEach(header => {
+        header.addEventListener('click', () => {
+          const id = (header.parentElement as HTMLElement).dataset.id!;
+          if (this.expandedItems.has(id)) {
+            this.expandedItems.delete(id);
+          } else {
+            this.expandedItems.add(id);
+          }
+          this.render();
         });
+      });
+  }
+
+  private renderNetwork(): void {
+    const logs = this.filterNetworkLogs();
+    if (logs.length === 0) {
+      this.contentEl.innerHTML =
+        '<div class="empty-state">无匹配的网络请求</div>';
+      return;
     }
 
-    private renderNetwork(): void {
-        const logs = this.filterNetworkLogs();
-        if (logs.length === 0) {
-            this.contentEl.innerHTML = '<div class="empty-state">无匹配的网络请求</div>';
-            return;
-        }
+    this.contentEl.innerHTML = logs
+      .map(log => {
+        const statusClass =
+          log.status >= 400
+            ? 'status-error'
+            : log.status >= 300
+              ? 'status-redirect'
+              : 'status-ok';
+        const methodColor = this.getMethodColor(log.method);
+        const isExpanded = this.expandedItems.has(log.id);
+        const startTime = logs[0].startTime;
+        const relativeTime = formatTime(log.startTime - startTime);
 
-        this.contentEl.innerHTML = logs.map(log => {
-            const statusClass = log.status >= 400 ? 'status-error' : log.status >= 300 ? 'status-redirect' : 'status-ok';
-            const methodColor = this.getMethodColor(log.method);
-            const isExpanded = this.expandedItems.has(log.id);
-            const startTime = logs[0].startTime;
-            const relativeTime = formatTime(log.startTime - startTime);
-
-            return `
+        return `
                 <div class="sidebar-item network-item" data-id="${log.id}" data-time="${log.startTime}">
                     <div class="item-header">
                         <span class="item-time">${relativeTime}</span>
@@ -163,24 +179,27 @@ export class Sidebar {
                     ${isExpanded ? this.renderNetworkDetail(log) : ''}
                 </div>
             `;
-        }).join('');
+      })
+      .join('');
 
-        // 绑定点击事件
-        this.contentEl.querySelectorAll('.network-item .item-header').forEach(header => {
-            header.addEventListener('click', () => {
-                const id = (header.parentElement as HTMLElement).dataset.id!;
-                if (this.expandedItems.has(id)) {
-                    this.expandedItems.delete(id);
-                } else {
-                    this.expandedItems.add(id);
-                }
-                this.render();
-            });
+    // 绑定点击事件
+    this.contentEl
+      .querySelectorAll('.network-item .item-header')
+      .forEach(header => {
+        header.addEventListener('click', () => {
+          const id = (header.parentElement as HTMLElement).dataset.id!;
+          if (this.expandedItems.has(id)) {
+            this.expandedItems.delete(id);
+          } else {
+            this.expandedItems.add(id);
+          }
+          this.render();
         });
-    }
+      });
+  }
 
-    private renderNetworkDetail(log: NetworkLog): string {
-        return `
+  private renderNetworkDetail(log: NetworkLog): string {
+    return `
             <div class="item-detail">
                 <div class="detail-section">
                     <strong>URL:</strong> ${this.escapeHtml(log.url)}
@@ -198,101 +217,109 @@ export class Sidebar {
                 ${log.responseBody ? this.renderBody('响应体', log.responseBody) : ''}
             </div>
         `;
-    }
+  }
 
-    private renderHeaders(title: string, headers: Record<string, string>): string {
-        const entries = Object.entries(headers);
-        if (entries.length === 0) return '';
-        return `
+  private renderHeaders(
+    title: string,
+    headers: Record<string, string>
+  ): string {
+    const entries = Object.entries(headers);
+    if (entries.length === 0) return '';
+    return `
             <div class="detail-section">
                 <strong>${title}:</strong>
                 <pre class="detail-code">${entries.map(([k, v]) => `  ${k}: ${v}`).join('\n')}</pre>
             </div>
         `;
-    }
+  }
 
-    private renderBody(title: string, body: string): string {
-        return `
+  private renderBody(title: string, body: string): string {
+    return `
             <div class="detail-section">
                 <strong>${title}:</strong>
                 <pre class="detail-code">${this.escapeHtml(body.slice(0, 2000))}${body.length > 2000 ? '\n... [Truncated]' : ''}</pre>
             </div>
         `;
+  }
+
+  // ---- 高亮 ----
+
+  private updateHighlight(): void {
+    const items = this.contentEl.querySelectorAll('.sidebar-item');
+    items.forEach(item => {
+      const itemTime = Number((item as HTMLElement).dataset.time);
+      if (itemTime <= this.currentTime) {
+        item.classList.add('past');
+      } else {
+        item.classList.remove('past');
+      }
+    });
+
+    // 找到最接近当前时间的条目并滚动到可见
+    let closestItem: Element | null = null;
+    let closestDiff = Infinity;
+    items.forEach(item => {
+      const itemTime = Number((item as HTMLElement).dataset.time);
+      const diff = Math.abs(itemTime - this.currentTime);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closestItem = item;
+      }
+    });
+
+    if (closestItem) {
+      (closestItem as HTMLElement).scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth'
+      });
     }
+  }
 
-    // ---- 高亮 ----
+  // ---- 过滤 ----
 
-    private updateHighlight(): void {
-        const items = this.contentEl.querySelectorAll('.sidebar-item');
-        items.forEach(item => {
-            const itemTime = Number((item as HTMLElement).dataset.time);
-            if (itemTime <= this.currentTime) {
-                item.classList.add('past');
-            } else {
-                item.classList.remove('past');
-            }
-        });
+  private filterConsoleLogs(): ConsoleLog[] {
+    if (!this.searchQuery) return this.consoleLogs;
+    return this.consoleLogs.filter(
+      log =>
+        log.args.some(a => a.toLowerCase().includes(this.searchQuery)) ||
+        log.level.includes(this.searchQuery)
+    );
+  }
 
-        // 找到最接近当前时间的条目并滚动到可见
-        let closestItem: Element | null = null;
-        let closestDiff = Infinity;
-        items.forEach(item => {
-            const itemTime = Number((item as HTMLElement).dataset.time);
-            const diff = Math.abs(itemTime - this.currentTime);
-            if (diff < closestDiff) {
-                closestDiff = diff;
-                closestItem = item;
-            }
-        });
+  private filterNetworkLogs(): NetworkLog[] {
+    if (!this.searchQuery) return this.networkLogs;
+    return this.networkLogs.filter(
+      log =>
+        log.url.toLowerCase().includes(this.searchQuery) ||
+        log.method.toLowerCase().includes(this.searchQuery) ||
+        String(log.status).includes(this.searchQuery)
+    );
+  }
 
-        if (closestItem) {
-            (closestItem as HTMLElement).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        }
-    }
+  // ---- 工具 ----
 
-    // ---- 过滤 ----
+  private getMethodColor(method: string): string {
+    const colors: Record<string, string> = {
+      GET: '#22C55E',
+      POST: '#3B82F6',
+      PUT: '#F59E0B',
+      DELETE: '#EF4444',
+      PATCH: '#A855F7',
+      HEAD: '#9CA3AF',
+      OPTIONS: '#9CA3AF'
+    };
+    return colors[method] || '#9CA3AF';
+  }
 
-    private filterConsoleLogs(): ConsoleLog[] {
-        if (!this.searchQuery) return this.consoleLogs;
-        return this.consoleLogs.filter(log =>
-            log.args.some(a => a.toLowerCase().includes(this.searchQuery))
-            || log.level.includes(this.searchQuery),
-        );
-    }
+  private truncateUrl(url: string): string {
+    const maxLen = 60;
+    if (url.length <= maxLen) return url;
+    return `${url.slice(0, maxLen - 3)}...`;
+  }
 
-    private filterNetworkLogs(): NetworkLog[] {
-        if (!this.searchQuery) return this.networkLogs;
-        return this.networkLogs.filter(log =>
-            log.url.toLowerCase().includes(this.searchQuery)
-            || log.method.toLowerCase().includes(this.searchQuery)
-            || String(log.status).includes(this.searchQuery),
-        );
-    }
-
-    // ---- 工具 ----
-
-    private getMethodColor(method: string): string {
-        const colors: Record<string, string> = {
-            GET: '#22C55E',
-            POST: '#3B82F6',
-            PUT: '#F59E0B',
-            DELETE: '#EF4444',
-            PATCH: '#A855F7',
-            HEAD: '#9CA3AF',
-            OPTIONS: '#9CA3AF',
-        };
-        return colors[method] || '#9CA3AF';
-    }
-
-    private truncateUrl(url: string): string {
-        const maxLen = 60;
-        if (url.length <= maxLen) return url;
-        return url.slice(0, maxLen - 3) + '...';
-    }
-
-    private escapeHtml(str: string): string {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
+  private escapeHtml(str: string): string {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 }

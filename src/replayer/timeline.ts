@@ -9,8 +9,8 @@
  * - 时间显示
  */
 
-import { formatTime } from '@shared/utils';
 import { REPLAY_SPEEDS } from '@shared/types';
+import { formatTime } from '@shared/utils';
 
 export interface TimelineCallbacks {
     onPlayPause: () => void;

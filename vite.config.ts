@@ -1,7 +1,7 @@
-import { cpSync, existsSync, rmSync } from 'node:fs';
+import { cpSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
 import { crx } from '@crxjs/vite-plugin';
+import { defineConfig } from 'vite';
 import manifest from './src/manifest.json';
 
 // ============================================================
@@ -21,16 +21,10 @@ function publicCopyPlugin() {
                 console.log('✓ Copied public/ to dist/');
             }
 
-            // 清理空的 src 子目录（crxjs 嵌套输出后留下的）
-            const srcDistDir = resolve(distDir, 'src');
-            if (existsSync(srcDistDir)) {
-                try {
-                    rmSync(srcDistDir, { recursive: true, force: true });
-                    console.log('✓ Cleaned up src/ directory');
-                } catch {
-                    // 忽略清理错误
-                }
-            }
+            // 注意：不要删除 dist/src/ 目录！
+            // @crxjs/vite-plugin 将 popup.html / replayer/index.html 输出到
+            // dist/src/popup/popup.html 和 dist/src/replayer/index.html，
+            // manifest.json 中的路径引用也指向这些位置。
         },
     };
 }
@@ -53,9 +47,11 @@ export default defineConfig({
         emptyOutDir: true,
         sourcemap: false,
         target: 'es2020',
+        rollupOptions: {
+            input: {
+                replayer: resolve(__dirname, 'src/replayer/index.html'),
+            },
+        },
     },
-    plugins: [
-        crx({ manifest }),
-        publicCopyPlugin(),
-    ],
+    plugins: [crx({ manifest }), publicCopyPlugin()],
 });

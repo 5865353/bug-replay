@@ -1,280 +1,155 @@
 /**
- * src/replayer/annotation-overlay.ts — 回放标注图层
+ * src/replayer/annotation-overlay.ts — 回放标注图层 (Fabric.js)
  *
- * 在回放时根据时间轴精准叠加显示标注
- * - 使用 Canvas 在回放视图上叠加渲染
- * - 根据 timestamp 在对应时间点渐显
- * - 开关按钮控制显示/隐藏
+ * 使用 Fabric.Canvas 静态渲染标注，无交互
+ * 根据 timestamp 在对应时间点渐显
  */
 
 import type { Annotation } from '@shared/types';
+import { Canvas, Rect, Line, Polygon, IText, Path, Text, classRegistry } from 'fabric';
+
+classRegistry.setClass(Rect, 'Rect');
+classRegistry.setClass(Line, 'Line');
+classRegistry.setClass(IText, 'IText');
+classRegistry.setClass(Polygon, 'Polygon');
 
 export class AnnotationOverlay {
-    private canvas: HTMLCanvasElement | null = null;
-    private ctx: CanvasRenderingContext2D | null = null;
+    private canvas: Canvas | null = null;
+    private wrapperEl: HTMLDivElement | null = null;
     private visible = true;
     private annotations: Annotation[] = [];
-    private shownAnnotations = new Set<string>();
     private container: HTMLElement | null = null;
+    private lastShownCount = 0;
 
-    /**
-     * 初始化覆盖层（挂载到指定容器）
-     */
     init(container: HTMLElement, annotations: Annotation[]): void {
         this.container = container;
         this.annotations = annotations;
-        this.shownAnnotations.clear();
 
-        this.canvas = document.createElement('canvas');
-        this.canvas.id = 'bugreplay-annotation-overlay';
-        this.canvas.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        `;
-
+        this.wrapperEl = document.createElement('div');
+        this.wrapperEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;background:transparent;';
         container.style.position = 'relative';
-        container.appendChild(this.canvas);
-        this.ctx = this.canvas.getContext('2d');
+        container.appendChild(this.wrapperEl);
 
-        this.resize();
-        window.addEventListener('resize', this.resize.bind(this));
-    }
+        const canvasEl = document.createElement('canvas');
+        this.wrapperEl.appendChild(canvasEl);
 
-    /**
-     * 根据当前回放时间更新标注显示
-     */
-    updateTime(currentTime: number): void {
-        if (!this.visible || !this.ctx || !this.canvas) return;
+        this.canvas = new Canvas(canvasEl, {
+            width: container.clientWidth || 1280,
+            height: container.clientHeight || 720,
+            selection: false,
+            renderOnAddRemove: true,
+            backgroundColor: 'transparent',
+        });
 
-        const ctx = this.ctx;
-        const canvas = this.canvas;
-
-        // 找出当前时间应该显示的标注
-        const activeAnnotations = this.annotations.filter(
-            a => a.timestamp <= currentTime,
+        console.log(
+            `[BugReplay] AnnotationOverlay init: ${annotations.length} annotations, ` +
+            `container=${container.clientWidth}x${container.clientHeight}`,
         );
 
-        // 检查是否有新增的标注
-        const newIds = activeAnnotations.map(a => a.id);
-        const hasNew = newIds.some(id => !this.shownAnnotations.has(id));
-
-        if (hasNew) {
-            this.shownAnnotations = new Set(newIds);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            this.renderAnnotations(ctx, activeAnnotations);
-        }
+        window.addEventListener('resize', this.handleResize);
     }
 
-    /**
-     * 切换显示/隐藏
-     */
-    toggle(): boolean {
-        this.visible = !this.visible;
-        if (this.canvas) {
-            this.canvas.style.display = this.visible ? 'block' : 'none';
-        }
-        return this.visible;
+    updateTime(currentTime: number): void {
+        if (!this.visible || !this.canvas) return;
+        const active = this.annotations.filter(a => a.timestamp <= currentTime);
+        if (active.length === this.lastShownCount) return;
+        this.lastShownCount = active.length;
+
+        this.canvas.clear();
+        for (const ann of active) this.renderAnnotation(ann);
+        this.canvas.requestRenderAll();
     }
 
-    /**
-     * 切换显示/隐藏
-     */
-    setVisible(visible: boolean): void {
-        this.visible = visible;
-        if (this.canvas) {
-            this.canvas.style.display = visible ? 'block' : 'none';
-        }
-    }
+    toggle(): boolean { this.visible = !this.visible; if (this.wrapperEl) this.wrapperEl.style.display = this.visible ? 'block' : 'none'; return this.visible; }
+    setVisible(v: boolean): void { this.visible = v; if (this.wrapperEl) this.wrapperEl.style.display = v ? 'block' : 'none'; }
 
-    /**
-     * 销毁
-     */
+    /** 获取 wrapper 元素（供外部缩放同步） */
+    getWrapper(): HTMLDivElement | null { return this.wrapperEl; }
+
     destroy(): void {
-        if (this.canvas) {
-            this.canvas.remove();
-            this.canvas = null;
-            this.ctx = null;
-        }
-        window.removeEventListener('resize', this.resize.bind(this));
+        window.removeEventListener('resize', this.handleResize);
+        this.canvas?.dispose();
+        this.canvas = null;
+        this.wrapperEl?.remove();
+        this.wrapperEl = null;
     }
 
-    // ---- 渲染 ----
-
-    private renderAnnotations(
-        ctx: CanvasRenderingContext2D,
-        annotations: Annotation[],
-    ): void {
-        for (const annotation of annotations) {
-            this.drawAnnotation(ctx, annotation);
-
-            // 绘制步骤编号
-            if (annotation.stepNumber) {
-                this.drawStepNumber(ctx, annotation);
-            }
-        }
-    }
-
-    private drawAnnotation(
-        ctx: CanvasRenderingContext2D,
-        annotation: Annotation,
-    ): void {
-        switch (annotation.type) {
-            case 'rect': {
-                const { x, y, width, height, strokeColor, strokeWidth, fillColor } = annotation.data;
-                if (fillColor) {
-                    ctx.fillStyle = fillColor;
-                    ctx.fillRect(x, y, width, height);
-                }
-                ctx.strokeStyle = strokeColor;
-                ctx.lineWidth = strokeWidth;
-                ctx.setLineDash([]);
-                ctx.strokeRect(x, y, width, height);
-                break;
-            }
-            case 'arrow': {
-                const { startX, startY, endX, endY, color, lineWidth } = annotation.data;
-                const headLength = 12;
-                const angle = Math.atan2(endY - startY, endX - startX);
-
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(
-                    endX - headLength * Math.cos(angle - Math.PI / 6),
-                    endY - headLength * Math.sin(angle - Math.PI / 6),
-                );
-                ctx.moveTo(endX, endY);
-                ctx.lineTo(
-                    endX - headLength * Math.cos(angle + Math.PI / 6),
-                    endY - headLength * Math.sin(angle + Math.PI / 6),
-                );
-                ctx.stroke();
-                break;
-            }
-            case 'freehand': {
-                const { points, color, lineWidth } = annotation.data;
-                if (points.length < 2) return;
-                ctx.strokeStyle = color;
-                ctx.lineWidth = lineWidth;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                ctx.beginPath();
-                ctx.moveTo(points[0].x, points[0].y);
-                for (let i = 1; i < points.length; i++) {
-                    ctx.lineTo(points[i].x, points[i].y);
-                }
-                ctx.stroke();
-                break;
-            }
-            case 'text': {
-                const { x, y, text, fontSize, fontFamily, color, backgroundColor } = annotation.data;
-                const padding = 4;
-                ctx.font = `${fontSize}px ${fontFamily}`;
-                const metrics = ctx.measureText(text);
-
-                if (backgroundColor) {
-                    ctx.fillStyle = backgroundColor;
-                    ctx.fillRect(
-                        x - padding,
-                        y - fontSize - padding,
-                        metrics.width + padding * 2,
-                        fontSize + padding * 2,
-                    );
-                }
-
-                ctx.fillStyle = color;
-                ctx.fillText(text, x, y);
-                break;
-            }
-        }
-    }
-
-    private drawStepNumber(
-        ctx: CanvasRenderingContext2D,
-        annotation: Annotation,
-    ): void {
-        const { x, y } = this.getAnnotationPosition(annotation);
-        const stepText = `Step ${annotation.stepNumber}`;
-        const fontSize = 12;
-        ctx.font = `bold ${fontSize}px system-ui, sans-serif`;
-        const metrics = ctx.measureText(stepText);
-        const padding = 4;
-        const badgeWidth = metrics.width + padding * 2;
-        const badgeHeight = fontSize + padding * 2;
-
-        // 在标注位置附近绘制步骤编号徽章
-        const badgeX = x;
-        const badgeY = y - badgeHeight - 4;
-
-        ctx.fillStyle = '#1f2937';
-        ctx.beginPath();
-        this.roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, 4);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(stepText, badgeX + padding, badgeY + fontSize + 1);
-    }
-
-    private getAnnotationPosition(annotation: Annotation): { x: number; y: number } {
-        switch (annotation.type) {
+    private renderAnnotation(ann: Annotation): void {
+        let obj = null;
+        switch (ann.type) {
             case 'rect':
-                return { x: annotation.data.x, y: annotation.data.y };
-            case 'arrow':
-                return { x: annotation.data.endX, y: annotation.data.endY };
-            case 'freehand':
-                return annotation.data.points[0] || { x: 0, y: 0 };
+                obj = new Rect({ left: ann.data.x, top: ann.data.y, width: ann.data.width, height: ann.data.height, fill: ann.data.fillColor || `${ann.data.strokeColor}20`, stroke: ann.data.strokeColor, strokeWidth: ann.data.strokeWidth, rx: 4, ry: 4, selectable: false, evented: false });
+                break;
+            case 'arrow': {
+                const { startX, startY, endX, endY, color, lineWidth } = ann.data;
+                const line = new Line([startX, startY, endX, endY], {
+                    stroke: color, strokeWidth: lineWidth,
+                    selectable: false, evented: false,
+                });
+                this.canvas!.add(line);
+                const angle = Math.atan2(endY - startY, endX - startX);
+                const h = 14;
+                const tri = new Polygon([
+                    { x: endX, y: endY },
+                    { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
+                    { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
+                ], {
+                    fill: color, stroke: color, strokeWidth: 2,
+                    selectable: false, evented: false,
+                });
+                this.canvas!.add(tri);
+                if (ann.stepNumber) this.addStepBadge(ann);
+                return;
+            }
             case 'text':
-                return { x: annotation.data.x, y: annotation.data.y };
+                obj = new IText(ann.data.text, { left: ann.data.x, top: ann.data.y, fontSize: ann.data.fontSize, fontFamily: ann.data.fontFamily, fill: ann.data.color, backgroundColor: ann.data.backgroundColor || `${ann.data.color}15`, padding: 6, selectable: false, evented: false, editable: false });
+                break;
+            case 'freehand': {
+                const { points, color, lineWidth } = ann.data;
+                if (points.length === 0) break;
+                const d = points.map((p, i) => { const rx = p.x - points[0].x; const ry = p.y - points[0].y; return i === 0 ? `M ${rx} ${ry}` : `L ${rx} ${ry}`; }).join(' ');
+                obj = new Path(d, { left: points[0].x, top: points[0].y, stroke: color, strokeWidth: lineWidth, fill: '', selectable: false, evented: false });
+                break;
+            }
+        }
+        if (obj) {
+            this.canvas!.add(obj);
+            if (ann.stepNumber) {
+                this.addStepBadge(ann);
+            }
         }
     }
 
-    private resize(): void {
+    private addStepBadge(ann: Annotation): void {
+        const pos = this.getAnnotationPos(ann);
+        const badge = new Text(`Step ${ann.stepNumber}`, {
+            left: pos.x,
+            top: pos.y - 22,
+            fontSize: 11,
+            fontFamily: 'system-ui, sans-serif',
+            fontWeight: 'bold',
+            fill: '#ffffff',
+            backgroundColor: '#1f2937',
+            padding: 3,
+            selectable: false,
+            evented: false,
+        });
+        this.canvas!.add(badge);
+    }
+
+    private getAnnotationPos(ann: Annotation): { x: number; y: number } {
+        switch (ann.type) {
+            case 'rect': return { x: ann.data.x, y: ann.data.y };
+            case 'arrow': return { x: ann.data.endX, y: ann.data.endY };
+            case 'freehand': return ann.data.points[0] || { x: 0, y: 0 };
+            case 'text': return { x: ann.data.x, y: ann.data.y };
+        }
+    }
+
+    private handleResize = (): void => {
         if (!this.canvas || !this.container) return;
-        const rect = this.container.getBoundingClientRect();
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-
-        // 重新绘制
-        if (this.ctx) {
-            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-            const activeAnnotations = this.annotations.filter(
-                a => this.shownAnnotations.has(a.id),
-            );
-            this.renderAnnotations(this.ctx, activeAnnotations);
-        }
-    }
-
-    /**
-     * 绘制圆角矩形（兼容旧浏览器）
-     */
-    private roundRect(
-        ctx: CanvasRenderingContext2D,
-        x: number,
-        y: number,
-        w: number,
-        h: number,
-        r: number,
-    ): void {
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.arcTo(x + w, y, x + w, y + r, r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-        ctx.lineTo(x + r, y + h);
-        ctx.arcTo(x, y + h, x, y + h - r, r);
-        ctx.lineTo(x, y + r);
-        ctx.arcTo(x, y, x + r, y, r);
-        ctx.closePath();
-    }
+        this.canvas.setWidth(this.container.clientWidth);
+        this.canvas.setHeight(this.container.clientHeight);
+        this.canvas.requestRenderAll();
+    };
 }

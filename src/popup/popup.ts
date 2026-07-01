@@ -1,13 +1,10 @@
 /**
  * src/popup/popup.ts — Extension Popup 窗口逻辑
  *
- * 负责：
- * 1. 录制控制（开始/暂停/停止）
- * 2. 显示录制状态和计时
- * 3. 历史会话列表
- * 4. 导出 .rrt 文件
- *
- * TODO M6: 实现完整的 Popup UI 交互逻辑
+ * Popup 仅作为启动器和会话列表：
+ * 1. 点击"开始录制"启动录制，之后工具栏注入页面
+ * 2. 显示历史会话列表
+ * 3. 导出 .rrt 文件
  */
 
 import type {
@@ -23,21 +20,16 @@ import browser from 'webextension-polyfill';
 // ============================================================
 
 const btnRecord = document.getElementById('btn-record') as HTMLButtonElement;
-const btnPause = document.getElementById('btn-pause') as HTMLButtonElement;
-const btnStop = document.getElementById('btn-stop') as HTMLButtonElement;
 const btnExport = document.getElementById('btn-export') as HTMLButtonElement;
-const statusBadge = document.getElementById('status-badge') as HTMLSpanElement;
-const sessionTimer = document.getElementById('session-timer') as HTMLSpanElement;
-const sessionTitle = document.getElementById('session-title') as HTMLDivElement;
-const currentSessionEl = document.getElementById('current-session') as HTMLDivElement;
+const btnClipboard = document.getElementById('btn-clipboard') as HTMLButtonElement;
 const sessionsList = document.getElementById('sessions-list') as HTMLDivElement;
 
 // ============================================================
 // 状态
 // ============================================================
 
-let timerInterval: ReturnType<typeof setInterval> | null = null;
-let recordingStartTime = 0;
+let isRecording = false;
+let isPaused = false;
 let activeSessionId: string | null = null;
 
 // ============================================================
@@ -45,9 +37,38 @@ let activeSessionId: string | null = null;
 // ============================================================
 
 if (btnRecord) btnRecord.addEventListener('click', startRecording);
-if (btnPause) btnPause.addEventListener('click', pauseRecording);
-if (btnStop) btnStop.addEventListener('click', stopRecording);
 if (btnExport) btnExport.addEventListener('click', exportRRT);
+if (btnClipboard) btnClipboard.addEventListener('click', copyToClipboard);
+
+// 打开回放页面
+const btnReplay = document.getElementById('btn-replay') as HTMLButtonElement;
+if (btnReplay) {
+    btnReplay.addEventListener('click', () => {
+        browser.tabs.create({ url: browser.runtime.getURL('src/replayer/index.html') });
+    });
+}
+
+// 监听 SW 推送的录制状态变更
+browser.runtime.onMessage.addListener(onRecordingStateChange);
+
+// ============================================================
+// 初始化：查询当前录制状态
+// ============================================================
+
+async function initRecordingStatus(): Promise<void> {
+    try {
+        const response: BackgroundToContentMessage = await browser.runtime.sendMessage({ action: 'GET_RECORDING_STATUS' });
+        if (response.action === 'RECORDING_STATUS') {
+            const status = response.payload as { isRecording: boolean; isPaused: boolean };
+            if (status.isRecording) {
+                isRecording = true;
+                isPaused = status.isPaused;
+                updateRecordingUI();
+            }
+        }
+    }
+    catch { /* SW 可能尚未就绪 */ }
+}
 
 // ============================================================
 // 录制控制
@@ -55,72 +76,85 @@ if (btnExport) btnExport.addEventListener('click', exportRRT);
 
 async function startRecording(): Promise<void> {
     try {
-        console.log('[BugReplay] Popup: sending START_RECORDING...');
         await browser.runtime.sendMessage({ action: 'START_RECORDING' });
-        console.log('[BugReplay] Popup: START_RECORDING acknowledged');
+
+        isRecording = true;
+        isPaused = false;
+        activeSessionId = null;
+        updateRecordingUI();
     }
     catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error('[BugReplay] Popup: START_RECORDING failed:', msg);
-        if (statusBadge) {
-            statusBadge.textContent = '启动失败';
-            statusBadge.className = 'status-badge status-idle';
-        }
-        return;
-    }
-
-    setUIState('recording');
-    startTimer();
-
-    // 查询当前活跃 tab 的标题
-    try {
-        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.title && sessionTitle) {
-            sessionTitle.textContent = tabs[0].title;
-        }
-    }
-    catch {
-        // tabs query may fail if no permissions, ignore
     }
 }
 
-async function pauseRecording(): Promise<void> {
-    try {
-        await browser.runtime.sendMessage({ action: 'PAUSE_RECORDING' });
-    }
-    catch (err) {
-        console.error('[BugReplay] Popup: PAUSE_RECORDING failed:', err);
-        return;
-    }
-    setUIState('paused');
-    stopTimer();
-}
+function onRecordingStateChange(message: unknown): void {
+    const msg = message as BackgroundToContentMessage;
+    if (msg.action === 'RECORDING_STOPPED') {
+        isRecording = false;
+        isPaused = false;
+        resetUI();
+        loadSessions();
 
-async function stopRecording(): Promise<void> {
-    try {
-        await browser.runtime.sendMessage({ action: 'STOP_RECORDING' });
-    }
-    catch (err) {
-        console.error('[BugReplay] Popup: STOP_RECORDING failed:', err);
-        return;
-    }
-    setUIState('idle');
-    stopTimer();
-    if (currentSessionEl) currentSessionEl.style.display = 'none';
-    loadSessions();
-}
-
-async function exportRRT(): Promise<void> {
-    if (!activeSessionId) {
-        // Pick the most recent session if none is active
-        const response: BackgroundToContentMessage = await browser.runtime.sendMessage({ action: 'GET_SESSIONS' });
-        if (response.action === 'SESSIONS_LIST') {
-            const sessions = response.payload as RecordingSessionSummary[];
-            if (sessions.length > 0) {
-                activeSessionId = sessions[sessions.length - 1].id;
+        if (msg.payload) {
+            const p = msg.payload as { sessionId?: string };
+            if (p.sessionId) {
+                activeSessionId = p.sessionId;
+                if (btnExport) btnExport.disabled = false;
+                if (btnClipboard) btnClipboard.disabled = false;
             }
         }
     }
+    if (msg.action === 'RECORDING_PAUSED') {
+        isPaused = true;
+        updateRecordingUI();
+    }
+    if (msg.action === 'RECORDING_RESUMED') {
+        isPaused = false;
+        updateRecordingUI();
+    }
+}
+
+function setBtnText(btn: HTMLButtonElement, text: string): void {
+    const span = btn.querySelector('span');
+    if (span) span.textContent = text;
+}
+
+function resetUI(): void {
+    if (btnRecord) {
+        btnRecord.disabled = false;
+        setBtnText(btnRecord, '开始录制');
+        btnRecord.style.opacity = '1';
+    }
+}
+
+function updateRecordingUI(): void {
+    if (!isRecording) {
+        resetUI();
+        return;
+    }
+    if (btnRecord) {
+        btnRecord.disabled = true;
+        setBtnText(btnRecord, isPaused ? '已暂停' : '录制中...');
+        btnRecord.style.opacity = '0.6';
+    }
+    if (btnExport) btnExport.disabled = true;
+    if (btnClipboard) btnClipboard.disabled = true;
+}
+
+async function copyToClipboard(): Promise<void> {
+    await ensureActiveSession();
+    if (activeSessionId) {
+        await browser.runtime.sendMessage({
+            action: 'EXPORT_RRT',
+            payload: { sessionId: activeSessionId, clipboard: true },
+        });
+    }
+}
+
+async function exportRRT(): Promise<void> {
+    await ensureActiveSession();
     if (activeSessionId) {
         await browser.runtime.sendMessage({
             action: 'EXPORT_RRT',
@@ -129,67 +163,22 @@ async function exportRRT(): Promise<void> {
     }
 }
 
-// ============================================================
-// UI 状态管理
-// ============================================================
-
-function setUIState(state: 'idle' | 'recording' | 'paused'): void {
-    switch (state) {
-        case 'idle':
-            if (btnRecord) btnRecord.disabled = false;
-            if (btnPause) btnPause.disabled = true;
-            if (btnStop) btnStop.disabled = true;
-            if (btnExport) btnExport.disabled = true;
-            if (statusBadge) {
-                statusBadge.textContent = '就绪';
-                statusBadge.className = 'status-badge status-idle';
-            }
-            break;
-        case 'recording':
-            if (btnRecord) btnRecord.disabled = true;
-            if (btnPause) btnPause.disabled = false;
-            if (btnStop) btnStop.disabled = false;
-            if (btnExport) btnExport.disabled = true;
-            if (statusBadge) {
-                statusBadge.textContent = '录制中';
-                statusBadge.className = 'status-badge status-recording';
-            }
-            if (currentSessionEl) currentSessionEl.style.display = 'block';
-            break;
-        case 'paused':
-            if (btnRecord) btnRecord.disabled = true;
-            if (btnPause) btnPause.disabled = true;
-            if (btnStop) btnStop.disabled = false;
-            if (btnExport) btnExport.disabled = true;
-            if (statusBadge) {
-                statusBadge.textContent = '已暂停';
-                statusBadge.className = 'status-badge status-paused';
-            }
-            break;
+async function ensureActiveSession(): Promise<void> {
+    if (activeSessionId) return;
+    const response: BackgroundToContentMessage = await browser.runtime.sendMessage({ action: 'GET_SESSIONS' });
+    if (response.action === 'SESSIONS_LIST') {
+        const sessions = response.payload as RecordingSessionSummary[];
+        if (sessions.length > 0) activeSessionId = sessions[sessions.length - 1].id;
     }
 }
 
-function startTimer(): void {
-    recordingStartTime = Date.now();
-    updateTimer();
-    timerInterval = setInterval(updateTimer, 1000);
-}
-
-function stopTimer(): void {
-    if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-    }
-}
-
-function updateTimer(): void {
-    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-    const mins = Math.floor(elapsed / 60);
-    const secs = elapsed % 60;
-    if (sessionTimer) {
-        sessionTimer.textContent
-            = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    }
+async function deleteSession(sessionId: string): Promise<void> {
+    await browser.runtime.sendMessage({
+        action: 'DELETE_SESSION',
+        payload: { sessionId },
+    });
+    if (activeSessionId === sessionId) activeSessionId = null;
+    loadSessions();
 }
 
 // ============================================================
@@ -213,15 +202,41 @@ async function loadSessions(): Promise<void> {
                     sessionsList.innerHTML = sessions
                         .map(
                             s => `
-          <div class="session-item">
-            <div class="session-item-title">${escapeHtml(s.title)}</div>
-            <div class="session-item-time">${new Date(s.startTime).toLocaleString()}</div>
+          <div class="session-item${s.id === activeSessionId ? ' session-item-selected' : ''}" data-id="${s.id}">
+            <div class="session-item-main">
+              <div class="session-item-title">${escapeHtml(s.title)}</div>
+              <div class="session-item-time">${new Date(s.startTime).toLocaleString()}</div>
+            </div>
+            <button class="session-item-del" data-del="${s.id}" title="删除">✕</button>
           </div>
         `,
                         )
                         .join('');
+
+                    // 点击选中会话
+                    sessionsList.querySelectorAll('.session-item').forEach((item) => {
+                        item.addEventListener('click', (e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.classList.contains('session-item-del')) return;
+                            const id = (item as HTMLElement).dataset.id!;
+                            activeSessionId = id;
+                            if (btnExport) btnExport.disabled = false;
+                            if (btnClipboard) btnClipboard.disabled = false;
+                            loadSessions(); // 刷新高亮
+                        });
+                    });
+
+                    // 删除按钮
+                    sessionsList.querySelectorAll('.session-item-del').forEach((btn) => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const id = (btn as HTMLElement).dataset.del!;
+                            deleteSession(id);
+                        });
+                    });
                 }
-                if (btnExport) btnExport.disabled = false;
+                if (btnExport) btnExport.disabled = isRecording || !activeSessionId;
+                if (btnClipboard) btnClipboard.disabled = isRecording || !activeSessionId;
             }
         }
     }
@@ -241,4 +256,5 @@ function escapeHtml(str: string): string {
 // ============================================================
 
 console.log(`[${EXTENSION_NAME}] Popup initialized`);
+initRecordingStatus();
 loadSessions();

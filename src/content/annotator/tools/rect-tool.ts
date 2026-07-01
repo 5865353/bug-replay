@@ -1,104 +1,90 @@
 /**
- * src/content/annotator/tools/rect-tool.ts — 矩形框选工具
+ * rect-tool.ts — 矩形框选工具 (Fabric 原生事件)
  *
- * 交互：鼠标按下 → 拖拽 → 释放，绘制矩形选择框
+ * - 拖拽空白区：实时预览 → 松手创建 Rect
+ * - 点击已有对象：交给 Fabric 选中/拖拽/缩放，不创建新对象
  */
 
-import type { RectAnnotation } from '@shared/types';
+import type { CanvasLayer } from '../canvas-layer';
+import type { Canvas, TPointerEventInfo, FabricObject } from 'fabric';
+import { Rect } from 'fabric';
 import { BaseTool } from './base-tool';
 
 export class RectTool extends BaseTool {
+    private fc: Canvas | null = null;
+    private preview: Rect | null = null;
     private startX = 0;
     private startY = 0;
     private isDrawing = false;
 
     activate(): void {
         this.isActive = true;
-        const canvas = this.canvasLayer.getCanvas();
-        if (!canvas) return;
-
-        this.boundMouseDown = this.onMouseDown.bind(this);
-        this.boundMouseMove = this.onMouseMove.bind(this);
-        this.boundMouseUp = this.onMouseUp.bind(this);
-        this.boundKeyDown = this.onKeyDown.bind(this);
-
-        canvas.addEventListener('mousedown', this.boundMouseDown);
-        canvas.addEventListener('mousemove', this.boundMouseMove);
-        canvas.addEventListener('mouseup', this.boundMouseUp);
-        document.addEventListener('keydown', this.boundKeyDown);
+        this.fc = this.canvasLayer.getFabricCanvas();
+        if (!this.fc) return;
+        this.fc.defaultCursor = 'crosshair';
+        this.fc.on('mouse:down', this.onDown);
+        this.fc.on('mouse:move', this.onMove);
+        this.fc.on('mouse:up', this.onUp);
     }
 
-    private onMouseDown(e: MouseEvent): void {
-        if (e.button !== 0) return;
-        const { x, y } = this.getCanvasCoords(e);
-        this.startX = x;
-        this.startY = y;
+    deactivate(): void {
+        if (this.fc) {
+            this.fc.off('mouse:down', this.onDown);
+            this.fc.off('mouse:move', this.onMove);
+            this.fc.off('mouse:up', this.onUp);
+            this.fc.defaultCursor = 'default';
+        }
+        this.removePreview();
+        this.fc = null;
+        super.deactivate();
+    }
+
+    private onDown = (e: TPointerEventInfo): void => {
+        // 点击已有对象 → 不拦截，交给 Fabric 处理
+        if (e.target) return;
+
+        const ptr = this.fc!.getScenePoint(e.e);
+        this.startX = ptr.x;
+        this.startY = ptr.y;
         this.isDrawing = true;
-    }
 
-    private onMouseMove(e: MouseEvent): void {
-        if (!this.isDrawing) return;
-        const { x, y } = this.getCanvasCoords(e);
-        const ctx = this.canvasLayer.getContext();
-        if (!ctx) return;
+        this.preview = new Rect({
+            left: ptr.x, top: ptr.y, width: 0, height: 0,
+            fill: `${this.color}18`, stroke: this.color,
+            strokeWidth: 2, strokeDashArray: [6, 3],
+            selectable: false, evented: false,
+        });
+        this.fc!.add(this.preview);
+    };
 
-        this.canvasLayer.clear();
-        this.canvasLayer.restoreSnapshot();
+    private onMove = (e: TPointerEventInfo): void => {
+        if (!this.isDrawing || !this.preview) return;
+        const ptr = this.fc!.getScenePoint(e.e);
+        const w = ptr.x - this.startX;
+        const h = ptr.y - this.startY;
+        this.preview.set({
+            left: Math.min(this.startX, ptr.x),
+            top: Math.min(this.startY, ptr.y),
+            width: Math.abs(w),
+            height: Math.abs(h),
+        });
+        this.fc!.requestRenderAll();
+    };
 
-        const width = x - this.startX;
-        const height = y - this.startY;
-
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 3]);
-        ctx.strokeRect(this.startX, this.startY, width, height);
-        ctx.setLineDash([]);
-
-        // 半透明填充
-        ctx.fillStyle = `${this.color}20`;
-        ctx.fillRect(this.startX, this.startY, width, height);
-    }
-
-    private onMouseUp(e: MouseEvent): void {
+    private onUp = (e: TPointerEventInfo): void => {
         if (!this.isDrawing) return;
         this.isDrawing = false;
+        this.removePreview();
 
-        const { x, y } = this.getCanvasCoords(e);
-        const width = Math.abs(x - this.startX);
-        const height = Math.abs(y - this.startY);
+        const ptr = this.fc!.getScenePoint(e.e);
+        const w = Math.abs(ptr.x - this.startX);
+        const h = Math.abs(ptr.y - this.startY);
+        if (w < 5 || h < 5) return;
 
-        // 忽略过小的选区（可能是误点击）
-        if (width < 5 || height < 5) {
-            this.canvasLayer.clear();
-            this.canvasLayer.restoreSnapshot();
-            return;
-        }
+        this.canvasLayer.addRect(this.startX, this.startY, ptr.x - this.startX, ptr.y - this.startY, this.color);
+    };
 
-        const annotation: RectAnnotation = {
-            id: this.generateId(),
-            type: 'rect',
-            timestamp: Date.now(),
-            sessionId: this.sessionId,
-            data: {
-                x: Math.min(this.startX, x),
-                y: Math.min(this.startY, y),
-                width,
-                height,
-                strokeColor: this.color,
-                strokeWidth: 2,
-                fillColor: `${this.color}20`,
-            },
-        };
-
-        this.onComplete(annotation);
-        this.canvasLayer.drawAnnotation(annotation);
-    }
-
-    private onKeyDown(e: KeyboardEvent): void {
-        if (e.key === 'Escape' && this.isDrawing) {
-            this.isDrawing = false;
-            this.canvasLayer.clear();
-            this.canvasLayer.restoreSnapshot();
-        }
+    private removePreview(): void {
+        if (this.preview) { this.fc?.remove(this.preview); this.preview = null; }
     }
 }

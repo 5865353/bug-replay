@@ -1,127 +1,85 @@
 /**
- * src/content/annotator/tools/arrow-tool.ts — 箭头指向工具
+ * arrow-tool.ts — 箭头指向工具 (Fabric 原生事件)
  *
- * 交互：鼠标按下（起点）→ 拖拽 → 释放（终点），绘制带箭头的线段
+ * - 拖拽空白区：实时预览 → 松手创建箭头
+ * - 点击已有对象：交给 Fabric 选中/拖拽，不创建新对象
  */
 
-import type { ArrowAnnotation } from '@shared/types';
+import type { Canvas, TPointerEventInfo } from 'fabric';
+import { Line } from 'fabric';
+import type { CanvasLayer } from '../canvas-layer';
 import { BaseTool } from './base-tool';
 
 export class ArrowTool extends BaseTool {
+    private fc: Canvas | null = null;
+    private preview: Line | null = null;
     private startX = 0;
     private startY = 0;
     private isDrawing = false;
 
     activate(): void {
         this.isActive = true;
-        const canvas = this.canvasLayer.getCanvas();
-        if (!canvas) return;
-
-        this.boundMouseDown = this.onMouseDown.bind(this);
-        this.boundMouseMove = this.onMouseMove.bind(this);
-        this.boundMouseUp = this.onMouseUp.bind(this);
-        this.boundKeyDown = this.onKeyDown.bind(this);
-
-        canvas.addEventListener('mousedown', this.boundMouseDown);
-        canvas.addEventListener('mousemove', this.boundMouseMove);
-        canvas.addEventListener('mouseup', this.boundMouseUp);
-        document.addEventListener('keydown', this.boundKeyDown);
+        this.fc = this.canvasLayer.getFabricCanvas();
+        if (!this.fc) return;
+        this.fc.defaultCursor = 'crosshair';
+        this.fc.on('mouse:down', this.onDown);
+        this.fc.on('mouse:move', this.onMove);
+        this.fc.on('mouse:up', this.onUp);
     }
 
-    private onMouseDown(e: MouseEvent): void {
-        if (e.button !== 0) return;
-        const { x, y } = this.getCanvasCoords(e);
-        this.startX = x;
-        this.startY = y;
+    deactivate(): void {
+        if (this.fc) {
+            this.fc.off('mouse:down', this.onDown);
+            this.fc.off('mouse:move', this.onMove);
+            this.fc.off('mouse:up', this.onUp);
+            this.fc.defaultCursor = 'default';
+        }
+        this.removePreview();
+        this.fc = null;
+        super.deactivate();
+    }
+
+    private onDown = (e: TPointerEventInfo): void => {
+        if (e.target) return;
+        const ptr = this.fc!.getScenePoint(e.e);
+        this.startX = ptr.x;
+        this.startY = ptr.y;
         this.isDrawing = true;
-    }
+        this.updatePreview(ptr.x, ptr.y);
+    };
 
-    private onMouseMove(e: MouseEvent): void {
+    private onMove = (e: TPointerEventInfo): void => {
         if (!this.isDrawing) return;
-        const { x, y } = this.getCanvasCoords(e);
-        const ctx = this.canvasLayer.getContext();
-        if (!ctx) return;
+        const ptr = this.fc!.getScenePoint(e.e);
+        this.updatePreview(ptr.x, ptr.y);
+    };
 
-        this.canvasLayer.clear();
-        this.canvasLayer.restoreSnapshot();
-
-        this.drawArrow(ctx, this.startX, this.startY, x, y);
-    }
-
-    private onMouseUp(e: MouseEvent): void {
+    private onUp = (e: TPointerEventInfo): void => {
         if (!this.isDrawing) return;
         this.isDrawing = false;
+        this.removePreview();
 
-        const { x, y } = this.getCanvasCoords(e);
-        const dx = x - this.startX;
-        const dy = y - this.startY;
+        const ptr = this.fc!.getScenePoint(e.e);
+        const dx = ptr.x - this.startX;
+        const dy = ptr.y - this.startY;
+        if (Math.sqrt(dx * dx + dy * dy) < 10) return;
 
-        // 忽略过短的箭头
-        if (Math.sqrt(dx * dx + dy * dy) < 10) {
-            this.canvasLayer.clear();
-            this.canvasLayer.restoreSnapshot();
-            return;
-        }
+        this.canvasLayer.addArrow(this.startX, this.startY, ptr.x, ptr.y, this.color);
+    };
 
-        const annotation: ArrowAnnotation = {
-            id: this.generateId(),
-            type: 'arrow',
-            timestamp: Date.now(),
-            sessionId: this.sessionId,
-            data: {
-                startX: this.startX,
-                startY: this.startY,
-                endX: x,
-                endY: y,
-                color: this.color,
-                lineWidth: 2,
-            },
-        };
-
-        this.onComplete(annotation);
-        this.canvasLayer.drawAnnotation(annotation);
+    private updatePreview(ex: number, ey: number): void {
+        this.removePreview();
+        this.preview = new Line([this.startX, this.startY, ex, ey], {
+            stroke: this.color,
+            strokeWidth: 2,
+            selectable: false, evented: false,
+            strokeDashArray: [6, 3],
+        });
+        this.fc!.add(this.preview);
+        this.fc!.requestRenderAll();
     }
 
-    /**
-     * 绘制带箭头的线段
-     */
-    private drawArrow(
-        ctx: CanvasRenderingContext2D,
-        fromX: number,
-        fromY: number,
-        toX: number,
-        toY: number,
-    ): void {
-        const headLength = 12;
-        const angle = Math.atan2(toY - fromY, toX - fromX);
-
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-        ctx.stroke();
-
-        // 箭头头部
-        ctx.beginPath();
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(
-            toX - headLength * Math.cos(angle - Math.PI / 6),
-            toY - headLength * Math.sin(angle - Math.PI / 6),
-        );
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(
-            toX - headLength * Math.cos(angle + Math.PI / 6),
-            toY - headLength * Math.sin(angle + Math.PI / 6),
-        );
-        ctx.stroke();
-    }
-
-    private onKeyDown(e: KeyboardEvent): void {
-        if (e.key === 'Escape' && this.isDrawing) {
-            this.isDrawing = false;
-            this.canvasLayer.clear();
-            this.canvasLayer.restoreSnapshot();
-        }
+    private removePreview(): void {
+        if (this.preview) { this.fc?.remove(this.preview); this.preview = null; }
     }
 }

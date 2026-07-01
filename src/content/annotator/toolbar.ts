@@ -1,21 +1,35 @@
 /**
  * src/content/annotator/toolbar.ts
  *
- * 悬浮工具栏 UI 组件
- * - 位置：页面右侧悬浮，可拖拽移动
- * - 按钮：矩形 / 箭头 / 文本 / 画笔 / 撤销 / 清除
- * - 颜色选择器
+ * 统一悬浮工具栏 UI 组件
+ * - 录制控制：暂停/继续、停止、计时器
+ * - 标注工具：矩形 / 箭头 / 文本 / 画笔
+ * - 颜色选择器 + 撤销 / 清除
+ * - 支持拖拽移动
  */
 
 import type { AnnotationToolType } from '@shared/types';
 import { ANNOTATION_COLORS } from '@shared/types';
 
+// ============================================================
+// 回调接口
+// ============================================================
+
 export interface ToolbarCallbacks {
+    // ---- 录制控制 ----
+    onPause: () => void;
+    onResume: () => void;
+    onStop: () => void;
+    // ---- 标注工具 ----
     onToolSelect: (tool: AnnotationToolType | null) => void;
     onColorChange: (color: string) => void;
     onUndo: () => void;
     onClearAll: () => void;
 }
+
+// ============================================================
+// 工具按钮配置
+// ============================================================
 
 interface ToolButtonConfig {
     type: AnnotationToolType;
@@ -24,154 +38,217 @@ interface ToolButtonConfig {
 }
 
 const TOOL_BUTTONS: ToolButtonConfig[] = [
-    { type: 'rect', icon: '⬜', label: '矩形框选' },
-    { type: 'arrow', icon: '➡️', label: '箭头指向' },
-    { type: 'text', icon: '📝', label: '文本批注' },
-    { type: 'freehand', icon: '✏️', label: '自由画笔' },
+    { type: 'rect', icon: 'rect', label: '矩形框选' },
+    { type: 'arrow', icon: 'arrow', label: '箭头指向' },
+    { type: 'text', icon: 'text', label: '文本批注' },
+    { type: 'freehand', icon: 'freehand', label: '自由画笔' },
 ];
+
+// ============================================================
+// 内联 SVG 图标
+// ============================================================
+
+const SVG_ICONS: Record<string, string> = {
+    drag: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round"><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/></svg>`,
+    pause: `<svg width="16" height="16" viewBox="0 0 24 24" fill="#374151"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>`,
+    play: `<svg width="16" height="16" viewBox="0 0 24 24" fill="#374151"><polygon points="6,3 20,12 6,21"/></svg>`,
+    stop: `<svg width="16" height="16" viewBox="0 0 24 24" fill="#374151"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>`,
+    rect: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1"/></svg>`,
+    arrow: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12 5 19 5 19 12"/></svg>`,
+    text: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 7 5 4 19 4 19 7"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/></svg>`,
+    freehand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17c2-4 6-8 10-6s4 6 2 8c-2 3-5 1-4-2s4-5 8-4"/></svg>`,
+    undo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M4 16a9 9 0 1 1 1-10"/></svg>`,
+    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M8 6v14h8V6M10 6V4h4v4"/></svg>`,
+};
+
+function createSvg(name: string): HTMLElement {
+    const span = document.createElement('span');
+    span.innerHTML = SVG_ICONS[name] || '';
+    span.style.cssText = 'display:flex;align-items:center;justify-content:center;';
+    return span;
+}
+// Toolbar 类
+// ============================================================
 
 export class Toolbar {
     private container: HTMLDivElement | null = null;
     private callbacks: ToolbarCallbacks;
     private selectedTool: AnnotationToolType | null = null;
     private selectedColor = ANNOTATION_COLORS[0];
+
+    // 拖拽状态
     private isDragging = false;
     private dragStartX = 0;
     private dragStartY = 0;
-    private toolbarX = 0;
-    private toolbarY = 0;
+    private toolbarStartX = 0;
+    private toolbarStartY = 0;
+
+    // 录制状态
+    private recordingState: 'recording' | 'paused' = 'recording';
+    private timerEl: HTMLSpanElement | null = null;
+    private timerInterval: ReturnType<typeof setInterval> | null = null;
+    private recordingStartTime = 0;
+    private pauseBtn: HTMLButtonElement | null = null;
+    private stopBtn: HTMLButtonElement | null = null;
+    private toolButtons: Map<string, HTMLButtonElement> = new Map();
 
     constructor(callbacks: ToolbarCallbacks) {
         this.callbacks = callbacks;
     }
 
-    /**
-     * 创建并显示工具栏
-     */
+    // ============================================================
+    // 显示 / 隐藏
+    // ============================================================
+
     show(): void {
         if (this.container) return;
         this.container = this.buildToolbar();
         document.body.appendChild(this.container);
+        this.recordingStartTime = Date.now();
+        this.startTimer();
     }
 
-    /**
-     * 隐藏并销毁工具栏
-     */
     hide(): void {
+        this.stopTimer();
         if (this.container) {
             this.container.remove();
             this.container = null;
         }
     }
 
-    /**
-     * 获取当前选中的颜色
-     */
     get currentColor(): string {
         return this.selectedColor;
     }
 
-    /**
-     * 构建工具栏 DOM
-     */
+    // ============================================================
+    // 录制状态更新
+    // ============================================================
+
+    setPaused(): void {
+        this.recordingState = 'paused';
+        this.stopTimer();
+        if (this.pauseBtn) {
+            this.pauseBtn.innerHTML = '';
+            this.pauseBtn.appendChild(createSvg('play'));
+            this.pauseBtn.title = '继续录制';
+        }
+    }
+
+    setResumed(): void {
+        this.recordingState = 'recording';
+        this.recordingStartTime = Date.now();
+        this.startTimer();
+        if (this.pauseBtn) {
+            this.pauseBtn.innerHTML = '';
+            this.pauseBtn.appendChild(createSvg('pause'));
+            this.pauseBtn.title = '暂停录制';
+        }
+    }
+
+    // ============================================================
+    // 构建 DOM
+    // ============================================================
+
     private buildToolbar(): HTMLDivElement {
         const el = document.createElement('div');
-        el.id = 'bugreplay-annotator-toolbar';
+        el.id = 'bugreplay-toolbar';
         el.style.cssText = `
             position: fixed;
-            top: 80px;
-            right: 16px;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
             z-index: 2147483647;
             background: #ffffff;
             border-radius: 12px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-            padding: 8px;
+            padding: 6px 10px;
             display: flex;
-            flex-direction: column;
-            gap: 4px;
-            font-family: system-ui, sans-serif;
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+            font-family: system-ui, -apple-system, sans-serif;
             user-select: none;
-            width: 52px;
-            cursor: grab;
+            cursor: default;
         `;
 
         // ---- 拖拽手柄 ----
-        const handle = document.createElement('div');
-        handle.style.cssText = `
-            display: flex;
-            justify-content: center;
-            padding: 4px 0 6px 0;
-            border-bottom: 1px solid #e5e7eb;
-            margin-bottom: 4px;
-            cursor: grab;
-        `;
-        handle.innerHTML = '<span style="color:#9ca3af;font-size:12px;letter-spacing:2px;">⋮⋮</span>';
+        const handle = this.createDragHandle();
         el.appendChild(handle);
+
+        // ---- 录制指示器 + 计时器 ----
+        const dot = document.createElement('span');
+        dot.style.cssText = 'width:8px;height:8px;background:#ef4444;border-radius:50%;flex-shrink:0;animation:bugreplay-pulse 1.5s infinite;';
+        el.appendChild(dot);
+
+        this.timerEl = document.createElement('span');
+        this.timerEl.style.cssText = 'font-size:13px;font-weight:600;color:#ef4444;font-variant-numeric:tabular-nums;';
+        this.timerEl.textContent = '00:00';
+        el.appendChild(this.timerEl);
+
+        // ---- 分隔线 ----
+        el.appendChild(this.createDivider());
+
+        // ---- 暂停 / 停止 ----
+        this.pauseBtn = this.createIconBtn('pause', '暂停录制', () => {
+            if (this.recordingState === 'recording') { this.setPaused(); this.callbacks.onPause(); }
+            else { this.setResumed(); this.callbacks.onResume(); }
+        });
+        el.appendChild(this.pauseBtn);
+
+        this.stopBtn = this.createIconBtn('stop', '停止录制', () => this.callbacks.onStop());
+        el.appendChild(this.stopBtn);
+
+        // ---- 分隔线 ----
+        el.appendChild(this.createDivider());
 
         // ---- 工具按钮 ----
         for (const btn of TOOL_BUTTONS) {
             const toolBtn = this.createToolButton(btn);
+            this.toolButtons.set(btn.type, toolBtn);
             el.appendChild(toolBtn);
         }
 
         // ---- 分隔线 ----
-        const divider = document.createElement('div');
-        divider.style.cssText = `
-            border-top: 1px solid #e5e7eb;
-            margin: 4px 0;
-        `;
-        el.appendChild(divider);
+        el.appendChild(this.createDivider());
 
         // ---- 颜色选择器 ----
-        const colorPicker = this.createColorPicker();
-        el.appendChild(colorPicker);
+        el.appendChild(this.createColorPicker());
 
         // ---- 分隔线 ----
-        const divider2 = document.createElement('div');
-        divider2.style.cssText = `
-            border-top: 1px solid #e5e7eb;
-            margin: 4px 0;
-        `;
-        el.appendChild(divider2);
+        el.appendChild(this.createDivider());
 
-        // ---- 操作按钮 ----
-        const undoBtn = this.createActionButton('↩', '撤销', () => this.callbacks.onUndo());
-        el.appendChild(undoBtn);
-
-        const clearBtn = this.createActionButton('🗑', '清除全部', () => this.callbacks.onClearAll());
-        el.appendChild(clearBtn);
+        // ---- 撤销 + 清除 ----
+        el.appendChild(this.createIconBtn('undo', '撤销', () => this.callbacks.onUndo()));
+        el.appendChild(this.createIconBtn('trash', '清除全部', () => this.callbacks.onClearAll()));
 
         // ---- 拖拽事件 ----
-        handle.addEventListener('mousedown', this.onDragStart.bind(this));
-        document.addEventListener('mousemove', this.onDragMove.bind(this));
-        document.addEventListener('mouseup', this.onDragEnd.bind(this));
+        handle.addEventListener('mousedown', this.onDragStart);
+        document.addEventListener('mousemove', this.onDragMove);
+        document.addEventListener('mouseup', this.onDragEnd);
 
         return el;
     }
 
-    /**
-     * 创建工具按钮
-     */
+    // ============================================================
+    // 子组件构建
+    // ============================================================
+
+    private createDragHandle(): HTMLDivElement {
+        const handle = document.createElement('div');
+        handle.style.cssText = `
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 2px; cursor: grab; color: #9ca3af;
+            font-size: 14px; letter-spacing: 1px;
+        `;
+        handle.appendChild(createSvg('drag'));
+        return handle;
+    }
+
     private createToolButton(config: ToolButtonConfig): HTMLButtonElement {
         const btn = document.createElement('button');
         btn.title = config.label;
-        btn.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border: 2px solid transparent;
-            border-radius: 8px;
-            background: transparent;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.15s ease;
-            padding: 0;
-            margin: 0 auto;
-        `;
-
-        btn.textContent = config.icon;
+        btn.style.cssText = this.iconBtnStyle();
+        btn.appendChild(createSvg(config.icon));
 
         btn.addEventListener('mouseenter', () => {
             if (this.selectedTool !== config.type) {
@@ -187,7 +264,6 @@ export class Toolbar {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (this.selectedTool === config.type) {
-                // 再次点击取消选择
                 this.deselectAllTools();
                 this.callbacks.onToolSelect(null);
             } else {
@@ -199,156 +275,154 @@ export class Toolbar {
         return btn;
     }
 
-    /**
-     * 创建颜色选择器
-     */
-    private createColorPicker(): HTMLDivElement {
-        const container = document.createElement('div');
-        container.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            align-items: center;
+    private createColorPicker(): HTMLInputElement {
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = ANNOTATION_COLORS[0];
+        input.title = '选择颜色';
+        input.style.cssText = `
+            width: 26px; height: 26px; border: 2px solid #e5e7eb; border-radius: 6px;
+            cursor: pointer; padding: 0; background: none; flex-shrink: 0;
         `;
-
-        for (const color of ANNOTATION_COLORS) {
-            const dot = document.createElement('button');
-            dot.style.cssText = `
-                width: 20px;
-                height: 20px;
-                border-radius: 50%;
-                background: ${color};
-                border: 2px solid ${this.selectedColor === color ? '#1f2937' : 'transparent'};
-                cursor: pointer;
-                padding: 0;
-                transition: border-color 0.15s ease;
-                flex-shrink: 0;
-            `;
-            dot.title = color;
-            dot.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.selectedColor = color;
-                this.callbacks.onColorChange(color);
-                // 更新所有颜色按钮边框
-                const allDots = container.querySelectorAll('button');
-                allDots.forEach((d) => {
-                    d.style.borderColor = 'transparent';
-                });
-                dot.style.borderColor = '#1f2937';
-            });
-            container.appendChild(dot);
-        }
-
-        return container;
+        input.addEventListener('input', () => {
+            this.selectedColor = input.value;
+            this.callbacks.onColorChange(input.value);
+        });
+        input.addEventListener('click', (e) => e.stopPropagation());
+        return input;
     }
 
-    /**
-     * 创建操作按钮
-     */
-    private createActionButton(
-        icon: string,
-        label: string,
-        onClick: () => void,
-    ): HTMLButtonElement {
+    private createIconBtn(iconName: string, title: string, onClick: () => void): HTMLButtonElement {
         const btn = document.createElement('button');
-        btn.title = label;
-        btn.style.cssText = `
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 36px;
-            height: 36px;
-            border: none;
-            border-radius: 8px;
-            background: transparent;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background 0.15s ease;
-            margin: 0 auto;
-        `;
-        btn.textContent = icon;
-
-        btn.addEventListener('mouseenter', () => {
-            btn.style.background = '#f3f4f6';
-        });
-        btn.addEventListener('mouseleave', () => {
-            btn.style.background = 'transparent';
-        });
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            onClick();
-        });
-
+        btn.title = title;
+        btn.style.cssText = this.iconBtnStyle();
+        btn.appendChild(createSvg(iconName));
+        btn.addEventListener('mouseenter', () => { btn.style.background = '#f3f4f6'; });
+        btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
+        btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
         return btn;
     }
 
-    /**
-     * 选中工具（高亮按钮）
-     */
+    private createDivider(): HTMLDivElement {
+        const div = document.createElement('div');
+        div.style.cssText = 'border-left: 1px solid #e5e7eb; width: 0; height: 24px; margin: 0 2px;';
+        return div;
+    }
+
+    private iconBtnStyle(): string {
+        return `
+            display: flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border: 2px solid transparent;
+            border-radius: 8px; background: transparent; cursor: pointer;
+            font-size: 16px; transition: all 0.15s ease; padding: 0;
+            flex-shrink: 0;
+        `;
+    }
+
+    // ============================================================
+    // 工具选中状态
+    // ============================================================
+
     private selectTool(type: AnnotationToolType): void {
         this.selectedTool = type;
         this.updateToolButtonStyles();
     }
 
-    /**
-     * 取消所有工具选中状态
-     */
     private deselectAllTools(): void {
         this.selectedTool = null;
         this.updateToolButtonStyles();
     }
 
-    /**
-     * 更新工具按钮样式
-     */
     private updateToolButtonStyles(): void {
-        if (!this.container) return;
-        const buttons = this.container.querySelectorAll('button');
-        // 跳过颜色按钮和操作按钮，只更新工具按钮
-        let toolBtnIndex = 0;
-        for (const btn of buttons) {
-            const title = btn.title;
-            if (TOOL_BUTTONS.some(t => t.label === title)) {
-                if (TOOL_BUTTONS[toolBtnIndex]?.type === this.selectedTool) {
-                    btn.style.borderColor = this.selectedColor;
-                    btn.style.background = `${this.selectedColor}15`;
-                } else {
-                    btn.style.borderColor = 'transparent';
-                    btn.style.background = 'transparent';
-                }
-                toolBtnIndex++;
+        for (const [type, btn] of this.toolButtons) {
+            if (type === this.selectedTool) {
+                btn.style.borderColor = this.selectedColor;
+                btn.style.background = `${this.selectedColor}18`;
+            } else {
+                btn.style.borderColor = 'transparent';
+                btn.style.background = 'transparent';
             }
         }
     }
 
     // ============================================================
-    // 拖拽逻辑
+    // 计时器
     // ============================================================
 
-    private onDragStart(e: MouseEvent): void {
+    private startTimer(): void {
+        this.stopTimer();
+        const update = () => {
+            if (!this.timerEl) return;
+            const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            this.timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        };
+        update();
+        this.timerInterval = setInterval(update, 1000);
+    }
+
+    private stopTimer(): void {
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+
+    // ============================================================
+    // 拖拽
+    // ============================================================
+
+    private onDragStart = (e: MouseEvent): void => {
         if (!this.container) return;
         this.isDragging = true;
         this.dragStartX = e.clientX;
         this.dragStartY = e.clientY;
-        const rect = this.container.getBoundingClientRect();
-        this.toolbarX = rect.left;
-        this.toolbarY = rect.top;
+        const r = this.container.getBoundingClientRect();
+        this.toolbarStartX = r.left;
+        this.toolbarStartY = r.top;
+        this.container.style.width = `${r.width}px`;
+        this.container.style.height = `${r.height}px`;
+        this.container.style.left = `${r.left}px`;
+        this.container.style.top = `${r.top}px`;
+        this.container.style.transform = 'none';
         this.container.style.cursor = 'grabbing';
         e.preventDefault();
-    }
+    };
 
-    private onDragMove(e: MouseEvent): void {
+    private onDragMove = (e: MouseEvent): void => {
         if (!this.isDragging || !this.container) return;
         const dx = e.clientX - this.dragStartX;
         const dy = e.clientY - this.dragStartY;
-        this.container.style.right = 'auto';
-        this.container.style.top = `${Math.max(0, this.toolbarY + dy)}px`;
-        this.container.style.left = `${Math.max(0, this.toolbarX + dx)}px`;
-    }
 
-    private onDragEnd(): void {
-        if (!this.isDragging || !this.container) return;
+        let newLeft = this.toolbarStartX + dx;
+        let newTop = this.toolbarStartY + dy;
+
+        const maxLeft = window.innerWidth - this.container.offsetWidth - 8;
+        const maxTop = window.innerHeight - this.container.offsetHeight - 8;
+        newLeft = Math.max(8, Math.min(newLeft, maxLeft));
+        newTop = Math.max(8, Math.min(newTop, maxTop));
+
+        this.container.style.left = `${newLeft}px`;
+        this.container.style.top = `${newTop}px`;
+    };
+
+    private onDragEnd = (): void => {
+        if (!this.isDragging) return;
         this.isDragging = false;
-        this.container.style.cursor = 'grab';
+        if (this.container) {
+            this.container.style.cursor = 'default';
+        }
+    };
+
+    // ============================================================
+    // 销毁
+    // ============================================================
+
+    destroy(): void {
+        this.stopTimer();
+        document.removeEventListener('mousemove', this.onDragMove);
+        document.removeEventListener('mouseup', this.onDragEnd);
+        this.hide();
     }
 }
