@@ -11,6 +11,9 @@
         "module": "ESNext",
         "moduleResolution": "bundler",
         "paths": {
+            "@/*": [
+                "src/*"
+            ],
             "@shared/*": [
                 "src/shared/*"
             ],
@@ -22,6 +25,9 @@
             ],
             "@replayer/*": [
                 "src/replayer/*"
+            ],
+            "@popup/*": [
+                "src/popup/*"
             ]
         },
         "resolveJsonModule": true,
@@ -36,7 +42,10 @@
         "skipLibCheck": true
     },
     "include": [
-        "src/**/*.ts"
+        "src/**/*.ts",
+        "src/**/*.vue",
+        "src/**/*.d.ts",
+        "*.config.ts"
     ],
     "exclude": [
         "node_modules",

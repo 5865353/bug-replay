@@ -1,0 +1,27 @@
+// Popup 全局样式
+// 使用 UnoCSS atomic CSS + SCSS 辅助样式
+
+body {
+    width: 340px;
+    min-height: 420px;
+    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    color: #1f2937;
+    background: #f9fafb;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 420px;
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+}
