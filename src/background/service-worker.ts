@@ -215,8 +215,12 @@ async function handleMessage(
 
                 // 记录录制源 origin（用于跨标签页检测）
                 const url = tabs[0]?.url || '';
-                try { activeRecordingOrigin = new URL(url).origin; }
-                catch { activeRecordingOrigin = ''; }
+                try {
+                    activeRecordingOrigin = new URL(url).origin;
+                }
+                catch {
+                    activeRecordingOrigin = '';
+                }
 
                 // 生成 session ID（由第一个 tab 的 content script 创建）
                 activeSessionId = '';
@@ -287,7 +291,9 @@ async function handleMessage(
         case 'PAUSE_RECORDING': {
             isPaused = true;
             for (const tid of activeRecordingTabIds) {
-                try { await sendMessageToTab(tid, { action: 'RECORDING_PAUSED' }); }
+                try {
+                    await sendMessageToTab(tid, { action: 'RECORDING_PAUSED' });
+                }
                 catch { /* */ }
             }
             return { action: 'RECORDING_PAUSED', requestId };
@@ -296,7 +302,9 @@ async function handleMessage(
         case 'RESUME_RECORDING': {
             isPaused = false;
             for (const tid of activeRecordingTabIds) {
-                try { await sendMessageToTab(tid, { action: 'RECORDING_RESUMED' }); }
+                try {
+                    await sendMessageToTab(tid, { action: 'RECORDING_RESUMED' });
+                }
                 catch { /* */ }
             }
             return { action: 'RECORDING_RESUMED', requestId };
@@ -326,6 +334,19 @@ async function handleMessage(
             return {
                 action: 'SESSIONS_LIST',
                 payload: summaries,
+                requestId,
+            };
+        }
+
+        case 'GET_SESSION': {
+            const { sessionId } = payload as { sessionId: string };
+            const session = await storageManager.getSession(sessionId);
+            if (!session) {
+                return { action: 'ERROR', payload: 'Session not found', requestId };
+            }
+            return {
+                action: 'SESSION_DATA',
+                payload: session,
                 requestId,
             };
         }

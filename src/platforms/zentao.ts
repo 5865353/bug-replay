@@ -112,7 +112,7 @@ export class ZentaoPlatform extends BasePlatform {
 
             // 2. 构建 Bug 数据
             const meta = rrtPackage.metadata;
-            const env = rrtPackage.environment;
+            const _env = rrtPackage.environment;
 
             const steps = this.buildSteps(rrtPackage);
 

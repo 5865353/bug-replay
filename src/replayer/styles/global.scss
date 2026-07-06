@@ -1,39 +1,68 @@
-// Replayer 全局样式
+// Replayer 全局样式 — Vant 暗色主题
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+// Vant CSS 变量暗色覆盖
+:root {
+  --van-nav-bar-background: #18181f;
+  --van-nav-bar-text-color: #cdd6f4;
+  --van-nav-bar-icon-color: #cdd6f4;
+  --van-tabs-card-height: 34px;
+  --van-tab-font-size: 12px;
+  --van-button-default-background: #2a2a38;
+  --van-button-default-color: #cdd6f4;
+  --van-button-default-border-color: #3a3a48;
+  --van-button-primary-background: #cba6f7;
+  --van-button-primary-color: #0f0f14;
+  --van-button-small-height: 30px;
+  --van-button-mini-height: 24px;
+  --van-field-input-text-color: #cdd6f4;
+  --van-field-placeholder-text-color: #585b70;
+  --van-slider-bar-height: 4px;
+  --van-empty-description-color: #585b70;
+  --van-tag-primary-color: #cba6f7;
 }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-    background: #0f0f14;
-    color: #cdd6f4;
-    height: 100vh;
-    overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a10;
+  color: #cdd6f4;
+  height: 100vh;
+  overflow: hidden;
 }
 
-#app {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+#app { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a38; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #404050; }
+
+// Vant tab 暗色适配
+.van-tabs__nav--card {
+  border: none !important;
+  margin: 0 !important;
+}
+.van-tab--card {
+  border-right-color: #2a2a38 !important;
+  background: #18181f !important;
+  color: #585b70 !important;
+}
+.van-tab--card.van-tab--active {
+  background: #0f0f14 !important;
+  color: #cba6f7 !important;
 }
 
-::-webkit-scrollbar {
-    width: 5px;
-}
+// van-field 暗色
+.van-field__control { background: transparent !important; }
+.van-field { background: #0f0f14 !important; padding: 6px 10px !important; }
 
-::-webkit-scrollbar-track {
-    background: transparent;
-}
+// slider
+.van-slider { padding: 0 8px !important; }
 
-::-webkit-scrollbar-thumb {
-    background: #2a2a38;
-    border-radius: 4px;
-}
+// empty
+.van-empty { padding: 24px 0 !important; }
+.van-empty__image { opacity: 0.3; }
 
-::-webkit-scrollbar-thumb:hover {
-    background: #404050;
-}
+// nav bar border
+.van-nav-bar { border-bottom: 1px solid #2a2a38 !important; }

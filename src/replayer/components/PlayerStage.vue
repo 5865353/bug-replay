@@ -1,91 +1,137 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue'
-import type { RRTPackage } from '@shared/types'
+import type { RRTPackage } from '@shared/types';
+import { ref } from 'vue';
 
-const props = defineProps<{
-  hasLoaded: boolean
-  currentPackage: RRTPackage | null
-}>()
+defineProps<{
+    hasLoaded: boolean;
+    currentPackage: RRTPackage | null;
+}>();
 
 const emit = defineEmits<{
-  dropFile: [file: File]
-  fileSelected: [event: Event]
-}>()
+    dropFile: [file: File];
+    fileSelected: [event: Event];
+}>();
 
-const playerContainer = ref<HTMLDivElement>()
-const stageEl = ref<HTMLDivElement>()
-const fileInput = ref<HTMLInputElement>()
-const isDragOver = ref(false)
+const playerContainer = ref<HTMLDivElement>();
+const fileInput = ref<HTMLInputElement>();
+const isDragOver = ref(false);
 
-// Signal to useReplayer that DOM is ready
-const stageReady = ref(false)
+defineExpose({ playerContainer });
 
-defineExpose({ playerContainer, stageEl })
-
-onMounted(() => {
-  stageReady.value = true
-})
-
-// Drag & drop handlers
 function onDragOver(e: DragEvent) {
-  e.preventDefault()
-  isDragOver.value = true
+    e.preventDefault();
+    isDragOver.value = true;
 }
 function onDragLeave() {
-  isDragOver.value = false
+    isDragOver.value = false;
 }
 function onDrop(e: DragEvent) {
-  e.preventDefault()
-  isDragOver.value = false
-  const file = e.dataTransfer?.files?.[0]
-  if (file) emit('dropFile', file)
+    e.preventDefault();
+    isDragOver.value = false;
+    const file = e.dataTransfer?.files?.[0];
+    if (file)
+        emit('dropFile', file);
 }
-
 function onClickDropZone() {
-  fileInput.value?.click()
+    fileInput.value?.click();
 }
 </script>
 
 <template>
-  <div
-    ref="stageEl"
-    class="flex-1 relative overflow-hidden flex items-center justify-center"
-    style="background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a10 70%);"
-  >
-    <!-- Ambient glow -->
-    <div class="absolute -inset-15 z-0 pointer-events-none"
-      style="background: radial-gradient(circle at 30% 50%, rgba(203,166,247,0.06) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(180,190,254,0.04) 0%, transparent 50%);" />
-
-    <div class="relative z-1 overflow-hidden rounded-lg w-full h-full"
-      style="box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);">
-      <!-- Drop zone -->
-      <div
-        v-if="!hasLoaded"
-        class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3.5 text-text3 bg-bg border-2 border-dashed rounded-lg cursor-pointer transition-all"
-        :class="isDragOver ? 'border-accent! text-text2!' : 'border-border'"
-        @click="onClickDropZone"
-        @dragover="onDragOver"
-        @dragleave="onDragLeave"
-        @drop="onDrop"
-      >
-        <img src="/icons/icon-16.png" alt="" class="w-14 h-14 op-50">
-        <div class="text-sm font-medium">点击或拖放 .rrt 文件</div>
-        <div class="text-xs text-text3">支持 .rrt / .json 格式的录制回放文件</div>
-        <input
-          ref="fileInput"
-          type="file"
-          accept=".rrt,.json"
-          class="hidden"
-          @change="emit('fileSelected', $event)"
+    <div class="stage-wrapper">
+        <!-- Drop zone -->
+        <div
+            v-if="!hasLoaded"
+            class="drop-zone"
+            :class="{ 'drop-zone-active': isDragOver }"
+            @click="onClickDropZone"
+            @dragover="onDragOver"
+            @dragleave="onDragLeave"
+            @drop="onDrop"
         >
-      </div>
+            <div class="drop-zone-icon">
+                <van-icon name="cloud-upload-o" size="48" color="#585b70" />
+            </div>
+            <div class="drop-zone-title">
+                点击或拖放 .rrt 文件
+            </div>
+            <div class="drop-zone-hint">
+                支持 .rrt / .json 格式的录制回放文件
+            </div>
+            <van-button round type="primary" size="small" class="mt-3">
+                选择文件
+            </van-button>
+            <input
+                ref="fileInput"
+                type="file"
+                accept=".rrt,.json"
+                class="hidden"
+                @change="emit('fileSelected', $event)"
+            >
+        </div>
 
-      <!-- rrweb player container -->
-      <div
-        ref="playerContainer"
-        class="w-full h-full relative overflow-hidden"
-        :style="{ display: hasLoaded ? 'block' : 'none' }"
-      />
+        <!-- rrweb player -->
+        <div
+            id="rrweb-player"
+            ref="playerContainer"
+            class="player-container"
+            :style="{ display: hasLoaded ? 'block' : 'none' }"
+        />
     </div>
-  </div>
 </template>
+
+<style scoped>
+.stage-wrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a10 70%);
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  border: 2px dashed #2a2a38;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(15,15,20,0.8);
+}
+
+.drop-zone:hover,
+.drop-zone-active {
+  border-color: #cba6f7;
+  background: rgba(203,166,247,0.04);
+}
+
+.drop-zone-icon {
+  opacity: 0.6;
+}
+
+.drop-zone-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #cdd6f4;
+}
+
+.drop-zone-hint {
+  font-size: 12px;
+  color: #585b70;
+}
+
+.player-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+}
+</style>

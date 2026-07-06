@@ -1,11 +1,13 @@
-import path from 'node:path'
-import { crx } from '@crxjs/vite-plugin'
-import vue from '@vitejs/plugin-vue'
-import UnoCSS from 'unocss/vite'
-import { defineConfig } from 'vite'
-import manifest from './manifest.config'
+import path from 'node:path';
+import { crx } from '@crxjs/vite-plugin';
+import { VantResolver } from '@vant/auto-import-resolver';
+import vue from '@vitejs/plugin-vue';
+import UnoCSS from 'unocss/vite';
+import Components from 'unplugin-vue-components/vite';
+import { defineConfig } from 'vite';
+import manifest from './manifest.config';
 
-const __dirname = path.resolve()
+const __dirname = path.resolve();
 
 export default defineConfig({
     resolve: {
@@ -20,16 +22,12 @@ export default defineConfig({
     plugins: [
         vue(),
         UnoCSS(),
+        Components({
+            resolvers: [VantResolver()],
+        }),
         crx({ manifest }),
     ],
     publicDir: path.resolve(__dirname, 'public'),
-    server: {
-        cors: {
-            origin: [
-                /chrome-extension:\/\//,
-            ],
-        },
-    },
     build: {
         outDir: 'dist',
         emptyOutDir: true,
@@ -41,4 +39,4 @@ export default defineConfig({
             },
         },
     },
-})
+});

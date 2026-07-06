@@ -1,21 +1,22 @@
-import { ref } from 'vue'
-import browser from 'webextension-polyfill'
-import type { BackgroundToContentMessage, RecordingSessionSummary } from '@shared/types'
+import type { BackgroundToContentMessage, RecordingSessionSummary } from '@shared/types';
+import { ref } from 'vue';
+import browser from 'webextension-polyfill';
 
 export function useSessions() {
-    const sessions = ref<RecordingSessionSummary[]>([])
+    const sessions = ref<RecordingSessionSummary[]>([]);
 
     async function loadSessions() {
         try {
             const response = await browser.runtime.sendMessage({
                 action: 'GET_SESSIONS',
-            })
-            const typedResponse = response as BackgroundToContentMessage
+            });
+            const typedResponse = response as BackgroundToContentMessage;
 
             if (typedResponse.action === 'SESSIONS_LIST') {
-                sessions.value = (typedResponse.payload as RecordingSessionSummary[]) || []
+                sessions.value = (typedResponse.payload as RecordingSessionSummary[]) || [];
             }
-        } catch {
+        }
+        catch {
             // SW may not be ready
         }
     }
@@ -24,17 +25,17 @@ export function useSessions() {
         await browser.runtime.sendMessage({
             action: 'DELETE_SESSION',
             payload: { sessionId },
-        })
-        await loadSessions()
+        });
+        await loadSessions();
     }
 
     // Reload sessions when recording stops
     browser.runtime.onMessage.addListener((message: unknown) => {
-        const msg = message as BackgroundToContentMessage
+        const msg = message as BackgroundToContentMessage;
         if (msg.action === 'RECORDING_STOPPED') {
-            loadSessions()
+            loadSessions();
         }
-    })
+    });
 
-    return { sessions, loadSessions, deleteSession }
+    return { sessions, loadSessions, deleteSession };
 }

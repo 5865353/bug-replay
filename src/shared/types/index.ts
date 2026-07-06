@@ -64,6 +64,7 @@ export type ContentToBackgroundAction
         | 'EXPORT_RRT'
         | 'SUBMIT_TO_PLATFORM'
         | 'GET_SESSIONS'
+        | 'GET_SESSION'
         | 'DELETE_SESSION'
         | 'UPDATE_SESSION_META'
         | 'GET_RECORDING_STATUS';
@@ -84,6 +85,7 @@ export type BackgroundToContentAction
         | 'RECORDING_RESUMED'
         | 'EXPORT_READY'
         | 'SESSIONS_LIST'
+        | 'SESSION_DATA'
         | 'SESSION_DELETED'
         | 'SESSION_UPDATED'
         | 'RECORDING_STATUS'

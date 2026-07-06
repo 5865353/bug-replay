@@ -57,7 +57,7 @@ const SVG_ICONS: Record<string, string> = {
     arrow: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12 5 19 5 19 12"/></svg>`,
     text: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 7 5 4 19 4 19 7"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/></svg>`,
     freehand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17c2-4 6-8 10-6s4 6 2 8c-2 3-5 1-4-2s4-5 8-4"/></svg>`,
-    undo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M4 16a9 9 0 1 1 1-10"/></svg>`,
+    undo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9 5 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-4"/></svg>`,
     trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M8 6v14h8V6M10 6V4h4v4"/></svg>`,
 };
 
@@ -91,6 +91,8 @@ export class Toolbar {
     private pauseBtn: HTMLButtonElement | null = null;
     private stopBtn: HTMLButtonElement | null = null;
     private toolButtons: Map<string, HTMLButtonElement> = new Map();
+    private drawingBadge: HTMLSpanElement | null = null;
+    private hintPanel: HTMLDivElement | null = null;
 
     constructor(callbacks: ToolbarCallbacks) {
         this.callbacks = callbacks;
@@ -113,6 +115,10 @@ export class Toolbar {
         if (this.container) {
             this.container.remove();
             this.container = null;
+        }
+        if (this.hintPanel) {
+            this.hintPanel.remove();
+            this.hintPanel = null;
         }
     }
 
@@ -162,13 +168,14 @@ export class Toolbar {
             border-radius: 12px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.15);
             padding: 6px 10px;
-            display: flex;
+            display: inline-flex;
             flex-direction: row;
             align-items: center;
             gap: 6px;
             font-family: system-ui, -apple-system, sans-serif;
             user-select: none;
             cursor: default;
+            white-space: nowrap;
         `;
 
         // ---- 拖拽手柄 ----
@@ -185,13 +192,32 @@ export class Toolbar {
         this.timerEl.textContent = '00:00';
         el.appendChild(this.timerEl);
 
+        // ---- 绘制中标识 ----
+        this.drawingBadge = document.createElement('span');
+        this.drawingBadge.style.cssText = `
+            font-size: 11px; font-weight: 700; color: #fff;
+            background: linear-gradient(135deg, #6467f0, #8b5cf6);
+            padding: 2px 7px; border-radius: 5px; display: none;
+            flex-shrink: 0; letter-spacing: 0.5px; cursor: help;
+            align-items: center; gap: 3px;
+        `;
+        this.drawingBadge.innerHTML = `绘制中 <span style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;background:rgba(255,255,255,0.25);border-radius:50%;font-size:9px;font-weight:700;">i</span>`;
+        this.drawingBadge.title = '悬停查看提示';
+        el.appendChild(this.drawingBadge);
+
         // ---- 分隔线 ----
         el.appendChild(this.createDivider());
 
         // ---- 暂停 / 停止 ----
         this.pauseBtn = this.createIconBtn('pause', '暂停录制', () => {
-            if (this.recordingState === 'recording') { this.setPaused(); this.callbacks.onPause(); }
-            else { this.setResumed(); this.callbacks.onResume(); }
+            if (this.recordingState === 'recording') {
+                this.setPaused();
+                this.callbacks.onPause();
+            }
+            else {
+                this.setResumed();
+                this.callbacks.onResume();
+            }
         });
         el.appendChild(this.pauseBtn);
 
@@ -225,6 +251,23 @@ export class Toolbar {
         handle.addEventListener('mousedown', this.onDragStart);
         document.addEventListener('mousemove', this.onDragMove);
         document.addEventListener('mouseup', this.onDragEnd);
+
+        // ---- 绘制提示面板 ----
+        this.hintPanel = document.createElement('div');
+        this.hintPanel.style.cssText = `
+            position: fixed; left: 50%; transform: translateX(-50%);
+            display: none; flex-direction: column; gap: 0;
+            z-index: 2147483647; pointer-events: none;
+        `;
+        this.hintPanel.innerHTML = `
+            <div style="background:#1f2937;color:#f9fafb;padding:8px 14px;border-radius:10px;font-size:12px;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;text-align:center;">
+                <div>✋ 页面滚动和点击已禁用</div>
+                <div>🗑 按 <b style="color:#cba6f7">Delete</b> 删除选中标注</div>
+                <div>↩ 点击 <b style="color:#cba6f7">撤销</b> 移除最后一条</div>
+            </div>
+            <div style="width:0;height:0;margin:-1px auto 0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #1f2937;"></div>
+        `;
+        document.body.appendChild(this.hintPanel);
 
         return el;
     }
@@ -298,9 +341,16 @@ export class Toolbar {
         btn.title = title;
         btn.style.cssText = this.iconBtnStyle();
         btn.appendChild(createSvg(iconName));
-        btn.addEventListener('mouseenter', () => { btn.style.background = '#f3f4f6'; });
-        btn.addEventListener('mouseleave', () => { btn.style.background = 'transparent'; });
-        btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = '#f3f4f6';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
+        });
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            onClick();
+        });
         return btn;
     }
 
@@ -316,7 +366,7 @@ export class Toolbar {
             width: 34px; height: 34px; border: 2px solid transparent;
             border-radius: 8px; background: transparent; cursor: pointer;
             font-size: 16px; transition: all 0.15s ease; padding: 0;
-            flex-shrink: 0;
+            flex-shrink: 0; color: #374151;
         `;
     }
 
@@ -327,11 +377,36 @@ export class Toolbar {
     private selectTool(type: AnnotationToolType): void {
         this.selectedTool = type;
         this.updateToolButtonStyles();
+        this.updateToolLabel();
     }
 
     private deselectAllTools(): void {
         this.selectedTool = null;
         this.updateToolButtonStyles();
+        this.updateToolLabel();
+    }
+
+    private updateToolLabel(): void {
+        if (!this.drawingBadge || !this.hintPanel || !this.container) return;
+        if (!this.selectedTool) {
+            this.drawingBadge.style.display = 'none';
+            this.hintPanel.style.display = 'none';
+            return;
+        }
+        this.drawingBadge.style.display = 'inline-flex';
+
+        // 鼠标悬浮到 badge 上才显示提示面板
+        this.drawingBadge.onmouseenter = () => {
+            const badgeRect = this.drawingBadge!.getBoundingClientRect();
+            this.hintPanel!.style.display = 'flex';
+            this.hintPanel!.style.bottom = `${window.innerHeight - badgeRect.top + 8}px`;
+            this.hintPanel!.style.left = `${badgeRect.left + badgeRect.width / 2}px`;
+            this.hintPanel!.style.transform = 'translateX(-50%)';
+            this.hintPanel!.style.top = 'auto';
+        };
+        this.drawingBadge.onmouseleave = () => {
+            this.hintPanel!.style.display = 'none';
+        };
     }
 
     private updateToolButtonStyles(): void {
@@ -383,8 +458,8 @@ export class Toolbar {
         const r = this.container.getBoundingClientRect();
         this.toolbarStartX = r.left;
         this.toolbarStartY = r.top;
+        // 锁定宽度防止 flex 换行，但不锁高度避免 flex 布局异常
         this.container.style.width = `${r.width}px`;
-        this.container.style.height = `${r.height}px`;
         this.container.style.left = `${r.left}px`;
         this.container.style.top = `${r.top}px`;
         this.container.style.transform = 'none';

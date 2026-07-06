@@ -108,7 +108,7 @@ export class Sidebar {
         }
 
         this.contentEl.innerHTML = logs
-            .map((log, idx) => {
+            .map((log, _idx) => {
                 const color = CONSOLE_LEVEL_COLORS[log.level];
                 const levelBadge = `<span class="log-level" style="color:${color}">[${log.level.toUpperCase()}]</span>`;
                 const args = log.args.join(' ');

@@ -1,4 +1,4 @@
-import { defineManifest } from '@crxjs/vite-plugin'
+import { defineManifest } from '@crxjs/vite-plugin';
 
 export default defineManifest({
     manifest_version: 3,
@@ -6,7 +6,7 @@ export default defineManifest({
     version: '1.0.0',
     description: '一键录制 Bug 现场，生成 .rrt 离线回放文件，100% 还原案发现场',
     author: {
-        email: ''
+        email: '',
     },
     icons: {
         16: 'icons/icon-16.png',
@@ -58,4 +58,4 @@ export default defineManifest({
             strict_min_version: '109.0',
         },
     },
-})
+});

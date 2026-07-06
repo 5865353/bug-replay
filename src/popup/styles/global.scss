@@ -1,27 +1,53 @@
 // Popup 全局样式
-// 使用 UnoCSS atomic CSS + SCSS 辅助样式
+
+:root {
+  --van-nav-bar-height: 44px;
+  --van-nav-bar-background: #fff;
+  --van-cell-font-size: 14px;
+  --van-cell-line-height: 20px;
+  --van-cell-group-inset-padding: 0;
+  --van-cell-background: transparent;
+  --van-empty-padding: 24px 0;
+}
 
 body {
-    width: 340px;
-    min-height: 420px;
-    margin: 0;
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    color: #1f2937;
-    background: #f9fafb;
+  width: 340px;
+  min-height: 420px;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: #f2f3f7;
 }
 
 #app {
-    display: flex;
-    flex-direction: column;
-    min-height: 420px;
+  min-height: 420px;
+}
+
+.van-nav-bar {
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+.van-nav-bar__title {
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  letter-spacing: -0.3px;
+}
+
+.van-nav-bar__left {
+  padding-left: 12px;
+}
+
+.van-cell-group--inset {
+  margin: 0 !important;
+  background: transparent !important;
+}
+
+.van-empty__description {
+  color: #969799 !important;
+  font-size: 13px !important;
 }
 
 ::-webkit-scrollbar {
-    width: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 2px;
+  width: 0;
+  height: 0;
 }

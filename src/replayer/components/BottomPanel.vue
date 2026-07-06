@@ -1,199 +1,196 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { RRTPackage, ConsoleLog, NetworkLog } from '@shared/types'
-import { CONSOLE_LEVEL_COLORS } from '@shared/types'
-import { formatTime } from '@shared/utils'
+import type { RRTPackage } from '@shared/types';
+import { CONSOLE_LEVEL_COLORS } from '@shared/types';
+import { formatTime } from '@shared/utils';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
-  visible: boolean
-  collapsed: boolean
-  currentPackage: RRTPackage | null
-}>()
+    visible: boolean;
+    collapsed: boolean;
+    currentPackage: RRTPackage | null;
+}>();
 
-type DevToolsTab = 'console' | 'network'
-const activeTab = ref<DevToolsTab>('console')
-const searchQuery = ref('')
-const expandedItems = ref(new Set<string>())
-const panelHeight = ref(200)
-const isDragging = ref(false)
+defineEmits<{
+    toggleCollapse: [];
+}>();
+
+const activeTab = ref(0);
+const searchQuery = ref('');
+const expandedItems = ref(new Set<string>());
+const panelHeight = ref(220);
+let dragStartY = 0;
+let dragStartH = 0;
 
 const consoleLogs = computed(() => {
-  if (!props.currentPackage) return []
-  let logs = props.currentPackage.consoleLogs
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    logs = logs.filter(l =>
-      l.args.some(a => String(a).toLowerCase().includes(q))
-      || l.level.toLowerCase().includes(q),
-    )
-  }
-  return logs
-})
+    if (!props.currentPackage)
+        return [];
+    let logs = props.currentPackage.consoleLogs;
+    if (searchQuery.value) {
+        const q = searchQuery.value.toLowerCase();
+        logs = logs.filter(l => l.args.some(a => String(a).toLowerCase().includes(q)) || l.level.toLowerCase().includes(q));
+    }
+    return logs;
+});
 
 const networkLogs = computed(() => {
-  if (!props.currentPackage) return []
-  let logs = props.currentPackage.networkLogs
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    logs = logs.filter(l =>
-      l.url.toLowerCase().includes(q)
-      || l.method.toLowerCase().includes(q),
-    )
-  }
-  return logs
-})
+    if (!props.currentPackage)
+        return [];
+    let logs = props.currentPackage.networkLogs;
+    if (searchQuery.value) {
+        const q = searchQuery.value.toLowerCase();
+        logs = logs.filter(l => l.url.toLowerCase().includes(q) || l.method.toLowerCase().includes(q));
+    }
+    return logs;
+});
 
 function toggleItem(key: string) {
-  if (expandedItems.value.has(key)) {
-    expandedItems.value.delete(key)
-  } else {
-    expandedItems.value.add(key)
-  }
+    if (expandedItems.value.has(key))
+        expandedItems.value.delete(key);
+    else expandedItems.value.add(key);
 }
 
-function statusClass(status: number): string {
-  if (status >= 200 && status < 300) return 'text-green'
-  if (status >= 300 && status < 400) return 'text-yellow'
-  return 'text-red'
+function statusColor(status: number): string {
+    if (status >= 200 && status < 300)
+        return '#a6e3a1';
+    if (status >= 300 && status < 400)
+        return '#f9e2af';
+    return '#f38ba8';
 }
 
 function onResizeStart(e: MouseEvent) {
-  isDragging.value = true
-  const startY = e.clientY
-  const startH = panelHeight.value
-
-  function onMove(ev: MouseEvent) {
-    panelHeight.value = Math.max(80, Math.min(600, startH + (startY - ev.clientY)))
-  }
-  function onUp() {
-    isDragging.value = false
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
-  }
-
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onUp)
+    dragStartY = e.clientY;
+    dragStartH = panelHeight.value;
+    const onMove = (ev: MouseEvent) => {
+        panelHeight.value = Math.max(80, Math.min(500, dragStartH + (dragStartY - ev.clientY)));
+    };
+    const onUp = () => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
 }
 </script>
 
 <template>
-  <div
-    v-if="visible"
-    class="flex-shrink-0 bg-surface flex flex-col relative border-t border-border"
-    :class="{ 'h-9': collapsed }"
-    :style="{ height: collapsed ? undefined : `${panelHeight}px` }"
-  >
-    <!-- Resize handle -->
     <div
-    class="absolute -top-0.5 left-0 right-0 h-1.5 cursor-ns-resize z-10 flex justify-center items-center group"
-    @mousedown="onResizeStart"
+        v-if="visible"
+        class="bottom-panel"
+        :class="{ 'bottom-collapsed': collapsed }"
+        :style="{ height: collapsed ? '36px' : `${panelHeight}px` }"
     >
-      <div class="w-10 h-0.75 bg-border rounded group-hover:bg-accent transition-colors" />
-    </div>
+        <div class="resize-handle" @mousedown="onResizeStart">
+            <div class="resize-bar" />
+        </div>
 
-    <!-- Tabs -->
-    <div class="flex items-center bg-#0f0f14 border-b border-border flex-shrink-0">
-      <button
-        v-for="tab in (['console', 'network'] as DevToolsTab[])"
-        :key="tab"
-        class="px-3.5 py-1.5 text-xs font-medium bg-transparent border-none border-b-2 cursor-pointer transition-all"
-        :class="activeTab === tab
-          ? 'text-text border-accent'
-          : 'text-text3 border-transparent hover:text-text2'"
-        @click="activeTab = tab"
-      >
-        {{ tab === 'console' ? '📋 控制台' : '🌐 网络' }}
-      </button>
-      <div class="flex-1" />
-      <button class="px-2.5 py-1 text-sm cursor-pointer border-none bg-transparent text-text3 hover:text-text" @click="$emit('toggleCollapse')">
-        {{ collapsed ? '╍' : '╌' }}
-      </button>
-    </div>
-
-    <!-- Content -->
-    <div v-if="!collapsed" class="flex-1 overflow-hidden flex flex-col">
-      <!-- Search -->
-      <div class="px-2.5 py-1.5 border-b border-border flex-shrink-0">
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="w-full px-2.5 py-1.5 border border-border rounded-md bg-#0f0f14 text-text text-xs outline-none focus:border-accent"
-          placeholder="搜索..."
+        <van-tabs
+            v-model:active="activeTab"
+            type="card"
+            color="#cba6f7"
+            title-active-color="#cdd6f4"
+            title-inactive-color="#585b70"
+            background="#0f0f14"
+            :border="false"
         >
-      </div>
+            <template #nav-right>
+                <van-icon
+                    :name="collapsed ? 'arrow-up' : 'arrow-down'"
+                    size="16"
+                    color="#585b70"
+                    class="collapse-btn"
+                    @click="$emit('toggleCollapse')"
+                />
+            </template>
 
-      <!-- List -->
-      <div class="flex-1 overflow-y-auto py-1">
-        <!-- Console tab -->
-        <template v-if="activeTab === 'console'">
-          <div
-            v-for="(log, i) in consoleLogs"
-            :key="i"
-            class="px-2.5 py-1.5 border-b border-white/3 text-xs transition-colors"
-          >
-            <div
-              class="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 -mx-1 -my-0.5 hover:bg-surface2"
-              @click="toggleItem(`console-${i}`)"
-            >
-              <span class="text-text3 tabular-nums text-2.5 min-w-11">{{ formatTime(log.timestamp) }}</span>
-              <span class="font-bold text-2.5" :style="{ color: CONSOLE_LEVEL_COLORS[log.level] }">{{ log.level.toUpperCase() }}</span>
-              <span class="text-text flex-1 truncate">{{ log.args.map(a => String(a)).join(' ') }}</span>
-              <span class="text-text3 text-2.5">{{ expandedItems.has(`console-${i}`) ? '▲' : '▼' }}</span>
-            </div>
-            <div
-              v-if="expandedItems.has(`console-${i}`)"
-              class="mt-1 p-2 bg-#0f0f14 rounded text-2.5 text-#bac2de max-h-40 overflow-y-auto whitespace-pre-wrap break-all"
-            >
-              <div v-for="(arg, j) in log.args" :key="j" class="mb-1">
-                <strong class="text-accent">Arg {{ j + 1 }}:</strong>
-                {{ typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg) }}
-              </div>
-              <div v-if="log.stackTrace" class="mt-1 text-red">
-                <strong>Stack:</strong>
-                <pre class="mt-1 text-2.5">{{ log.stackTrace }}</pre>
-              </div>
-            </div>
-          </div>
-        </template>
+            <van-tab title="控制台">
+                <div v-if="!collapsed" class="tab-inner">
+                    <van-field v-model="searchQuery" placeholder="搜索..." :border="false" class="search-field" />
+                    <div class="log-list">
+                        <div v-for="(log, i) in consoleLogs" :key="i" class="log-item" @click="toggleItem(`c-${i}`)">
+                            <div class="log-header">
+                                <span class="log-time">{{ formatTime(log.timestamp) }}</span>
+                                <span class="log-level" :style="{ color: CONSOLE_LEVEL_COLORS[log.level] }">{{ log.level.toUpperCase() }}</span>
+                                <span class="log-preview">{{ log.args.map(a => String(a)).join(' ').slice(0, 80) }}</span>
+                                <van-icon :name="expandedItems.has(`c-${i}`) ? 'arrow-up' : 'arrow-down'" size="12" color="#585b70" />
+                            </div>
+                            <div v-if="expandedItems.has(`c-${i}`)" class="log-detail">
+                                <div v-for="(arg, j) in log.args" :key="j">
+                                    <strong>Arg {{ j + 1 }}:</strong> {{ typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg) }}
+                                </div>
+                                <div v-if="log.stackTrace" class="log-stack">
+                                    <strong>Stack:</strong><pre>{{ log.stackTrace }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </van-tab>
 
-        <!-- Network tab -->
-        <template v-else>
-          <div
-            v-for="(log, i) in networkLogs"
-            :key="i"
-            class="px-2.5 py-1.5 border-b border-white/3 text-xs"
-          >
-            <div
-              class="flex items-center gap-1.5 cursor-pointer rounded px-1 py-0.5 -mx-1 -my-0.5 hover:bg-surface2"
-              @click="toggleItem(`net-${i}`)"
-            >
-              <span class="text-text3 tabular-nums text-2.5 min-w-11">{{ formatTime(log.startTime) }}</span>
-              <span class="font-bold text-xs min-w-8">{{ log.method }}</span>
-              <span class="font-semibold text-xs min-w-6" :class="statusClass(log.status)">{{ log.status }}</span>
-              <span class="text-text flex-1 truncate">{{ log.url }}</span>
-              <span class="text-text3 text-2.5 min-w-10 text-right">{{ log.duration }}ms</span>
-              <span class="text-text3 text-2.5">{{ expandedItems.has(`net-${i}`) ? '▲' : '▼' }}</span>
-            </div>
-            <div
-              v-if="expandedItems.has(`net-${i}`)"
-              class="mt-1 p-2 bg-#0f0f14 rounded text-2.5 text-#bac2de"
-            >
-              <div class="mb-1"><strong class="text-accent">URL:</strong> {{ log.url }}</div>
-              <div class="mb-1"><strong class="text-accent">Method:</strong> {{ log.method }}</div>
-              <div class="mb-1"><strong class="text-accent">Status:</strong> {{ log.status }} {{ log.statusText }}</div>
-              <div class="mb-1"><strong class="text-accent">Duration:</strong> {{ log.duration }}ms</div>
-              <div v-if="log.requestHeaders" class="mb-1">
-                <strong class="text-accent">Request Headers:</strong>
-                <pre class="mt-1 p-2 bg-#0f0f14 rounded text-2.5 text-#a6adc8 max-h-37.5 overflow-y-auto whitespace-pre-wrap break-all">{{ JSON.stringify(log.requestHeaders, null, 2) }}</pre>
-              </div>
-              <div v-if="log.responseHeaders" class="mb-1">
-                <strong class="text-accent">Response Headers:</strong>
-                <pre class="mt-1 p-2 bg-#0f0f14 rounded text-2.5 text-#a6adc8 max-h-37.5 overflow-y-auto whitespace-pre-wrap break-all">{{ JSON.stringify(log.responseHeaders, null, 2) }}</pre>
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
+            <van-tab title="网络">
+                <div v-if="!collapsed" class="tab-inner">
+                    <van-field v-model="searchQuery" placeholder="搜索..." :border="false" class="search-field" />
+                    <div class="log-list">
+                        <div v-for="(log, i) in networkLogs" :key="i" class="log-item" @click="toggleItem(`n-${i}`)">
+                            <div class="log-header">
+                                <span class="log-time">{{ formatTime(log.startTime) }}</span>
+                                <span class="log-method">{{ log.method }}</span>
+                                <span class="log-status" :style="{ color: statusColor(log.status) }">{{ log.status }}</span>
+                                <span class="log-preview">{{ log.url.slice(0, 60) }}</span>
+                                <span class="log-duration">{{ log.duration }}ms</span>
+                                <van-icon :name="expandedItems.has(`n-${i}`) ? 'arrow-up' : 'arrow-down'" size="12" color="#585b70" />
+                            </div>
+                            <div v-if="expandedItems.has(`n-${i}`)" class="log-detail">
+                                <div><strong>URL:</strong> {{ log.url }}</div>
+                                <div><strong>Status:</strong> {{ log.status }} {{ log.statusText }}</div>
+                                <div><strong>Duration:</strong> {{ log.duration }}ms</div>
+                                <div v-if="Object.keys(log.requestHeaders).length">
+                                    <strong>Request Headers:</strong><pre>{{ JSON.stringify(log.requestHeaders, null, 2) }}</pre>
+                                </div>
+                                <div v-if="Object.keys(log.responseHeaders).length">
+                                    <strong>Response Headers:</strong><pre>{{ JSON.stringify(log.responseHeaders, null, 2) }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </van-tab>
+        </van-tabs>
     </div>
-  </div>
 </template>
+
+<style scoped>
+.bottom-panel {
+  flex-shrink: 0;
+  background: #18181f;
+  border-top: 1px solid #2a2a38;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.bottom-collapsed { overflow: hidden; }
+.resize-handle {
+  position: absolute; top: -2px; left: 0; right: 0; height: 8px;
+  cursor: ns-resize; z-index: 10;
+  display: flex; justify-content: center; align-items: center;
+}
+.resize-bar { width: 40px; height: 3px; background: #2a2a38; border-radius: 2px; transition: background 0.15s; }
+.resize-handle:hover .resize-bar { background: #cba6f7; }
+.collapse-btn { margin-right: 10px; cursor: pointer; padding: 4px; }
+.tab-inner { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.search-field { flex-shrink: 0; background: #0f0f14 !important; }
+.log-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+.log-item { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; font-size: 11px; transition: background 0.1s; }
+.log-item:hover { background: rgba(255,255,255,0.03); }
+.log-header { display: flex; align-items: center; gap: 6px; }
+.log-time { color: #585b70; min-width: 40px; font-variant-numeric: tabular-nums; font-size: 10px; }
+.log-level { font-weight: 700; font-size: 10px; min-width: 36px; }
+.log-method { font-weight: 700; font-size: 11px; color: #cdd6f4; min-width: 32px; }
+.log-status { font-weight: 600; font-size: 11px; min-width: 24px; }
+.log-preview { color: #bac2de; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-duration { color: #585b70; font-size: 10px; min-width: 36px; text-align: right; }
+.log-detail { margin-top: 6px; padding: 8px; background: #0f0f14; border-radius: 6px; font-size: 11px; color: #bac2de; max-height: 180px; overflow-y: auto; word-break: break-all; }
+.log-detail pre { margin-top: 4px; font-size: 10px; color: #a6adc8; white-space: pre-wrap; word-break: break-all; }
+.log-stack { margin-top: 6px; color: #f38ba8; }
+.log-stack pre { font-size: 10px; }
+</style>

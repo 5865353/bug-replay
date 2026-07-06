@@ -272,8 +272,24 @@ export class CanvasLayer {
         const container = this.wrapperEl?.querySelector('.canvas-container') as HTMLElement | null;
         if (container) {
             container.style.pointerEvents = enabled ? 'auto' : 'none';
+            container.style.touchAction = enabled ? 'none' : '';
+        }
+        // 绘制时防止页面滚动
+        if (this.wrapperEl) {
+            this.wrapperEl.style.touchAction = enabled ? 'none' : '';
+            if (enabled) {
+                this.wrapperEl.addEventListener('wheel', this.preventDefault, { passive: false });
+            }
+            else {
+                this.wrapperEl.removeEventListener('wheel', this.preventDefault);
+            }
         }
     }
+
+    /** 阻止默认滚动 */
+    private preventDefault = (e: Event): void => {
+        e.preventDefault();
+    };
 
     // ============================================================
     // 序列化 / 反序列化

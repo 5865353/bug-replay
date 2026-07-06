@@ -80,6 +80,9 @@ export class ArrowTool extends BaseTool {
     }
 
     private removePreview(): void {
-        if (this.preview) { this.fc?.remove(this.preview); this.preview = null; }
+        if (this.preview) {
+            this.fc?.remove(this.preview);
+            this.preview = null;
+        }
     }
 }

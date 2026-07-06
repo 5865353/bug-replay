@@ -1,46 +1,65 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 defineProps<{
-  showAnnotations: boolean
-  devtoolsVisible: boolean
-}>()
+    showAnnotations: boolean;
+    devtoolsVisible: boolean;
+}>();
 
 const emit = defineEmits<{
-  toggleAnnotations: []
-  toggleDevtools: []
-  replay: []
-  fileSelected: [event: Event]
-}>()
+    toggleAnnotations: [];
+    toggleDevtools: [];
+    replay: [];
+    fileSelected: [event: Event];
+}>();
 
-const fileInput = ref<HTMLInputElement>()
+const fileInput = ref<HTMLInputElement>();
 
 function openFile() {
-  fileInput.value?.click()
+    fileInput.value?.click();
 }
 </script>
 
 <template>
-  <div class="flex items-center gap-2.5 px-3 py-1.5 bg-surface border-t border-border flex-shrink-0">
-    <label class="btn btn-primary btn-sm cursor-pointer">
-      📂 打开
-      <input
-        ref="fileInput"
-        type="file"
-        accept=".rrt,.json"
-        class="hidden"
-        @change="emit('fileSelected', $event)"
-      >
-    </label>
-    <button class="btn btn-sm" title="切换标注图层" @click="emit('toggleAnnotations')">
-      🖊 标注
-    </button>
-    <button class="btn btn-sm" title="重新播放" @click="emit('replay')">
-      ↺ 重新播放
-    </button>
-    <div class="flex-1" />
-    <button class="btn btn-sm" @click="emit('toggleDevtools')">
-      {{ devtoolsVisible ? '🔽 面板' : '🔼 面板' }}
-    </button>
-  </div>
+    <div class="control-bar">
+        <div class="control-left">
+            <van-button size="small" icon="folder-o" @click="openFile">
+                打开
+            </van-button>
+            <input
+                ref="fileInput"
+                type="file"
+                accept=".rrt,.json"
+                class="hidden"
+                @change="emit('fileSelected', $event)"
+            >
+            <van-button size="small" :icon="showAnnotations ? 'edit' : 'edit'" @click="emit('toggleAnnotations')">
+                标注
+            </van-button>
+            <van-button size="small" icon="replay" @click="emit('replay')">
+                重播
+            </van-button>
+        </div>
+        <van-button size="small" @click="emit('toggleDevtools')">
+            {{ devtoolsVisible ? '收起面板' : '展开面板' }}
+        </van-button>
+    </div>
 </template>
+
+<style scoped>
+.control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: #18181f;
+  border-top: 1px solid #2a2a38;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.control-left {
+  display: flex;
+  gap: 6px;
+}
+</style>

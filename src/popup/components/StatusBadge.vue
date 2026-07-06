@@ -1,37 +1,61 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = defineProps<{
-  isRecording: boolean
-  isPaused: boolean
-}>()
+    isRecording: boolean;
+    isPaused: boolean;
+}>();
 
-const status = computed(() => {
-  if (props.isRecording && props.isPaused) return 'paused'
-  if (props.isRecording) return 'recording'
-  return 'idle'
-})
+const text = computed(() => {
+    if (props.isRecording && props.isPaused)
+        return '已暂停';
+    if (props.isRecording)
+        return '● 录制中';
+    return '就绪';
+});
 
-const statusText = computed(() => {
-  switch (status.value) {
-    case 'recording': return '录制中'
-    case 'paused': return '已暂停'
-    default: return '就绪'
-  }
-})
-
-const statusClasses = computed(() => ({
-  'bg-red-100 text-red-600 animate-pulse': status.value === 'recording',
-  'bg-yellow-100 text-yellow-600': status.value === 'paused',
-  'bg-gray-100 text-gray-500': status.value === 'idle',
-}))
+const tagColor = computed(() => {
+    if (props.isRecording && props.isPaused)
+        return '#f59e0b';
+    if (props.isRecording)
+        return '#ee4141';
+    return '#969799';
+});
 </script>
 
 <template>
-  <span
-    class="text-xs px-2.5 py-0.5 rounded-full font-medium"
-    :class="statusClasses"
-  >
-    {{ statusText }}
-  </span>
+    <div class="status-badge" :style="{ 'color': tagColor, '--dot-color': tagColor }">
+        <span v-if="isRecording && !isPaused" class="status-dot" />
+        <span class="status-text">{{ text }}</span>
+    </div>
 </template>
+
+<style scoped>
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: #f5f5f5;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--dot-color);
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.3); }
+}
+
+.status-text {
+  letter-spacing: 0.3px;
+}
+</style>

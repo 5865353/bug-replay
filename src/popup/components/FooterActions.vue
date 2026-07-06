@@ -1,79 +1,138 @@
 <script setup lang="ts">
-import type { RecordingSessionSummary } from '@shared/types'
-import browser from 'webextension-polyfill'
-import { computed } from 'vue'
+import type { RecordingSessionSummary } from '@shared/types';
+import { showToast } from 'vant';
+import { computed } from 'vue';
+import browser from 'webextension-polyfill';
 
 const props = defineProps<{
-  activeSessionId: string | null
-  sessions: RecordingSessionSummary[]
-}>()
+    activeSessionId: string | null;
+    sessions: RecordingSessionSummary[];
+}>();
 
-const canExport = computed(() => !!props.activeSessionId || props.sessions.length > 0)
+const canExport = computed(() => props.sessions.length > 0);
 
-async function getSessionId(): Promise<string | null> {
-  if (props.activeSessionId) return props.activeSessionId
-  if (props.sessions.length > 0) return props.sessions[props.sessions.length - 1].id
-  return null
+function getSessionId(): string | null {
+    if (props.activeSessionId)
+        return props.activeSessionId;
+    return null;
 }
 
-async function exportRRT() {
-  const sessionId = await getSessionId()
-  if (sessionId) {
-    await browser.runtime.sendMessage({
-      action: 'EXPORT_RRT',
-      payload: { sessionId },
-    })
-  }
-}
-
-async function copyToClipboard() {
-  const sessionId = await getSessionId()
-  if (sessionId) {
-    await browser.runtime.sendMessage({
-      action: 'EXPORT_RRT',
-      payload: { sessionId, clipboard: true },
-    })
-  }
+function checkSelected(): string | null {
+    const id = getSessionId();
+    if (!id) {
+        showToast({ message: '请先选择一条录制记录', position: 'top' });
+        return null;
+    }
+    return id;
 }
 
 function openReplayer() {
-  browser.tabs.create({ url: browser.runtime.getURL('src/replayer/index.html') })
+    const base = browser.runtime.getURL('src/replayer/index.html');
+    const url = props.activeSessionId
+        ? `${base}?sessionId=${props.activeSessionId}`
+        : base;
+    browser.tabs.create({ url });
+}
+
+async function uploadRRT() {
+    const sessionId = checkSelected();
+    if (!sessionId)
+        return;
+    await browser.runtime.sendMessage({ action: 'EXPORT_RRT', payload: { sessionId } });
+}
+
+async function exportRRT() {
+    const sessionId = checkSelected();
+    if (!sessionId)
+        return;
+    await browser.runtime.sendMessage({ action: 'EXPORT_RRT', payload: { sessionId } });
+}
+
+async function copyToClipboard() {
+    const sessionId = checkSelected();
+    if (!sessionId)
+        return;
+    await browser.runtime.sendMessage({ action: 'EXPORT_RRT', payload: { sessionId, clipboard: true } });
 }
 </script>
 
 <template>
-  <footer class="flex items-center gap-2 px-4 py-3 bg-white border-t border-gray-200">
-    <button
-      class="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
-      @click="openReplayer"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <polygon points="5 3 19 12 5 21 5 3" />
-      </svg>
-      回放
-    </button>
-    <button
-      class="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-      :disabled="!canExport"
-      @click="exportRRT"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-        <polyline points="7 10 12 15 17 10" />
-        <line x1="12" y1="15" x2="12" y2="3" />
-      </svg>
-      导出 .rrt
-    </button>
-    <button
-      class="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs font-medium border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-      :disabled="!canExport"
-      @click="copyToClipboard"
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <rect x="9" y="9" width="13" height="13" rx="2" />
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-      </svg>
-      复制
-    </button>
-  </footer>
+    <div class="footer-bar">
+        <div class="footer-row">
+            <div class="footer-btn" @click="openReplayer">
+                <div class="footer-btn-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)">
+                    <van-icon name="play-circle-o" size="18" color="#7c3aed" />
+                </div>
+                <span class="footer-btn-label">回放</span>
+            </div>
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="uploadRRT">
+                <div class="footer-btn-icon" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc)">
+                    <van-icon name="upgrade" size="18" color="#3b82f6" />
+                </div>
+                <span class="footer-btn-label">上传</span>
+            </div>
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="exportRRT">
+                <div class="footer-btn-icon" style="background:linear-gradient(135deg,#fef3e2,#fde8c8)">
+                    <van-icon name="down" size="18" color="#e4943a" />
+                </div>
+                <span class="footer-btn-label">导出</span>
+            </div>
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="copyToClipboard">
+                <div class="footer-btn-icon" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)">
+                    <van-icon name="coupon-o" size="18" color="#4caf50" />
+                </div>
+                <span class="footer-btn-label">复制</span>
+            </div>
+        </div>
+    </div>
 </template>
+
+<style scoped>
+.footer-bar {
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  padding: 10px 12px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+.footer-row {
+  display: flex;
+  gap: 0;
+}
+
+.footer-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.footer-btn:active {
+  background: #f5f5f5;
+}
+
+.footer-btn-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.footer-btn-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-btn-label {
+  font-size: 11px;
+  color: #646566;
+  font-weight: 500;
+}
+</style>

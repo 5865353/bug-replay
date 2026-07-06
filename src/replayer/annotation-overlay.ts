@@ -46,7 +46,6 @@ export class AnnotationOverlay {
             + `container=${container.clientWidth}x${container.clientHeight}`,
         );
 
-
         window.addEventListener('resize', this.handleResize);
     }
 
@@ -61,8 +60,16 @@ export class AnnotationOverlay {
         this.canvas.requestRenderAll();
     }
 
-    toggle(): boolean { this.visible = !this.visible; if (this.wrapperEl) this.wrapperEl.style.display = this.visible ? 'block' : 'none'; return this.visible; }
-    setVisible(v: boolean): void { this.visible = v; if (this.wrapperEl) this.wrapperEl.style.display = v ? 'block' : 'none'; }
+    toggle(): boolean {
+        this.visible = !this.visible;
+        if (this.wrapperEl) this.wrapperEl.style.display = this.visible ? 'block' : 'none';
+        return this.visible;
+    }
+
+    setVisible(v: boolean): void {
+        this.visible = v;
+        if (this.wrapperEl) this.wrapperEl.style.display = v ? 'block' : 'none';
+    }
 
     /** 获取 wrapper 元素（供外部缩放同步） */
     getWrapper(): HTMLDivElement | null { return this.wrapperEl; }
@@ -121,7 +128,11 @@ export class AnnotationOverlay {
             case 'freehand': {
                 const { points, color, lineWidth } = ann.data;
                 if (points.length === 0) break;
-                const d = points.map((p, i) => { const rx = p.x - points[0].x; const ry = p.y - points[0].y; return i === 0 ? `M ${rx} ${ry}` : `L ${rx} ${ry}`; }).join(' ');
+                const d = points.map((p, i) => {
+                    const rx = p.x - points[0].x;
+                    const ry = p.y - points[0].y;
+                    return i === 0 ? `M ${rx} ${ry}` : `L ${rx} ${ry}`;
+                }).join(' ');
                 obj = new Path(d, { left: points[0].x, top: points[0].y, stroke: color, strokeWidth: lineWidth, fill: '', selectable: false, evented: false });
                 break;
             }
