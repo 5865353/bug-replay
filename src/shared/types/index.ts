@@ -56,18 +56,19 @@ export {
 // ============================================================
 
 /** Content Script → Service Worker 消息类型 */
-export type ContentToBackgroundAction
-    = | 'START_RECORDING'
-        | 'STOP_RECORDING'
-        | 'PAUSE_RECORDING'
-        | 'RESUME_RECORDING'
-        | 'EXPORT_RRT'
-        | 'SUBMIT_TO_PLATFORM'
-        | 'GET_SESSIONS'
-        | 'GET_SESSION'
-        | 'DELETE_SESSION'
-        | 'UPDATE_SESSION_META'
-        | 'GET_RECORDING_STATUS';
+export enum ContentToBackgroundAction {
+    START_RECORDING = 'START_RECORDING',
+    STOP_RECORDING = 'STOP_RECORDING',
+    PAUSE_RECORDING = 'PAUSE_RECORDING',
+    RESUME_RECORDING = 'RESUME_RECORDING',
+    EXPORT_RRT = 'EXPORT_RRT',
+    SUBMIT_TO_PLATFORM = 'SUBMIT_TO_PLATFORM',
+    GET_SESSIONS = 'GET_SESSIONS',
+    GET_SESSION = 'GET_SESSION',
+    DELETE_SESSION = 'DELETE_SESSION',
+    UPDATE_SESSION_META = 'UPDATE_SESSION_META',
+    GET_RECORDING_STATUS = 'GET_RECORDING_STATUS',
+}
 
 /** Content Script → Service Worker 消息体 */
 export interface ContentToBackgroundMessage {
@@ -78,18 +79,19 @@ export interface ContentToBackgroundMessage {
 }
 
 /** Service Worker → Content Script 消息类型 */
-export type BackgroundToContentAction
-    = | 'RECORDING_STARTED'
-        | 'RECORDING_STOPPED'
-        | 'RECORDING_PAUSED'
-        | 'RECORDING_RESUMED'
-        | 'EXPORT_READY'
-        | 'SESSIONS_LIST'
-        | 'SESSION_DATA'
-        | 'SESSION_DELETED'
-        | 'SESSION_UPDATED'
-        | 'RECORDING_STATUS'
-        | 'ERROR';
+export enum BackgroundToContentAction {
+    RECORDING_STARTED = 'RECORDING_STARTED',
+    RECORDING_STOPPED = 'RECORDING_STOPPED',
+    RECORDING_PAUSED = 'RECORDING_PAUSED',
+    RECORDING_RESUMED = 'RECORDING_RESUMED',
+    EXPORT_READY = 'EXPORT_READY',
+    SESSIONS_LIST = 'SESSIONS_LIST',
+    SESSION_DATA = 'SESSION_DATA',
+    SESSION_DELETED = 'SESSION_DELETED',
+    SESSION_UPDATED = 'SESSION_UPDATED',
+    RECORDING_STATUS = 'RECORDING_STATUS',
+    ERROR = 'ERROR',
+}
 
 /** Service Worker → Content Script 消息体 */
 export interface BackgroundToContentMessage {

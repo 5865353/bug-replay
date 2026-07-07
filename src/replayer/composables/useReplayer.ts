@@ -1,5 +1,6 @@
 import type { Annotation, RRTPackage } from '@shared/types';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { ContentToBackgroundAction } from '@shared/types';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
 
 export function useRePlayer() {
@@ -15,6 +16,10 @@ export function useRePlayer() {
 
     let rrwebRePlayer: any = null;
     let animationFrameId: number | null = null;
+    let stageResizeObserver: ResizeObserver | null = null;
+    let bottomPanelMutationObserver: MutationObserver | null = null;
+    let playStartTime = 0;
+    let playStartOffset = 0;
 
     const metadataTitle = computed(() => currentPackage.value?.metadata?.title || '回放');
 
@@ -42,6 +47,10 @@ export function useRePlayer() {
 
             // Initialize annotations
             initAnnotations(pkg.annotations || []);
+
+            // 重新建立观察器（cleanup 中已销毁）
+            await nextTick();
+            setupObservers();
         }
         catch (err) {
             console.error('[BugReplay] Failed to load file:', err);
@@ -54,7 +63,7 @@ export function useRePlayer() {
     async function loadFromSessionId(sessionId: string) {
         try {
             const response = await browser.runtime.sendMessage({
-                action: 'GET_SESSION',
+                action: ContentToBackgroundAction.GET_SESSION,
                 payload: { sessionId },
             });
             const session = (response as any).payload;
@@ -84,19 +93,31 @@ export function useRePlayer() {
 
             await initRRWebRePlayer(pkg);
             initAnnotations(pkg.annotations || []);
+
+            await nextTick();
+            setupObservers();
         }
         catch (err) {
             console.error('[BugReplay] Failed to load session:', err);
         }
     }
 
-    // 自动检查 URL 参数中的 sessionId
+    // 自动检查 URL 参数中的 sessionId，并设置观察器
     onMounted(() => {
         const params = new URLSearchParams(window.location.search);
         const sessionId = params.get('sessionId');
         if (sessionId) {
             loadFromSessionId(sessionId);
         }
+        // 延迟设置观察器，确保 DOM 已渲染
+        nextTick(() => {
+            setupObservers();
+        });
+    });
+
+    onUnmounted(() => {
+        teardownObservers();
+        cleanup();
     });
 
     // ============================================================
@@ -109,8 +130,8 @@ export function useRePlayer() {
         if (!container) return;
 
         // Clear previous
-        while (container.firstChild) container.removeChild(container.firstChild)
-        ; (container as HTMLElement).style.display = 'block';
+        while (container.firstChild) container.removeChild(container.firstChild);
+        (container as HTMLElement).style.display = 'block';
 
         rrwebRePlayer = new Replayer(pkg.rrwebEvents, {
             root: container as HTMLElement,
@@ -118,7 +139,22 @@ export function useRePlayer() {
             skipInactive: true,
             showWarning: false,
             showDebug: false,
+            mouseTail: false,
         });
+
+        // 渲染第一帧并缩放
+        showFirstFrame();
+        await nextTick();
+        syncContentScale();
+    }
+
+    function showFirstFrame(): void {
+        if (!rrwebRePlayer) return;
+        rrwebRePlayer.play(0);
+        setTimeout(() => {
+            rrwebRePlayer?.pause();
+            syncContentScale();
+        }, 250);
     }
 
     // ============================================================
@@ -138,6 +174,8 @@ export function useRePlayer() {
     function play() {
         if (!rrwebRePlayer) return;
         isPlaying.value = true;
+        playStartTime = performance.now();
+        playStartOffset = currentTime.value;
         rrwebRePlayer.play(currentTime.value);
         startPlaybackLoop();
     }
@@ -151,8 +189,10 @@ export function useRePlayer() {
 
     function seekTo(time: number) {
         if (!rrwebRePlayer) return;
-        currentTime.value = Math.max(0, Math.min(totalTime.value, time));
-        rrwebRePlayer.play(currentTime.value);
+        const target = Math.max(0, Math.min(totalTime.value, time));
+        currentTime.value = target;
+        playStartOffset = target;
+        rrwebRePlayer.play(target);
         rrwebRePlayer.pause();
         isPlaying.value = false;
         stopPlaybackLoop();
@@ -175,32 +215,35 @@ export function useRePlayer() {
     }
 
     function replay() {
-        seekTo(0);
+        if (!rrwebRePlayer) return;
+        stopPlaybackLoop();
+        currentTime.value = 0;
+        rrwebRePlayer.play(0);
+        rrwebRePlayer.pause();
         isPlaying.value = false;
+        updateAnnotationOverlay(0);
+        // 自动开始播放
         togglePlayPause();
     }
 
     // ============================================================
-    // Playback Loop
+    // Playback Loop — 基于 performance.now() 自主计算进度，不依赖 rrweb 事件回调
     // ============================================================
     function startPlaybackLoop() {
         if (animationFrameId) return;
 
         function loop() {
-            if (!rrwebRePlayer) return;
-
-            const metadata = rrwebRePlayer.getMetaData?.() as { startTime: number; totalTime: number } | undefined;
-            if (metadata) {
-                currentTime.value = metadata.totalTime;
-                totalTime.value = metadata.totalTime || currentPackage.value?.metadata.duration || 0;
-
-                if (currentTime.value >= totalTime.value && totalTime.value > 0) {
-                    isPlaying.value = false;
-                    stopPlaybackLoop();
-                }
-            }
+            const elapsed = (performance.now() - playStartTime) * speed.value;
+            currentTime.value = Math.min(totalTime.value, playStartOffset + elapsed);
 
             updateAnnotationOverlay(currentTime.value);
+
+            if (currentTime.value >= totalTime.value && totalTime.value > 0) {
+                isPlaying.value = false;
+                stopPlaybackLoop();
+                return;
+            }
+
             animationFrameId = requestAnimationFrame(loop);
         }
 
@@ -244,20 +287,20 @@ export function useRePlayer() {
 
     function toggleDevtools() {
         devtoolsVisible.value = !devtoolsVisible.value;
+        nextTick(() => syncContentScale());
     }
 
     // ============================================================
     // Content Scaling
     // ============================================================
     function syncContentScale() {
-        const iframe = document.querySelector('#rrweb-player iframe') as HTMLIFrameElement | null;
+        const container = document.querySelector('#rrweb-player') as HTMLElement | null;
+        if (!container) return;
+        const iframe = container.querySelector('iframe') as HTMLIFrameElement | null;
         if (!iframe || !currentPackage.value?.environment?.viewport) return;
 
         const vw = currentPackage.value.environment.viewport.width;
         const vh = currentPackage.value.environment.viewport.height;
-        const container = iframe.parentElement;
-        if (!container) return;
-
         const cw = container.clientWidth;
         const ch = container.clientHeight;
         if (!cw || !ch || !vw || !vh) return;
@@ -280,11 +323,36 @@ export function useRePlayer() {
         }
     }
 
+    function setupObservers() {
+        const stageEl = document.querySelector('.stage-wrapper') || document.querySelector('#rrweb-player')?.parentElement;
+        if (stageEl) {
+            stageResizeObserver = new ResizeObserver(() => syncContentScale());
+            stageResizeObserver.observe(stageEl);
+        }
+
+        const bottomEl = document.querySelector('.bottom-panel');
+        if (bottomEl) {
+            bottomPanelMutationObserver = new MutationObserver(() => syncContentScale());
+            bottomPanelMutationObserver.observe(bottomEl, {
+                attributes: true,
+                attributeFilter: ['class', 'style'],
+            });
+        }
+    }
+
+    function teardownObservers() {
+        stageResizeObserver?.disconnect();
+        stageResizeObserver = null;
+        bottomPanelMutationObserver?.disconnect();
+        bottomPanelMutationObserver = null;
+    }
+
     // ============================================================
     // Cleanup
     // ============================================================
     function cleanup() {
         stopPlaybackLoop();
+        teardownObservers();
 
         if (rrwebRePlayer) {
             try {
@@ -301,20 +369,21 @@ export function useRePlayer() {
             catch { /* */ }
             annotationOverlay = null;
         }
+        annotationWrapper = null;
 
-        const container = document.getElementById('rrweb-player') || document.querySelector('#rrweb-player');
+        const container = document.getElementById('rrweb-player');
         if (container) {
-            while (container.firstChild) container.removeChild(container.firstChild)
-            ; (container as HTMLElement).style.display = 'none';
+            while (container.firstChild) container.removeChild(container.firstChild);
+            container.style.display = 'none';
         }
 
-        hasLoaded.value = false;
         currentPackage.value = null;
+        hasLoaded.value = false;
+        currentTime.value = 0;
+        totalTime.value = 0;
+        isPlaying.value = false;
+        showAnnotations.value = true;
     }
-
-    onUnmounted(() => {
-        cleanup();
-    });
 
     return {
         // State

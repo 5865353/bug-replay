@@ -19,8 +19,8 @@ const emit = defineEmits<{
 }>();
 
 const sliderValue = computed({
-    get: () => props.totalTime > 0 ? (props.currentTime / props.totalTime) * 100 : 0,
-    set: (val: number) => emit('seek', (val / 100) * props.totalTime),
+    get: () => props.currentTime,
+    set: (val: number) => emit('seek', val),
 });
 </script>
 
@@ -39,7 +39,6 @@ const sliderValue = computed({
                 <van-button
                     v-for="s in REPLAY_SPEEDS"
                     :key="s"
-                    size="mini"
                     :type="speed === s ? 'primary' : 'default'"
                     @click="emit('speedChange', s)"
                 >
@@ -48,15 +47,17 @@ const sliderValue = computed({
             </div>
         </div>
 
-        <van-slider
-            v-model="sliderValue"
-            :min="0"
-            :max="100"
-            :step="0.1"
-            bar-height="4px"
-            active-color="#cba6f7"
-            inactive-color="#2a2a38"
-        />
+        <div>
+            <van-slider
+                v-model="sliderValue"
+                :min="0"
+                :max="totalTime"
+                :step="100"
+                bar-height="4px"
+                active-color="#cba6f7"
+                inactive-color="#2a2a38"
+            />
+        </div>
     </div>
 </template>
 
@@ -76,15 +77,15 @@ const sliderValue = computed({
 }
 
 .time-display {
-  font-size: 12px;
+  font-size: 14px;
   color: #9399b2;
   font-variant-numeric: tabular-nums;
-  min-width: 36px;
+  min-width: 40px;
   text-align: center;
 }
 
 .time-sep {
-  font-size: 12px;
+  font-size: 14px;
   color: #585b70;
 }
 
@@ -92,5 +93,11 @@ const sliderValue = computed({
   margin-left: auto;
   display: flex;
   gap: 3px;
+}
+
+/* van-slider 按钮缩小 */
+.timeline-bar :deep(.van-slider__button) {
+  width: 12px;
+  height: 12px;
 }
 </style>

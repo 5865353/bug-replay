@@ -90,7 +90,7 @@ function formatDuration(ms: number): string {
 
 <style scoped>
 .right-panel {
-  width: 260px;
+  width: 400px;
   flex-shrink: 0;
   background: #18181f;
   border-left: 1px solid #2a2a38;
@@ -100,7 +100,7 @@ function formatDuration(ms: number): string {
 }
 .panel-content { flex: 1; overflow-y: auto; padding: 12px; }
 .info-section { margin-bottom: 14px; }
-.section-title { font-size: 11px; font-weight: 600; color: #585b70; margin-bottom: 8px; letter-spacing: 0.5px; }
+.section-title { font-size: 14px; font-weight: 600; color: #585b70; margin-bottom: 8px; letter-spacing: 0.5px; }
 .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 3px 0; font-size: 12px; gap: 8px; }
 .info-row span:first-child { color: #585b70; flex-shrink: 0; }
 .info-row span:last-child { color: #9399b2; text-align: right; word-break: break-all; }

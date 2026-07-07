@@ -10,10 +10,12 @@
  * TODO M6: 实现完整的消息路由和存储逻辑
  */
 
-import type {
-    BackgroundToContentMessage,
-    ContentToBackgroundMessage,
-    RecordingSession,
+import {
+    BackgroundToContentAction,
+    ContentToBackgroundAction,
+    type BackgroundToContentMessage,
+    type ContentToBackgroundMessage,
+    type RecordingSession,
 } from '@shared/types';
 
 import type { JiraConfig } from '../platforms/jira';
@@ -72,7 +74,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             setTimeout(async () => {
                 try {
                     await sendMessageToTab(tabId, {
-                        action: 'RECORDING_STARTED',
+                        action: BackgroundToContentAction.RECORDING_STARTED,
                         payload: { sessionId: activeSessionId },
                     });
                     console.log(`[${EXTENSION_NAME}] ✅ 跨标签页录制已启动: tab ${tabId}`);
@@ -205,12 +207,12 @@ async function handleMessage(
 
     switch (action) {
         // ---- 录制控制 ----
-        case 'START_RECORDING': {
+        case ContentToBackgroundAction.START_RECORDING: {
             try {
                 const tabs = await browser.tabs.query({ active: true, currentWindow: true });
                 const tabId = tabs[0]?.id;
                 if (tabId === undefined) {
-                    return { action: 'ERROR', payload: '未找到活跃页面', requestId };
+                    return { action: BackgroundToContentAction.ERROR, payload: '未找到活跃页面', requestId };
                 }
 
                 // 记录录制源 origin（用于跨标签页检测）
@@ -226,7 +228,7 @@ async function handleMessage(
                 activeSessionId = '';
 
                 console.log(`[${EXTENSION_NAME}] SW: sending RECORDING_STARTED to tab ${tabId}, origin=${activeRecordingOrigin}`);
-                await sendMessageToTab(tabId, { action: 'RECORDING_STARTED' });
+                await sendMessageToTab(tabId, { action: BackgroundToContentAction.RECORDING_STARTED });
                 activeRecordingTabIds = new Set([tabId]);
                 isPaused = false;
                 console.log(`[${EXTENSION_NAME}] SW: RECORDING_STARTED sent successfully`);
@@ -234,12 +236,12 @@ async function handleMessage(
             catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
                 console.error(`[${EXTENSION_NAME}] SW: failed to send RECORDING_STARTED:`, msg);
-                return { action: 'ERROR', payload: `无法连接到页面: ${msg}`, requestId };
+                return { action: BackgroundToContentAction.ERROR, payload: `无法连接到页面: ${msg}`, requestId };
             }
-            return { action: 'RECORDING_STARTED', requestId };
+            return { action: BackgroundToContentAction.RECORDING_STARTED, requestId };
         }
 
-        case 'STOP_RECORDING': {
+        case ContentToBackgroundAction.STOP_RECORDING: {
             const data = payload as RecordingSession | { sessionId: string } | undefined;
 
             if (data && 'sessionId' in data && !('events' in data)) {
@@ -256,7 +258,7 @@ async function handleMessage(
                     console.log(`[${EXTENSION_NAME}] Session saved: ${session.id}`);
 
                     browser.runtime.sendMessage({
-                        action: 'RECORDING_STOPPED',
+                        action: BackgroundToContentAction.RECORDING_STOPPED,
                         payload: { sessionId: session.id },
                     }).catch(() => {});
                 }
@@ -271,7 +273,7 @@ async function handleMessage(
                 console.log(`[${EXTENSION_NAME}] Session saved: ${session.id}`);
 
                 browser.runtime.sendMessage({
-                    action: 'RECORDING_STOPPED',
+                    action: BackgroundToContentAction.RECORDING_STOPPED,
                     payload: { sessionId: session.id },
                 }).catch(() => {});
             }
@@ -280,46 +282,46 @@ async function handleMessage(
                 const tabIds = [...activeRecordingTabIds];
                 for (const tid of tabIds) {
                     try {
-                        await sendMessageToTab(tid, { action: 'RECORDING_STOPPED' });
+                        await sendMessageToTab(tid, { action: BackgroundToContentAction.RECORDING_STOPPED });
                     }
                     catch { /* tab may be closed */ }
                 }
             }
-            return { action: 'RECORDING_STOPPED', requestId };
+            return { action: BackgroundToContentAction.RECORDING_STOPPED, requestId };
         }
 
-        case 'PAUSE_RECORDING': {
+        case ContentToBackgroundAction.PAUSE_RECORDING: {
             isPaused = true;
             for (const tid of activeRecordingTabIds) {
                 try {
-                    await sendMessageToTab(tid, { action: 'RECORDING_PAUSED' });
+                    await sendMessageToTab(tid, { action: BackgroundToContentAction.RECORDING_PAUSED });
                 }
                 catch { /* */ }
             }
-            return { action: 'RECORDING_PAUSED', requestId };
+            return { action: BackgroundToContentAction.RECORDING_PAUSED, requestId };
         }
 
-        case 'RESUME_RECORDING': {
+        case ContentToBackgroundAction.RESUME_RECORDING: {
             isPaused = false;
             for (const tid of activeRecordingTabIds) {
                 try {
-                    await sendMessageToTab(tid, { action: 'RECORDING_RESUMED' });
+                    await sendMessageToTab(tid, { action: BackgroundToContentAction.RECORDING_RESUMED });
                 }
                 catch { /* */ }
             }
-            return { action: 'RECORDING_RESUMED', requestId };
+            return { action: BackgroundToContentAction.RECORDING_RESUMED, requestId };
         }
 
-        case 'GET_RECORDING_STATUS': {
+        case ContentToBackgroundAction.GET_RECORDING_STATUS: {
             return {
-                action: 'RECORDING_STATUS',
+                action: BackgroundToContentAction.RECORDING_STATUS,
                 payload: { isRecording: activeRecordingTabIds.size > 0, isPaused },
                 requestId,
             };
         }
 
         // ---- 会话管理 ----
-        case 'GET_SESSIONS': {
+        case ContentToBackgroundAction.GET_SESSIONS: {
             const sessions = await storageManager.getAllSessions();
             // 只返回摘要，不返回 events/networkLogs/consoleLogs 等大字段
             const summaries = sessions.map(s => ({
@@ -332,40 +334,40 @@ async function handleMessage(
                 hasAnnotations: s.annotations.length > 0,
             }));
             return {
-                action: 'SESSIONS_LIST',
+                action: BackgroundToContentAction.SESSIONS_LIST,
                 payload: summaries,
                 requestId,
             };
         }
 
-        case 'GET_SESSION': {
+        case ContentToBackgroundAction.GET_SESSION: {
             const { sessionId } = payload as { sessionId: string };
             const session = await storageManager.getSession(sessionId);
             if (!session) {
-                return { action: 'ERROR', payload: 'Session not found', requestId };
+                return { action: BackgroundToContentAction.ERROR, payload: 'Session not found', requestId };
             }
             return {
-                action: 'SESSION_DATA',
+                action: BackgroundToContentAction.SESSION_DATA,
                 payload: session,
                 requestId,
             };
         }
 
-        case 'DELETE_SESSION': {
+        case ContentToBackgroundAction.DELETE_SESSION: {
             const { sessionId } = payload as { sessionId: string };
             await storageManager.deleteSession(sessionId);
             return {
-                action: 'SESSION_DELETED',
+                action: BackgroundToContentAction.SESSION_DELETED,
                 payload: { sessionId },
                 requestId,
             };
         }
 
-        case 'EXPORT_RRT': {
+        case ContentToBackgroundAction.EXPORT_RRT: {
             const { sessionId, clipboard } = payload as { sessionId: string; clipboard?: boolean };
             const session = await storageManager.getSession(sessionId);
             if (!session) {
-                return { action: 'ERROR', payload: 'Session not found', requestId };
+                return { action: BackgroundToContentAction.ERROR, payload: 'Session not found', requestId };
             }
             if (clipboard) {
                 await copyRRTToClipboard(session);
@@ -373,10 +375,10 @@ async function handleMessage(
             else {
                 await downloadRRTFile(session);
             }
-            return { action: 'EXPORT_READY', payload: { sessionId }, requestId };
+            return { action: BackgroundToContentAction.EXPORT_READY, payload: { sessionId }, requestId };
         }
 
-        case 'SUBMIT_TO_PLATFORM': {
+        case ContentToBackgroundAction.SUBMIT_TO_PLATFORM: {
             const { sessionId, platform, config } = payload as {
                 sessionId: string;
                 platform: 'jira' | 'zentao';
@@ -388,7 +390,7 @@ async function handleMessage(
                 const session = await storageManager.getSession(sessionId);
                 if (!session) {
                     return {
-                        action: 'ERROR',
+                        action: BackgroundToContentAction.ERROR,
                         payload: '会话不存在',
                         requestId,
                     };
@@ -418,7 +420,7 @@ async function handleMessage(
                     }
 
                     return {
-                        action: 'SESSION_UPDATED',
+                        action: BackgroundToContentAction.SESSION_UPDATED,
                         payload: {
                             sessionId,
                             externalIssueId: result.issueId,
@@ -429,7 +431,7 @@ async function handleMessage(
                 }
 
                 return {
-                    action: 'ERROR',
+                    action: BackgroundToContentAction.ERROR,
                     payload: result.error || '提交失败',
                     requestId,
                 };
@@ -438,7 +440,7 @@ async function handleMessage(
                 const msg = err instanceof Error ? err.message : String(err);
                 console.error(`[${EXTENSION_NAME}] SUBMIT_TO_PLATFORM error:`, msg);
                 return {
-                    action: 'ERROR',
+                    action: BackgroundToContentAction.ERROR,
                     payload: `提交异常: ${msg}`,
                     requestId,
                 };
@@ -446,7 +448,7 @@ async function handleMessage(
         }
 
         default:
-            return { action: 'ERROR', payload: `Unknown action: ${action}`, requestId };
+            return { action: BackgroundToContentAction.ERROR, payload: `Unknown action: ${action}`, requestId };
     }
 }
 

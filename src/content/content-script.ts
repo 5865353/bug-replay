@@ -11,6 +11,7 @@
  */
 
 import type { BackgroundToContentMessage, RecordingSession } from '@shared/types';
+import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import { EXTENSION_NAME } from '@shared/constants';
 import browser from 'webextension-polyfill';
 import { useAnnotator } from './composables/useAnnotator';
@@ -46,17 +47,17 @@ function useContentScript() {
 
     async function handleMessage(message: BackgroundToContentMessage): Promise<void> {
         switch (message.action) {
-            case 'RECORDING_STARTED':
+            case BackgroundToContentAction.RECORDING_STARTED:
                 await startRecording();
                 break;
-            case 'RECORDING_STOPPED':
+            case BackgroundToContentAction.RECORDING_STOPPED:
                 await stopRecording();
                 break;
-            case 'RECORDING_PAUSED':
+            case BackgroundToContentAction.RECORDING_PAUSED:
                 recorder.pause();
                 annotator.setPaused();
                 break;
-            case 'RECORDING_RESUMED':
+            case BackgroundToContentAction.RECORDING_RESUMED:
                 recorder.resume();
                 annotator.setResumed();
                 break;
@@ -75,11 +76,11 @@ function useContentScript() {
                 },
                 onPause: () => {
                     recorder.pause();
-                    browser.runtime.sendMessage({ action: 'PAUSE_RECORDING' }).catch(() => { });
+                    browser.runtime.sendMessage({ action: ContentToBackgroundAction.PAUSE_RECORDING }).catch(() => { });
                 },
                 onResume: () => {
                     recorder.resume();
-                    browser.runtime.sendMessage({ action: 'RESUME_RECORDING' }).catch(() => { });
+                    browser.runtime.sendMessage({ action: ContentToBackgroundAction.RESUME_RECORDING }).catch(() => { });
                 },
                 onStop: async () => {
                     await stopRecording();
@@ -106,7 +107,7 @@ function useContentScript() {
             await browser.storage.local.set({ [key]: session });
 
             await browser.runtime.sendMessage({
-                action: 'STOP_RECORDING',
+                action: ContentToBackgroundAction.STOP_RECORDING,
                 payload: { sessionId: session.id },
             });
 

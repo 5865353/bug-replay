@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RecordingSessionSummary } from '@shared/types';
+import { ContentToBackgroundAction } from '@shared/types';
 import { showToast } from 'vant';
 import { computed } from 'vue';
 import browser from 'webextension-polyfill';
@@ -38,21 +39,21 @@ async function uploadRRT() {
     const sessionId = checkSelected();
     if (!sessionId)
         return;
-    await browser.runtime.sendMessage({ action: 'EXPORT_RRT', payload: { sessionId } });
+    await browser.runtime.sendMessage({ action: ContentToBackgroundAction.EXPORT_RRT, payload: { sessionId } });
 }
 
 async function exportRRT() {
     const sessionId = checkSelected();
     if (!sessionId)
         return;
-    await browser.runtime.sendMessage({ action: 'EXPORT_RRT', payload: { sessionId } });
+    await browser.runtime.sendMessage({ action: ContentToBackgroundAction.EXPORT_RRT, payload: { sessionId } });
 }
 
 async function copyToClipboard() {
     const sessionId = checkSelected();
     if (!sessionId)
         return;
-    await browser.runtime.sendMessage({ action: 'EXPORT_RRT', payload: { sessionId, clipboard: true } });
+    await browser.runtime.sendMessage({ action: ContentToBackgroundAction.EXPORT_RRT, payload: { sessionId, clipboard: true } });
 }
 </script>
 
