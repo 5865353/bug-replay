@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import BottomPanel from './components/BottomPanel.vue';
-import ControlBar from './components/ControlBar.vue';
 import PlayerStage from './components/PlayerStage.vue';
 import RePlayerHeader from './components/RePlayerHeader.vue';
 import RightPanel from './components/RightPanel.vue';
@@ -56,26 +55,23 @@ function onFileSelected(event: Event) {
                     @drop-file="onDropFile"
                     @file-selected="onFileSelected"
                 />
-                <ControlBar
-                    v-if="hasLoaded"
-                    :show-annotations="showAnnotations"
-                    :devtools-visible="devtoolsVisible"
-                    @toggle-annotations="toggleAnnotations"
-                    @toggle-devtools="toggleDevtools"
-                    @replay="replay"
-                    @file-selected="onFileSelected"
-                />
                 <TimelineControl
                     v-if="hasLoaded"
                     :current-time="currentTime"
                     :total-time="totalTime"
                     :is-playing="isPlaying"
                     :speed="speed"
+                    :show-annotations="showAnnotations"
+                    :devtools-visible="devtoolsVisible"
                     @play-pause="togglePlayPause"
                     @seek="seekTo"
                     @speed-change="setSpeed"
                     @step-forward="stepForward"
                     @step-back="stepBack"
+                    @toggle-annotations="toggleAnnotations"
+                    @toggle-devtools="toggleDevtools"
+                    @replay="replay"
+                    @file-selected="onFileSelected"
                 />
             </div>
 
