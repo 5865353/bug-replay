@@ -11,11 +11,23 @@
  */
 
 import type { BackgroundToContentMessage, RecordingSession } from '@shared/types';
-import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import { EXTENSION_NAME } from '@shared/constants';
+import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import browser from 'webextension-polyfill';
 import { useAnnotator } from './composables/useAnnotator';
 import { useRecorder } from './composables/useRecorder';
+import { NetworkInterceptor } from './recorder/network-interceptor';
+
+// ============================================================
+// 全局网络拦截 — document_start 立即启动，早于任何页面请求
+// ============================================================
+const networkInterceptor = new NetworkInterceptor({
+    onLog: (_log) => {
+        // 录制开始前：日志自动缓冲在 interceptor 内部
+        // 录制开始后：useRecorder 会重新设置 onLog 回调
+    },
+});
+networkInterceptor.start();
 
 // ============================================================
 // useContentScript — 主 composable
@@ -24,7 +36,17 @@ import { useRecorder } from './composables/useRecorder';
 function useContentScript() {
     let currentSession: RecordingSession | null = null;
 
-    const recorder = useRecorder();
+    const recorder = useRecorder({
+        // 录制开始时：flush 缓冲的网络日志 → session
+        onBeforeStart: () => {
+            const flushed = networkInterceptor.flush();
+            // 录制期间新日志实时写入 session
+            networkInterceptor.setOnLog((log) => {
+                if (currentSession) currentSession.networkLogs.push(log);
+            });
+            return flushed;
+        },
+    });
     const annotator = useAnnotator({
         sessionId: '',
         onChange: (annotations) => {

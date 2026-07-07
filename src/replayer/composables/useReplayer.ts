@@ -1,4 +1,4 @@
-import type { Annotation, RRTPackage } from '@shared/types';
+import type { Annotation, NetworkLog, RRTPackage } from '@shared/types';
 import { ContentToBackgroundAction } from '@shared/types';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
@@ -20,6 +20,13 @@ export function useRePlayer() {
     let bottomPanelMutationObserver: MutationObserver | null = null;
     let playStartTime = 0;
     let playStartOffset = 0;
+    let recordingBaseTime = 0;
+
+    // 自定义光标
+    let cursorWrapper: HTMLDivElement | null = null;
+    let cursorEl: HTMLDivElement | null = null;
+    let mousePositions: { time: number; x: number; y: number }[] = [];
+    let cursorPos = { x: 0, y: 0, visible: false };
 
     const metadataTitle = computed(() => currentPackage.value?.metadata?.title || '回放');
 
@@ -42,11 +49,19 @@ export function useRePlayer() {
             totalTime.value = pkg.metadata.duration;
             hasLoaded.value = true;
 
+            // 计算录制基准时间（第一个 rrweb 事件的时间戳）
+            const firstEvent = pkg.rrwebEvents[0] as { timestamp?: number } | undefined;
+            recordingBaseTime = firstEvent?.timestamp ?? 0;
+
+            // 归一化所有时间戳为相对时间
+            pkg.networkLogs = normalizeNetworkLogs(pkg.networkLogs || []);
+            pkg.annotations = normalizeAnnotations(pkg.annotations || []);
+
             // Initialize rrweb replayer
             await initRRWebRePlayer(pkg);
 
             // Initialize annotations
-            initAnnotations(pkg.annotations || []);
+            initAnnotations(pkg.annotations);
 
             // 重新建立观察器（cleanup 中已销毁）
             await nextTick();
@@ -91,8 +106,14 @@ export function useRePlayer() {
             totalTime.value = pkg.metadata.duration;
             hasLoaded.value = true;
 
+            const firstEvent = pkg.rrwebEvents[0] as { timestamp?: number } | undefined;
+            recordingBaseTime = firstEvent?.timestamp ?? 0;
+
+            pkg.networkLogs = normalizeNetworkLogs(pkg.networkLogs || []);
+            pkg.annotations = normalizeAnnotations(pkg.annotations || []);
+
             await initRRWebRePlayer(pkg);
-            initAnnotations(pkg.annotations || []);
+            initAnnotations(pkg.annotations);
 
             await nextTick();
             setupObservers();
@@ -140,7 +161,12 @@ export function useRePlayer() {
             showWarning: false,
             showDebug: false,
             mouseTail: false,
+            // 允许回放页面执行脚本
+            UNSAFE_PLAYBACK_MODE: true,
         });
+
+        // 自定义鼠标光标 — 比 rrweb 内置光标更显眼
+        initCustomCursor(container as HTMLElement, pkg.rrwebEvents);
 
         // 渲染第一帧并缩放
         showFirstFrame();
@@ -155,6 +181,101 @@ export function useRePlayer() {
             rrwebRePlayer?.pause();
             syncContentScale();
         }, 250);
+    }
+
+    // ============================================================
+    // 自定义鼠标光标
+    // ============================================================
+    function initCustomCursor(container: HTMLElement, events: any[]) {
+        // 创建与 iframe 同步缩放的 wrapper
+        cursorWrapper = document.createElement('div');
+        cursorWrapper.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:20;';
+        container.appendChild(cursorWrapper);
+
+        // 创建光标元素（在 wrapper 内，使用原始坐标）
+        cursorEl = document.createElement('div');
+        cursorEl.className = 'custom-cursor';
+        cursorEl.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M5 3l14 6-6 3-3 6-5-15z" fill="#cba6f7" stroke="#0a0a10" stroke-width="1.5"/>
+            </svg>
+        `;
+        cursorEl.style.cssText = `
+            position: absolute;
+            pointer-events: none;
+            display: none;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            transition: left 0.05s linear, top 0.05s linear;
+        `;
+        cursorWrapper.appendChild(cursorEl);
+
+        // 解析所有鼠标位置（从 rrweb 事件中提取 mousemove 坐标）
+        mousePositions = [];
+        for (const ev of events) {
+            // source: 1 = MouseMove
+            if (ev.type === 3 && ev.data?.source === 1 && ev.data?.positions) {
+                const baseTime = ev.timestamp - recordingBaseTime;
+                const positions: { x: number; y: number; timeOffset: number }[] = ev.data.positions;
+                for (const pos of positions) {
+                    // 跳过明显异常的坐标（如 (0,0) 且前面有正常位置）
+                    if (pos.x === 0 && pos.y === 0 && mousePositions.length > 0) continue;
+                    mousePositions.push({
+                        time: baseTime + pos.timeOffset,
+                        x: pos.x,
+                        y: pos.y,
+                    });
+                }
+            }
+            // source: 2 = MouseInteraction（点击等）——只在有有效坐标时才记录
+            if (ev.type === 3 && ev.data?.source === 2) {
+                const ix = ev.data.x as number | undefined;
+                const iy = ev.data.y as number | undefined;
+                // 如果坐标有效（非 undefined 且非全 0），记录位置
+                if (typeof ix === 'number' && typeof iy === 'number' && (ix !== 0 || iy !== 0)) {
+                    mousePositions.push({
+                        time: ev.timestamp - recordingBaseTime,
+                        x: ix,
+                        y: iy,
+                    });
+                }
+            }
+        }
+        // 按时间排序
+        mousePositions.sort((a, b) => a.time - b.time);
+    }
+
+    /** 根据当前回放时间更新光标位置 */
+    function updateCursorPosition(time: number) {
+        if (!cursorEl || mousePositions.length === 0) return;
+
+        // 二分查找 <= time 的最后一个位置
+        let lo = 0;
+        let hi = mousePositions.length - 1;
+        let found = -1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (mousePositions[mid].time <= time) {
+                found = mid;
+                lo = mid + 1;
+            }
+            else {
+                hi = mid - 1;
+            }
+        }
+
+        if (found >= 0) {
+            const pos = mousePositions[found];
+            cursorPos = { x: pos.x, y: pos.y, visible: true };
+            cursorEl.style.display = 'block';
+            cursorEl.style.left = `${pos.x}px`;
+            cursorEl.style.top = `${pos.y}px`;
+        }
+        else {
+            if (cursorPos.visible) {
+                cursorEl.style.display = 'none';
+                cursorPos.visible = false;
+            }
+        }
     }
 
     // ============================================================
@@ -197,6 +318,7 @@ export function useRePlayer() {
         isPlaying.value = false;
         stopPlaybackLoop();
         updateAnnotationOverlay(currentTime.value);
+        updateCursorPosition(currentTime.value);
     }
 
     function setSpeed(s: number) {
@@ -222,6 +344,7 @@ export function useRePlayer() {
         rrwebRePlayer.pause();
         isPlaying.value = false;
         updateAnnotationOverlay(0);
+        updateCursorPosition(0);
         // 自动开始播放
         togglePlayPause();
     }
@@ -237,6 +360,7 @@ export function useRePlayer() {
             currentTime.value = Math.min(totalTime.value, playStartOffset + elapsed);
 
             updateAnnotationOverlay(currentTime.value);
+            updateCursorPosition(currentTime.value);
 
             if (currentTime.value >= totalTime.value && totalTime.value > 0) {
                 isPlaying.value = false;
@@ -263,10 +387,27 @@ export function useRePlayer() {
     let annotationOverlay: any = null;
     let annotationWrapper: HTMLDivElement | null = null;
 
+    /** 归一化标注时间戳：录制时是绝对 Unix 时间，回放需要相对时间（从 0 开始） */
+    function normalizeAnnotations(annotations: Annotation[]): Annotation[] {
+        if (!recordingBaseTime) return annotations;
+        return annotations.map(a => ({
+            ...a,
+            timestamp: a.timestamp - recordingBaseTime,
+        }));
+    }
+
+    function normalizeNetworkLogs(logs: NetworkLog[]): NetworkLog[] {
+        if (!recordingBaseTime) return logs;
+        return logs.map(l => ({
+            ...l,
+            startTime: l.startTime - recordingBaseTime,
+        }));
+    }
+
     function initAnnotations(annotations: Annotation[]) {
         // Dynamic import for Fabric.js (only needed in replayer)
         import('./annotation-overlay').then(({ AnnotationOverlay }) => {
-            const container = document.getElementById('rrweb-player')?.parentElement;
+            const container = document.getElementById('rrweb-player');
             if (!container) return;
 
             const overlay = new AnnotationOverlay();
@@ -321,6 +462,14 @@ export function useRePlayer() {
             annotationWrapper.style.transformOrigin = 'top left';
             annotationOverlay?.resize(vw, vh);
         }
+
+        // 光标 wrapper 同样同步缩放
+        if (cursorWrapper) {
+            cursorWrapper.style.width = `${vw}px`;
+            cursorWrapper.style.height = `${vh}px`;
+            cursorWrapper.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+            cursorWrapper.style.transformOrigin = 'top left';
+        }
     }
 
     function setupObservers() {
@@ -370,6 +519,13 @@ export function useRePlayer() {
             annotationOverlay = null;
         }
         annotationWrapper = null;
+        cursorEl = null;
+        if (cursorWrapper) {
+            cursorWrapper.remove();
+            cursorWrapper = null;
+        }
+        mousePositions = [];
+        cursorPos = { x: 0, y: 0, visible: false };
 
         const container = document.getElementById('rrweb-player');
         if (container) {
@@ -383,6 +539,7 @@ export function useRePlayer() {
         totalTime.value = 0;
         isPlaying.value = false;
         showAnnotations.value = true;
+        recordingBaseTime = 0;
     }
 
     return {

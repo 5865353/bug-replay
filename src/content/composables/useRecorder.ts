@@ -2,25 +2,30 @@
  * src/content/composables/useRecorder.ts — Recorder composable (hooks pattern)
  *
  * 协调 rrweb 录制、网络拦截、控制台劫持、环境快照
+ *
+ * 网络拦截由 content-script.ts 在 document_start 时全局启动，
+ * 录制开始时通过 onBeforeStart 回调 flush 缓冲日志到 session。
  */
 
-import type { RecordingSession, RecordingStatus } from '@shared/types';
+import type { NetworkLog, RecordingSession, RecordingStatus } from '@shared/types';
 import { EXTENSION_NAME, MAX_RECORDING_DURATION } from '@shared/constants';
 import { generateUUID } from '@shared/utils';
 import { ConsoleInterceptor } from '../recorder/console-interceptor';
 import { EnvironmentCollector } from '../recorder/environment-snapshot';
-import { NetworkInterceptor } from '../recorder/network-interceptor';
 import { RRWebRecorder } from '../recorder/rrweb-recorder';
 
 export interface RecorderHooks {
     onSessionUpdate?: (session: RecordingSession) => void;
     onStatusChange?: (status: RecordingStatus) => void;
+    /** 录制开始前回调 — 用于 flush 网络拦截缓冲 */
+    onBeforeStart?: () => NetworkLog[];
+    /** 录制期间实时网络日志回调 */
+    onNetworkLog?: (log: NetworkLog) => void;
 }
 
 export function useRecorder(hooks: RecorderHooks = {}) {
     let session: RecordingSession | null = null;
     let rrwebRecorder: RRWebRecorder | null = null;
-    let networkInterceptor: NetworkInterceptor | null = null;
     let consoleInterceptor: ConsoleInterceptor | null = null;
     let maxDurationTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -37,6 +42,12 @@ export function useRecorder(hooks: RecorderHooks = {}) {
         session = createEmptySession();
         session.environment = EnvironmentCollector.collect();
 
+        // 把 document_start 起缓冲的网络日志刷入 session
+        if (hooks.onBeforeStart) {
+            const bufferedLogs = hooks.onBeforeStart();
+            session.networkLogs = bufferedLogs;
+        }
+
         // Start sub-modules
         rrwebRecorder = new RRWebRecorder({
             onEvent: (event) => {
@@ -45,13 +56,6 @@ export function useRecorder(hooks: RecorderHooks = {}) {
             maskAllInputs: true,
         });
         await rrwebRecorder.start();
-
-        networkInterceptor = new NetworkInterceptor({
-            onLog: (log) => {
-                if (session) session.networkLogs.push(log);
-            },
-        });
-        networkInterceptor.start();
 
         consoleInterceptor = new ConsoleInterceptor({
             onLog: (log) => {
@@ -110,8 +114,6 @@ export function useRecorder(hooks: RecorderHooks = {}) {
 
         rrwebRecorder?.stop();
         rrwebRecorder = null;
-        networkInterceptor?.stop();
-        networkInterceptor = null;
         consoleInterceptor?.stop();
         consoleInterceptor = null;
         if (maxDurationTimer) {

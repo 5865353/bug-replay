@@ -1,380 +1,230 @@
 /**
  * src/content/recorder/network-interceptor.ts
  *
- * 网络请求拦截器 — 拦截 XHR 和 Fetch 请求，记录请求/响应详情
- *
- * 安全处理：
- * - 过滤敏感请求头（Authorization, Cookie 等）
- * - 响应体超过 100KB 自动截断
- * - 循环引用安全序列化
+ * 网络请求拦截器 — 基于 @mswjs/interceptors
+ * 在 content script 注入时（document_start）立即启动拦截，
+ * 所有日志缓冲到内存，录制开始时刷入 session。
  */
 
 import type { HttpMethod, NetworkLog } from '@shared/types';
-import { MAX_RESPONSE_BODY_SIZE, SENSITIVE_HEADERS } from '@shared/types';
-import { filterSensitiveKeys, generateUUID, safeStringify } from '@shared/utils';
+import { MAX_RESPONSE_BODY_SIZE } from '@shared/types';
+import { generateUUID } from '@shared/utils';
+import { BatchInterceptor } from '@mswjs/interceptors';
+import { FetchInterceptor } from '@mswjs/interceptors/fetch';
+import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest';
+
+// ---- 工具函数 ----
+
+const SENSITIVE_HEADER_KEYS = new Set([
+    'authorization', 'cookie', 'set-cookie', 'x-api-key',
+    'x-auth-token', 'proxy-authorization', 'x-csrf-token',
+]);
+
+function filterHeaders(headers: Record<string, string>): Record<string, string> {
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(headers)) {
+        result[key] = SENSITIVE_HEADER_KEYS.has(key.toLowerCase()) ? '[FILTERED]' : value;
+    }
+    return result;
+}
+
+function headersToRecord(headers: Headers): Record<string, string> {
+    const result: Record<string, string> = {};
+    headers.forEach((value, key) => { result[key] = value; });
+    return result;
+}
+
+async function readBody(
+    body: ReadableStream<Uint8Array> | null | undefined,
+    maxSize: number,
+): Promise<string | null> {
+    if (!body) return null;
+    try {
+        const reader = body.getReader();
+        let total = 0;
+        const chunks: Uint8Array[] = [];
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            total += value.length;
+            chunks.push(value);
+            if (total >= maxSize) break;
+        }
+        const merged = new Uint8Array(Math.min(total, maxSize));
+        let offset = 0;
+        for (const chunk of chunks) {
+            const copy = Math.min(chunk.length, maxSize - offset);
+            merged.set(chunk.subarray(0, copy), offset);
+            offset += copy;
+            if (offset >= maxSize) break;
+        }
+        const text = new TextDecoder().decode(merged);
+        return total > maxSize ? `${text}\n... [TRUNCATED]` : text;
+    }
+    catch {
+        return null;
+    }
+}
+
+// ---- 待处理请求 ----
+
+interface PendingEntry {
+    id: string;
+    method: HttpMethod;
+    url: string;
+    requestHeaders: Record<string, string>;
+    requestBody: string | null;
+    startTime: number;
+}
+
+// ---- 主类 ----
 
 export interface NetworkInterceptorOptions {
-    /** 网络日志回调 */
     onLog: (log: NetworkLog) => void;
 }
 
 export class NetworkInterceptor {
-    private options: NetworkInterceptorOptions;
-    // 保存原始方法引用（用于恢复）
-    private originalXHROpen: typeof XMLHttpRequest.prototype.open | null = null;
-    private originalXHRSend: typeof XMLHttpRequest.prototype.send | null = null;
-    private originalFetch: typeof window.fetch | null = null;
-    private recordingStartTime = 0;
+    private interceptor: BatchInterceptor<
+        [XMLHttpRequestInterceptor, FetchInterceptor]
+    > | null = null;
+
+    private pending = new Map<string, PendingEntry>();
+    private onLog: (log: NetworkLog) => void;
+    private started = false;
+
+    // 录制开始前的缓冲
+    private buffer: NetworkLog[] = [];
+    private buffering = true;
 
     constructor(options: NetworkInterceptorOptions) {
-        this.options = options;
+        this.onLog = options.onLog;
     }
 
-    /**
-     * 开始拦截所有网络请求
-     */
+    // ============================================================
+    // 生命周期
+    // ============================================================
+
+    /** 立即启动拦截（document_start 时调用） */
     start(): void {
-        this.recordingStartTime = Date.now();
-        this.interceptXHR();
-        this.interceptFetch();
+        if (this.started) return;
+        this.started = true;
+
+        this.interceptor = new BatchInterceptor({
+            name: 'bugreplay-network',
+            interceptors: [
+                new XMLHttpRequestInterceptor(),
+                new FetchInterceptor(),
+            ],
+        });
+
+        this.interceptor.apply();
+        this.interceptor.on('request', this.onRequest);
+        this.interceptor.on('response', this.onResponse);
     }
 
-    /**
-     * 停止拦截（恢复原始方法）
-     */
+    /** 开始录制：停止缓冲，回放已缓冲日志 */
+    flush(): NetworkLog[] {
+        this.buffering = false;
+        const flushed = [...this.buffer];
+        this.buffer = [];
+        for (const log of flushed) {
+            this.onLog(log);
+        }
+        return flushed;
+    }
+
+    /** 停止拦截并清理 */
     stop(): void {
-        if (this.originalXHROpen) {
-            XMLHttpRequest.prototype.open = this.originalXHROpen;
-            this.originalXHROpen = null;
-        }
-        if (this.originalXHRSend) {
-            XMLHttpRequest.prototype.send = this.originalXHRSend;
-            this.originalXHRSend = null;
-        }
-        if (this.originalFetch) {
-            window.fetch = this.originalFetch;
-            this.originalFetch = null;
-        }
+        this.interceptor?.dispose();
+        this.interceptor = null;
+        this.pending.clear();
+        this.buffer = [];
+        this.buffering = true;
+        this.started = false;
+    }
+
+    /** 更新 onLog 回调（录制开始时切换为写入 session） */
+    setOnLog(fn: (log: NetworkLog) => void): void {
+        this.onLog = fn;
     }
 
     // ============================================================
-    // XHR 拦截
+    // 事件处理
     // ============================================================
 
-    private interceptXHR(): void {
-        // eslint-disable-next-line ts/no-this-alias
-        const self = this;
-        this.originalXHROpen = XMLHttpRequest.prototype.open;
-        this.originalXHRSend = XMLHttpRequest.prototype.send;
-
-        XMLHttpRequest.prototype.open = function (
-            this: XMLHttpRequest & { __bugreplay?: XHRMeta },
-            method: string,
-            url: string | URL,
-            async: boolean = true,
-            username?: string | null,
-            password?: string | null,
-        ) {
-            // 在 XHR 实例上挂载元数据
-            this.__bugreplay = {
-                method: method.toUpperCase() as HttpMethod,
-                url: url.toString(),
-                startTime: Date.now(),
-                requestHeaders: {},
-                requestBody: null,
-            };
-            return self.originalXHROpen!.call(
-                this,
-                method,
-                url,
-                async,
-                username ?? undefined,
-                password ?? undefined,
-            );
-        };
-
-        XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null) {
-            const meta = (this as XMLHttpRequest & { __bugreplay?: XHRMeta }).__bugreplay;
-            if (!meta) {
-                return self.originalXHRSend!.call(this, body);
-            }
-
-            meta.requestBody = self.safeBodyToString(body);
-            const startTime = Date.now();
-
-            // 监听 readyState 变化
-            const onReadyStateChange = () => {
-                if (this.readyState === XMLHttpRequest.DONE) {
-                    const endTime = Date.now();
-                    const responseHeaders = self.parseXHRHeaders(
-                        this.getAllResponseHeaders(),
-                    );
-
-                    const log = self.createLog({
-                        url: meta.url,
-                        method: meta.method,
-                        requestHeaders: self.filterHeaders(meta.requestHeaders),
-                        requestBody: meta.requestBody,
-                        status: this.status,
-                        statusText: this.statusText,
-                        responseHeaders: self.filterHeaders(
-                            self.headersToRecord(responseHeaders),
-                        ),
-                        responseBody: self.truncateBody(
-                            self.safeBodyToString(this.response ?? this.responseText),
-                        ),
-                        startTime: meta.startTime,
-                        duration: endTime - startTime,
-                        requestType: 'xhr',
-                        isError: this.status === 0 || this.status >= 400,
-                        error:
-                            this.status === 0
-                                ? 'Network Error / CORS / Aborted'
-                                : this.status >= 400
-                                    ? `HTTP ${this.status} ${this.statusText}`
-                                    : undefined,
-                    });
-
-                    self.options.onLog(log);
-                    this.removeEventListener('readystatechange', onReadyStateChange);
-                }
-            };
-
-            // 监听 error / abort / timeout
-            const onError = (eventType: string) => {
-                const endTime = Date.now();
-                const log = self.createLog({
-                    url: meta.url,
-                    method: meta.method,
-                    requestHeaders: self.filterHeaders(meta.requestHeaders),
-                    requestBody: meta.requestBody,
-                    status: 0,
-                    statusText: eventType,
-                    responseHeaders: {},
-                    responseBody: null,
-                    startTime: meta.startTime,
-                    duration: endTime - startTime,
-                    requestType: 'xhr',
-                    isError: true,
-                    error: `XHR ${eventType}`,
-                });
-                self.options.onLog(log);
-                this.removeEventListener('readystatechange', onReadyStateChange);
-            };
-
-            this.addEventListener('readystatechange', onReadyStateChange);
-            this.addEventListener('error', () => onError('error'));
-            this.addEventListener('abort', () => onError('abort'));
-            this.addEventListener('timeout', () => onError('timeout'));
-
-            // 设置请求头拦截
-            const originalSetRequestHeader = this.setRequestHeader.bind(this);
-            this.setRequestHeader = function (name: string, value: string) {
-                meta.requestHeaders[name] = value;
-                return originalSetRequestHeader(name, value);
-            };
-
-            return self.originalXHRSend!.call(this, body);
-        };
-    }
-
-    // ============================================================
-    // Fetch 拦截
-    // ============================================================
-
-    private interceptFetch(): void {
-        // eslint-disable-next-line ts/no-this-alias
-        const self = this;
-        this.originalFetch = window.fetch;
-
-        window.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
-            const startTime = Date.now();
-
-            // 解析 URL 和 Method
-            let url: string;
-            let method: HttpMethod = 'GET';
-            const requestHeaders: Record<string, string> = {};
-
-            if (typeof input === 'string') {
-                url = input;
-            }
-            else if (input instanceof Request) {
-                url = input.url;
-                method = input.method as HttpMethod;
-                input.headers.forEach((value, key) => {
-                    requestHeaders[key] = value;
-                });
-            }
-            else {
-                url = input.toString();
-            }
-
-            // 合并 init 中的 headers
-            if (init?.headers) {
-                const initHeaders = new Headers(init.headers);
-                initHeaders.forEach((value, key) => {
-                    requestHeaders[key] = value;
-                });
-            }
-            if (init?.method) {
-                method = init.method.toUpperCase() as HttpMethod;
-            }
-
-            const requestBody = self.safeBodyToString(init?.body);
-
-            try {
-                const response = await self.originalFetch!.call(window, input, init);
-                const endTime = Date.now();
-
-                // 克隆响应以读取 body（避免消费原始流）
-                const clonedResponse = response.clone();
-                let responseBody: string | null = null;
-                try {
-                    responseBody = await clonedResponse.text();
-                }
-                catch {
-                    responseBody = '[Unable to read response body]';
-                }
-
-                const responseHeaders: Record<string, string> = {};
-                response.headers.forEach((value, key) => {
-                    responseHeaders[key] = value;
-                });
-
-                const log = self.createLog({
-                    url,
-                    method,
-                    requestHeaders: self.filterHeaders(requestHeaders),
-                    requestBody,
-                    status: response.status,
-                    statusText: response.statusText,
-                    responseHeaders: self.filterHeaders(
-                        self.headersToRecord(responseHeaders),
-                    ),
-                    responseBody: self.truncateBody(responseBody),
-                    startTime,
-                    duration: endTime - startTime,
-                    requestType: 'fetch',
-                    isError: !response.ok,
-                    error: response.ok ? undefined : `HTTP ${response.status} ${response.statusText}`,
-                });
-
-                self.options.onLog(log);
-                return response;
-            }
-            catch (error) {
-                const endTime = Date.now();
-                const log = self.createLog({
-                    url,
-                    method,
-                    requestHeaders: self.filterHeaders(requestHeaders),
-                    requestBody,
-                    status: 0,
-                    statusText: 'Network Error',
-                    responseHeaders: {},
-                    responseBody: null,
-                    startTime,
-                    duration: endTime - startTime,
-                    requestType: 'fetch',
-                    isError: true,
-                    error: error instanceof Error ? error.message : 'Fetch failed',
-                });
-
-                self.options.onLog(log);
-                throw error;
-            }
-        };
-    }
-
-    // ============================================================
-    // 辅助方法
-    // ============================================================
-
-    /** 过滤敏感请求头 */
-    private filterHeaders(headers: Record<string, string>): Record<string, string> {
-        return filterSensitiveKeys(headers, SENSITIVE_HEADERS);
-    }
-
-    /** 截断过大的响应体 */
-    private truncateBody(body: string | null): string | null {
-        if (body && body.length > MAX_RESPONSE_BODY_SIZE) {
-            return (
-                `${body.slice(0, MAX_RESPONSE_BODY_SIZE)
-                }\n... [Truncated: ${body.length - MAX_RESPONSE_BODY_SIZE} bytes]`
-            );
-        }
-        return body;
-    }
-
-    /** 安全地将 body 转为字符串 */
-    private safeBodyToString(body: unknown): string | null {
-        if (body === null || body === undefined) return null;
-        if (typeof body === 'string') return body;
-
-        try {
-            if (body instanceof FormData) {
-                const obj: Record<string, unknown> = {};
-                body.forEach((value, key) => {
-                    obj[key] = value instanceof File ? `[File: ${value.name}]` : value;
-                });
-                return safeStringify(obj);
-            }
-            if (body instanceof URLSearchParams) {
-                return body.toString();
-            }
-            if (body instanceof Blob) {
-                return `[Blob: ${body.size} bytes, type=${body.type}]`;
-            }
-            if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) {
-                return `[Binary: ${(body as { byteLength?: number }).byteLength ?? 'unknown'} bytes]`;
-            }
-            return safeStringify(body);
-        }
-        catch {
-            return '[Serialization Failed]';
-        }
-    }
-
-    /** 解析 XHR getAllResponseHeaders() 返回的原始字符串 */
-    private parseXHRHeaders(raw: string): Record<string, string> {
+    private onRequest = ({ request, requestId }: {
+        request: Request;
+        requestId: string;
+    }) => {
         const headers: Record<string, string> = {};
-        raw.trim()
-            .split(/[\r\n]+/)
-            .forEach((line) => {
-                const parts = line.split(': ');
-                if (parts.length >= 2) {
-                    const key = parts[0];
-                    const value = parts.slice(1).join(': ');
-                    headers[key] = value;
-                }
-            });
-        return headers;
-    }
+        request.headers.forEach((value, key) => { headers[key] = value; });
 
-    /** 将 Headers 对象转为 Record（过滤 content-encoding 等二进制相关头） */
-    private headersToRecord(headers: Record<string, string>): Record<string, string> {
-        const result: Record<string, string> = {};
-        for (const [key, value] of Object.entries(headers)) {
-            // 保留文本类 header，跳过大体积二进制 header
-            result[key] = value;
-        }
-        return result;
-    }
-
-    /** 创建网络日志条目 */
-    private createLog(partial: Omit<NetworkLog, 'id'>): NetworkLog {
-        return {
+        this.pending.set(requestId, {
             id: generateUUID(),
-            ...partial,
-        };
-    }
-}
+            method: request.method as HttpMethod,
+            url: request.url,
+            requestHeaders: headers,
+            requestBody: null,
+            startTime: Date.now(),
+        });
 
-/** XHR 实例上的元数据类型 */
-interface XHRMeta {
-    method: HttpMethod;
-    url: string;
-    startTime: number;
-    requestHeaders: Record<string, string>;
-    requestBody: string | null;
+        // 异步读取请求体
+        if (request.body) {
+            readBody(request.body, MAX_RESPONSE_BODY_SIZE).then((body) => {
+                const entry = this.pending.get(requestId);
+                if (entry) entry.requestBody = body;
+            }).catch(() => {});
+        }
+    };
+
+    private onResponse = ({ response, requestId }: {
+        response: Response;
+        requestId: string;
+    }) => {
+        const entry = this.pending.get(requestId);
+        this.pending.delete(requestId);
+        if (!entry) return;
+
+        const endTime = Date.now();
+        const resHeaders = headersToRecord(response.headers);
+
+        readBody(response.body, MAX_RESPONSE_BODY_SIZE).then((resBody) => {
+            this.emitLog(entry, response.status, response.statusText, resHeaders, resBody, endTime);
+        }).catch(() => {
+            this.emitLog(entry, response.status, response.statusText, resHeaders, null, endTime);
+        });
+    };
+
+    private emitLog(
+        entry: PendingEntry,
+        status: number,
+        statusText: string,
+        resHeaders: Record<string, string>,
+        resBody: string | null,
+        endTime: number,
+    ): void {
+        const log: NetworkLog = {
+            id: entry.id,
+            url: entry.url,
+            method: entry.method,
+            requestHeaders: filterHeaders(entry.requestHeaders),
+            requestBody: entry.requestBody,
+            status,
+            statusText,
+            responseHeaders: filterHeaders(resHeaders),
+            responseBody: resBody,
+            startTime: entry.startTime,
+            duration: endTime - entry.startTime,
+            requestType: 'fetch',
+            isError: status === 0 || status >= 400,
+            error: status >= 400 ? `HTTP ${status} ${statusText}` : undefined,
+        };
+
+        if (this.buffering) {
+            this.buffer.push(log);
+        }
+        else {
+            this.onLog(log);
+        }
+    }
 }
