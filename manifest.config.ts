@@ -49,6 +49,7 @@ export default defineManifest({
         'storage',
         'activeTab',
         'scripting',
+        'cookies',
         'downloads',
         'tabs',
     ],

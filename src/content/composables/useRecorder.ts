@@ -40,7 +40,7 @@ export function useRecorder(hooks: RecorderHooks = {}) {
         }
 
         session = createEmptySession();
-        session.environment = EnvironmentCollector.collect();
+        session.environment = await EnvironmentCollector.collect();
 
         // 把 document_start 起缓冲的网络日志刷入 session
         if (hooks.onBeforeStart) {
@@ -150,6 +150,7 @@ export function useRecorder(hooks: RecorderHooks = {}) {
             networkLogs: [],
             consoleLogs: [],
             annotations: [],
+            pageEvents: [],
             environment: null,
             tags: [],
         };

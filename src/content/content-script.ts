@@ -10,7 +10,7 @@
  * 使用 document_start 时机注入，确保尽早拦截网络和控制台
  */
 
-import type { BackgroundToContentMessage, RecordingSession } from '@shared/types';
+import type { BackgroundToContentMessage, PageEvent, RecordingSession } from '@shared/types';
 import type { NetworkLog } from '@shared/types';
 import { EXTENSION_NAME } from '@shared/constants';
 import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
@@ -19,25 +19,29 @@ import { useAnnotator } from './composables/useAnnotator';
 import { useRecorder } from './composables/useRecorder';
 
 // ============================================================
-// 页面主世界网络拦截（注入 <script> 到页面 DOM，拦截页面的 XHR/fetch）
-// Content script 隔离世界无法拦截页面的网络请求！
+// 页面主世界拦截器（注入 <script> 到页面 DOM）
 // ============================================================
 
-// 缓冲录制开始前的网络日志
 const networkBuffer: NetworkLog[] = [];
 let networkLogCallback: ((log: NetworkLog) => void) | null = null;
 
-// 监听注入脚本发回的 postMessage
+const pageEventBuffer: PageEvent[] = [];
+let pageEventCallback: ((e: PageEvent) => void) | null = null;
+
+// 监听注入脚本发回的 postMessage（网络 + 页面事件）
 window.addEventListener('message', (event) => {
     if (event.source !== window) return;
-    if (event.data?.source !== 'bugreplay-network') return;
 
-    const log = event.data.payload as NetworkLog;
-    if (networkLogCallback) {
-        networkLogCallback(log);
+    if (event.data?.source === 'bugreplay-network') {
+        const log = event.data.payload as NetworkLog;
+        if (networkLogCallback) { networkLogCallback(log); }
+        else { networkBuffer.push(log); }
     }
-    else {
-        networkBuffer.push(log);
+
+    if (event.data?.source === 'bugreplay-page-event') {
+        const ev = event.data.payload as PageEvent;
+        if (pageEventCallback) { pageEventCallback(ev); }
+        else { pageEventBuffer.push(ev); }
     }
 });
 
@@ -59,18 +63,25 @@ function useContentScript() {
     let currentSession: RecordingSession | null = null;
 
     const recorder = useRecorder({
-        // 录制开始时：flush 缓冲的网络日志 → session
         onBeforeStart: () => {
-            // 之后的新日志实时回调
+            // 网络日志回调
             networkLogCallback = (log) => {
                 if (currentSession) currentSession.networkLogs.push(log);
             };
-            // 回放缓冲区中的旧日志
+            // 页面事件回调
+            pageEventCallback = (ev) => {
+                if (currentSession) currentSession.pageEvents.push(ev);
+            };
+            // flush 缓冲区
             const flushed = [...networkBuffer];
             networkBuffer.length = 0;
             for (const log of flushed) {
                 if (currentSession) currentSession.networkLogs.push(log);
             }
+            for (const ev of pageEventBuffer) {
+                if (currentSession) currentSession.pageEvents.push(ev);
+            }
+            pageEventBuffer.length = 0;
             return flushed;
         },
     });

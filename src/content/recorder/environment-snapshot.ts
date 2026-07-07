@@ -12,47 +12,56 @@
  * TODO M2: 完善敏感信息过滤逻辑
  */
 
-import type { EnvironmentSnapshot } from '@shared/types';
+import type { CookieEntry, EnvironmentSnapshot } from '@shared/types';
 
 export class EnvironmentCollector {
-    /**
-     * 采集当前页面的完整环境快照
-     */
-    static collect(): EnvironmentSnapshot {
+    static async collect(): Promise<EnvironmentSnapshot> {
         return {
             url: window.location.href,
             title: document.title,
             userAgent: navigator.userAgent,
-            screenResolution: {
-                width: screen.width,
-                height: screen.height,
-            },
-            viewport: {
-                width: window.innerWidth,
-                height: window.innerHeight,
-            },
+            screenResolution: { width: screen.width, height: screen.height },
+            viewport: { width: window.innerWidth, height: window.innerHeight },
             devicePixelRatio: window.devicePixelRatio,
             language: navigator.language,
             platform: navigator.platform,
-            cookies: EnvironmentCollector.collectCookies(),
+            cookies: await EnvironmentCollector.collectCookies(),
             localStorage: EnvironmentCollector.collectStorage(localStorage),
             sessionStorage: EnvironmentCollector.collectStorage(sessionStorage),
             timestamp: Date.now(),
         };
     }
 
-    /**
-     * 采集 Cookies（过滤 HttpOnly，无法通过 JS 读取）
-     */
-    private static collectCookies(): Record<string, string> {
-        const cookies: Record<string, string> = {};
-        document.cookie.split(';').forEach((cookie) => {
-            const [key, ...valueParts] = cookie.trim().split('=');
-            if (key) {
-                cookies[key] = valueParts.join('=');
-            }
-        });
-        return cookies;
+    /** 通过 chrome.cookies API 获取完整 Cookie 信息 */
+    private static async collectCookies(): Promise<CookieEntry[]> {
+        try {
+            const cookies = await chrome.cookies.getAll({ url: window.location.href });
+            return cookies.map(c => ({
+                name: c.name,
+                value: c.value,
+                domain: c.domain,
+                path: c.path,
+                expires: c.expirationDate,
+                secure: c.secure,
+                httpOnly: c.httpOnly,
+                sameSite: c.sameSite as CookieEntry['sameSite'],
+            }));
+        }
+        catch {
+            // fallback: 仅 name=value
+            const result: CookieEntry[] = [];
+            document.cookie.split(';').forEach((cookie) => {
+                const [key, ...vp] = cookie.trim().split('=');
+                if (key) {
+                    result.push({
+                        name: key, value: vp.join('='),
+                        domain: '', path: '/',
+                        secure: false, httpOnly: false,
+                    });
+                }
+            });
+            return result;
+        }
     }
 
     /**

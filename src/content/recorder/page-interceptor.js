@@ -147,4 +147,59 @@
             return Promise.reject(err);
         }
     };
+
+    // ===== URL 变更追踪 =====
+    var lastUrl = location.href;
+
+    function postEvent(type, data) {
+        window.postMessage({
+            source: 'bugreplay-page-event',
+            payload: { timestamp: Date.now(), type: type, data: data },
+        }, '*');
+    }
+
+    function checkUrl() {
+        var current = location.href;
+        if (current !== lastUrl) {
+            postEvent('url_change', { from: lastUrl, to: current });
+            lastUrl = current;
+        }
+    }
+
+    // SPA 路由变化
+    window.addEventListener('popstate', checkUrl);
+    window.addEventListener('hashchange', checkUrl);
+
+    // Monkey-patch history API
+    var origPush = history.pushState;
+    var origReplace = history.replaceState;
+    history.pushState = function () { origPush.apply(this, arguments); checkUrl(); };
+    history.replaceState = function () { origReplace.apply(this, arguments); checkUrl(); };
+
+    // ===== Storage 变更追踪 =====
+    function wrapStorage(storage, name) {
+        var origSet = storage.setItem;
+        var origRemove = storage.removeItem;
+        var origClear = storage.clear;
+
+        storage.setItem = function (key, value) {
+            var oldVal = origSet.name ? null : storage.getItem(key);
+            origSet.apply(this, arguments);
+            postEvent('storage_change', { storageType: name, action: 'set', key: key, oldValue: oldVal, newValue: value });
+        };
+
+        storage.removeItem = function (key) {
+            var oldVal = origRemove.name ? null : storage.getItem(key);
+            origRemove.apply(this, arguments);
+            postEvent('storage_change', { storageType: name, action: 'remove', key: key, oldValue: oldVal, newValue: null });
+        };
+
+        storage.clear = function () {
+            origClear.apply(this, arguments);
+            postEvent('storage_change', { storageType: name, action: 'clear' });
+        };
+    }
+
+    try { wrapStorage(localStorage, 'local'); } catch (e) {}
+    try { wrapStorage(sessionStorage, 'session'); } catch (e) {}
 })();

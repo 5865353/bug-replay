@@ -35,7 +35,8 @@ const progressPercent = computed(() =>
 );
 
 function seekFromEvent(e: MouseEvent) {
-    if (!progressBar.value || props.totalTime <= 0) return;
+    if (!progressBar.value || props.totalTime <= 0)
+        return;
     const rect = progressBar.value.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     emit('seek', pct * props.totalTime);
@@ -49,12 +50,14 @@ function onProgressMouseDown(e: MouseEvent) {
 }
 
 function onProgressMouseMove(e: MouseEvent) {
-    if (!isDragging.value) return;
+    if (!isDragging.value)
+        return;
     seekFromEvent(e);
 }
 
 function onProgressMouseUp(e: MouseEvent) {
-    if (!isDragging.value) return;
+    if (!isDragging.value)
+        return;
     isDragging.value = false;
     seekFromEvent(e);
     document.removeEventListener('mousemove', onProgressMouseMove);
@@ -62,7 +65,8 @@ function onProgressMouseUp(e: MouseEvent) {
 }
 
 function onProgressHover(e: MouseEvent) {
-    if (!progressBar.value || isDragging.value) return;
+    if (!progressBar.value || isDragging.value)
+        return;
     const rect = progressBar.value.getBoundingClientRect();
     hoverPercent.value = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
     showHover.value = true;
@@ -104,16 +108,16 @@ function openFile() {
             <!-- 左: 播放控制 -->
             <div class="controls-left">
                 <button class="ctrl-btn" title="后退 1s" @click="emit('stepBack')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7" /><polyline points="18 17 13 12 18 7" /></svg>
                 </button>
 
                 <button class="play-btn" :title="isPlaying ? '暂停' : '播放'" @click="emit('playPause')">
-                    <svg v-if="isPlaying" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-                    <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>
+                    <svg v-if="isPlaying" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                    <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
                 </button>
 
                 <button class="ctrl-btn" title="前进 1s" @click="emit('stepForward')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7" /><polyline points="6 17 11 12 6 7" /></svg>
                 </button>
 
                 <span class="time-text">{{ formatTime(currentTime) }}</span>
@@ -137,7 +141,7 @@ function openFile() {
             <!-- 右: 功能按钮 -->
             <div class="controls-right">
                 <button class="action-btn" title="打开文件" @click="openFile">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                     <span>打开</span>
                 </button>
                 <input
@@ -149,15 +153,15 @@ function openFile() {
                 >
 
                 <button class="action-btn" title="标注开关" @click="emit('toggleAnnotations')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                 </button>
 
                 <button class="action-btn" title="重播" @click="emit('replay')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                 </button>
 
                 <button class="action-btn" title="切换面板" @click="emit('toggleDevtools')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
                     <span>{{ devtoolsVisible ? '面板' : '面板' }}</span>
                 </button>
             </div>

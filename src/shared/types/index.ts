@@ -25,7 +25,7 @@ export type {
 } from './console';
 export { CAPTURE_STACK_LEVELS, CONSOLE_LEVEL_COLORS } from './console';
 
-export type { EnvironmentSnapshot } from './environment';
+export type { CookieEntry, EnvironmentSnapshot } from './environment';
 
 export type {
     HttpMethod,

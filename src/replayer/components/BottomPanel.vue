@@ -6,13 +6,8 @@ import NetworkPanel from './NetworkPanel.vue';
 
 defineProps<{
     visible: boolean;
-    collapsed: boolean;
     currentPackage: RRTPackage | null;
     currentTime: number;
-}>();
-
-defineEmits<{
-    toggleCollapse: [];
 }>();
 
 const activeTab = ref(0);
@@ -39,8 +34,7 @@ function onResizeStart(e: MouseEvent) {
     <div
         v-if="visible"
         class="bottom-panel"
-        :class="{ 'bottom-collapsed': collapsed }"
-        :style="{ height: collapsed ? '36px' : `${panelHeight}px` }"
+        :style="{ height: `${panelHeight}px` }"
     >
         <div class="resize-handle" @mousedown="onResizeStart">
             <div class="resize-bar" />
@@ -55,19 +49,8 @@ function onResizeStart(e: MouseEvent) {
             background="#0f0f14"
             :border="false"
         >
-            <template #nav-right>
-                <van-icon
-                    :name="collapsed ? 'arrow-up' : 'arrow-down'"
-                    size="16"
-                    color="#585b70"
-                    class="collapse-btn"
-                    @click="$emit('toggleCollapse')"
-                />
-            </template>
-
             <van-tab title="控制台">
                 <ConsolePanel
-                    v-if="!collapsed"
                     :logs="currentPackage?.consoleLogs || []"
                     :current-time="currentTime"
                 />
@@ -75,7 +58,6 @@ function onResizeStart(e: MouseEvent) {
 
             <van-tab title="网络">
                 <NetworkPanel
-                    v-if="!collapsed"
                     :logs="currentPackage?.networkLogs || []"
                     :current-time="currentTime"
                 />
@@ -84,7 +66,7 @@ function onResizeStart(e: MouseEvent) {
     </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .bottom-panel {
   flex-shrink: 0;
   background: #18181f;
@@ -93,30 +75,54 @@ function onResizeStart(e: MouseEvent) {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-}
-.bottom-collapsed { overflow: hidden; }
-.resize-handle {
-  position: absolute; top: -2px; left: 0; right: 0; height: 8px;
-  cursor: ns-resize; z-index: 10;
-  display: flex; justify-content: center; align-items: center;
-}
-.resize-bar { width: 40px; height: 3px; background: #2a2a38; border-radius: 2px; transition: background 0.15s; }
-.resize-handle:hover .resize-bar { background: #cba6f7; }
-.collapse-btn { margin-right: 10px; cursor: pointer; padding: 4px; }
 
-/* 确保 tab 内容填满并可滚动 */
-.bottom-panel :deep(.van-tabs) {
+  // 折叠状态
+  &.bottom-collapsed {
+    overflow: hidden;
+  }
+
+  // 拖拽手柄
+  .resize-handle {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 8px;
+    cursor: ns-resize;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .resize-bar {
+      width: 40px;
+      height: 3px;
+      background: #2a2a38;
+      border-radius: 2px;
+      transition: background 0.15s;
+    }
+
+    &:hover .resize-bar {
+      background: #cba6f7;
+    }
+  }
+
+  // van-tabs 填满
+  :deep(.van-tabs) {
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
-}
-.bottom-panel :deep(.van-tabs__content) {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-}
-.bottom-panel :deep(.van-tab__panel) {
-    height: 100%;
+
+    .van-tabs__content {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .van-tab__panel {
+      height: 100%;
+    }
+  }
 }
 </style>

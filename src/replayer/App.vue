@@ -28,7 +28,6 @@ const {
     replay,
 } = useRePlayer();
 
-const isBottomCollapsed = ref(false);
 const bottomPanelRef = ref<InstanceType<typeof BottomPanel> | null>(null);
 
 function onDropFile(file: File) {
@@ -82,10 +81,8 @@ function onFileSelected(event: Event) {
             v-if="hasLoaded"
             ref="bottomPanelRef"
             :visible="devtoolsVisible"
-            :collapsed="isBottomCollapsed"
             :current-package="currentPackage"
             :current-time="currentTime"
-            @toggle-collapse="isBottomCollapsed = !isBottomCollapsed"
         />
     </div>
 </template>

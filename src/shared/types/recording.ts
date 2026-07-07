@@ -33,6 +33,8 @@ export interface RecordingSession {
     annotations: Annotation[];
     /** 环境快照（录制开始时采集） */
     environment: EnvironmentSnapshot | null;
+    /** 页面事件时间轴（URL跳转、Storage变更等） */
+    pageEvents: PageEvent[];
     /** 用户自定义标签 */
     tags: string[];
     /** Bug 描述（用户填写） */
@@ -41,4 +43,29 @@ export interface RecordingSession {
     externalIssueId?: string;
     /** 关联的外部平台名称 */
     externalPlatform?: 'jira' | 'zentao';
+}
+
+/** 页面事件（录制过程中 URL / Storage / Cookie 变更） */
+export interface PageEvent {
+    /** 发生时间戳 */
+    timestamp: number;
+    /** 事件类型 */
+    type: 'url_change' | 'storage_change';
+    /** 事件数据 */
+    data: UrlChangeData | StorageChangeData;
+}
+
+export interface UrlChangeData {
+    type: 'url_change';
+    from: string;
+    to: string;
+}
+
+export interface StorageChangeData {
+    type: 'storage_change';
+    storageType: 'local' | 'session';
+    action: 'set' | 'remove' | 'clear';
+    key?: string;
+    oldValue?: string | null;
+    newValue?: string | null;
 }
