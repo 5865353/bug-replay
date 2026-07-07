@@ -38,6 +38,7 @@ export default defineManifest({
         {
             resources: [
                 'src/replayer/index.html',
+                'src/content/recorder/page-interceptor.js',
                 'assets/*',
                 'chunks/*',
             ],

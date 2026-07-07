@@ -13,7 +13,6 @@
         "lint:fix": "eslint . --fix"
     },
     "dependencies": {
-        "@mswjs/interceptors": "^0.41.9",
         "fabric": "^6.9.1",
         "pinia": "^2.1.7",
         "rrweb": "^2.0.0-alpha.13",

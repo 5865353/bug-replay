@@ -14,7 +14,8 @@ export function useSessions() {
             const typedResponse = response as BackgroundToContentMessage;
 
             if (typedResponse.action === BackgroundToContentAction.SESSIONS_LIST) {
-                sessions.value = (typedResponse.payload as RecordingSessionSummary[]) || [];
+                sessions.value = ((typedResponse.payload as RecordingSessionSummary[]) || [])
+                    .sort((a, b) => b.startTime - a.startTime);
             }
         }
         catch {

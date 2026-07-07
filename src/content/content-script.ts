@@ -11,23 +11,45 @@
  */
 
 import type { BackgroundToContentMessage, RecordingSession } from '@shared/types';
+import type { NetworkLog } from '@shared/types';
 import { EXTENSION_NAME } from '@shared/constants';
 import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import browser from 'webextension-polyfill';
 import { useAnnotator } from './composables/useAnnotator';
 import { useRecorder } from './composables/useRecorder';
-import { NetworkInterceptor } from './recorder/network-interceptor';
 
 // ============================================================
-// 全局网络拦截 — document_start 立即启动，早于任何页面请求
+// 页面主世界网络拦截（注入 <script> 到页面 DOM，拦截页面的 XHR/fetch）
+// Content script 隔离世界无法拦截页面的网络请求！
 // ============================================================
-const networkInterceptor = new NetworkInterceptor({
-    onLog: (_log) => {
-        // 录制开始前：日志自动缓冲在 interceptor 内部
-        // 录制开始后：useRecorder 会重新设置 onLog 回调
-    },
+
+// 缓冲录制开始前的网络日志
+const networkBuffer: NetworkLog[] = [];
+let networkLogCallback: ((log: NetworkLog) => void) | null = null;
+
+// 监听注入脚本发回的 postMessage
+window.addEventListener('message', (event) => {
+    if (event.source !== window) return;
+    if (event.data?.source !== 'bugreplay-network') return;
+
+    const log = event.data.payload as NetworkLog;
+    if (networkLogCallback) {
+        networkLogCallback(log);
+    }
+    else {
+        networkBuffer.push(log);
+    }
 });
-networkInterceptor.start();
+
+// 注入拦截脚本到页面主世界（通过 <script src>，不违反 CSP）
+function injectNetworkInterceptor(): void {
+    const script = document.createElement('script');
+    script.src = browser.runtime.getURL('src/content/recorder/page-interceptor.js');
+    (document.head || document.documentElement).appendChild(script);
+}
+
+// document_start 立即注入
+injectNetworkInterceptor();
 
 // ============================================================
 // useContentScript — 主 composable
@@ -39,11 +61,16 @@ function useContentScript() {
     const recorder = useRecorder({
         // 录制开始时：flush 缓冲的网络日志 → session
         onBeforeStart: () => {
-            const flushed = networkInterceptor.flush();
-            // 录制期间新日志实时写入 session
-            networkInterceptor.setOnLog((log) => {
+            // 之后的新日志实时回调
+            networkLogCallback = (log) => {
                 if (currentSession) currentSession.networkLogs.push(log);
-            });
+            };
+            // 回放缓冲区中的旧日志
+            const flushed = [...networkBuffer];
+            networkBuffer.length = 0;
+            for (const log of flushed) {
+                if (currentSession) currentSession.networkLogs.push(log);
+            }
             return flushed;
         },
     });

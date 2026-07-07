@@ -84,6 +84,7 @@ function onFileSelected(event: Event) {
             :visible="devtoolsVisible"
             :collapsed="isBottomCollapsed"
             :current-package="currentPackage"
+            :current-time="currentTime"
             @toggle-collapse="isBottomCollapsed = !isBottomCollapsed"
         />
     </div>

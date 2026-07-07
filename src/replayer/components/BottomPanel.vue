@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { RRTPackage } from '@shared/types';
-import { CONSOLE_LEVEL_COLORS } from '@shared/types';
-import { formatTime } from '@shared/utils';
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
+import ConsolePanel from './ConsolePanel.vue';
+import NetworkPanel from './NetworkPanel.vue';
 
-const props = defineProps<{
+defineProps<{
     visible: boolean;
     collapsed: boolean;
     currentPackage: RRTPackage | null;
+    currentTime: number;
 }>();
 
 defineEmits<{
@@ -15,47 +16,9 @@ defineEmits<{
 }>();
 
 const activeTab = ref(0);
-const searchQuery = ref('');
-const expandedItems = ref(new Set<string>());
 const panelHeight = ref(220);
 let dragStartY = 0;
 let dragStartH = 0;
-
-const consoleLogs = computed(() => {
-    if (!props.currentPackage)
-        return [];
-    let logs = props.currentPackage.consoleLogs;
-    if (searchQuery.value) {
-        const q = searchQuery.value.toLowerCase();
-        logs = logs.filter(l => l.args.some(a => String(a).toLowerCase().includes(q)) || l.level.toLowerCase().includes(q));
-    }
-    return logs;
-});
-
-const networkLogs = computed(() => {
-    if (!props.currentPackage)
-        return [];
-    let logs = props.currentPackage.networkLogs;
-    if (searchQuery.value) {
-        const q = searchQuery.value.toLowerCase();
-        logs = logs.filter(l => l.url.toLowerCase().includes(q) || l.method.toLowerCase().includes(q));
-    }
-    return logs;
-});
-
-function toggleItem(key: string) {
-    if (expandedItems.value.has(key))
-        expandedItems.value.delete(key);
-    else expandedItems.value.add(key);
-}
-
-function statusColor(status: number): string {
-    if (status >= 200 && status < 300)
-        return '#a6e3a1';
-    if (status >= 300 && status < 400)
-        return '#f9e2af';
-    return '#f38ba8';
-}
 
 function onResizeStart(e: MouseEvent) {
     dragStartY = e.clientY;
@@ -103,56 +66,19 @@ function onResizeStart(e: MouseEvent) {
             </template>
 
             <van-tab title="控制台">
-                <div v-if="!collapsed" class="tab-inner">
-                    <van-field v-model="searchQuery" placeholder="搜索..." :border="false" class="search-field" />
-                    <div class="log-list">
-                        <div v-for="(log, i) in consoleLogs" :key="i" class="log-item" @click="toggleItem(`c-${i}`)">
-                            <div class="log-header">
-                                <span class="log-time">{{ formatTime(log.timestamp) }}</span>
-                                <span class="log-level" :style="{ color: CONSOLE_LEVEL_COLORS[log.level] }">{{ log.level.toUpperCase() }}</span>
-                                <span class="log-preview">{{ log.args.map(a => String(a)).join(' ').slice(0, 80) }}</span>
-                                <van-icon :name="expandedItems.has(`c-${i}`) ? 'arrow-up' : 'arrow-down'" size="12" color="#585b70" />
-                            </div>
-                            <div v-if="expandedItems.has(`c-${i}`)" class="log-detail">
-                                <div v-for="(arg, j) in log.args" :key="j">
-                                    <strong>Arg {{ j + 1 }}:</strong> {{ typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg) }}
-                                </div>
-                                <div v-if="log.stackTrace" class="log-stack">
-                                    <strong>Stack:</strong><pre>{{ log.stackTrace }}</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ConsolePanel
+                    v-if="!collapsed"
+                    :logs="currentPackage?.consoleLogs || []"
+                    :current-time="currentTime"
+                />
             </van-tab>
 
             <van-tab title="网络">
-                <div v-if="!collapsed" class="tab-inner">
-                    <van-field v-model="searchQuery" placeholder="搜索..." :border="false" class="search-field" />
-                    <div class="log-list">
-                        <div v-for="(log, i) in networkLogs" :key="i" class="log-item" @click="toggleItem(`n-${i}`)">
-                            <div class="log-header">
-                                <span class="log-time">{{ formatTime(log.startTime) }}</span>
-                                <span class="log-method">{{ log.method }}</span>
-                                <span class="log-status" :style="{ color: statusColor(log.status) }">{{ log.status }}</span>
-                                <span class="log-preview">{{ log.url.slice(0, 60) }}</span>
-                                <span class="log-duration">{{ log.duration }}ms</span>
-                                <van-icon :name="expandedItems.has(`n-${i}`) ? 'arrow-up' : 'arrow-down'" size="12" color="#585b70" />
-                            </div>
-                            <div v-if="expandedItems.has(`n-${i}`)" class="log-detail">
-                                <div><strong>URL:</strong> {{ log.url }}</div>
-                                <div><strong>Status:</strong> {{ log.status }} {{ log.statusText }}</div>
-                                <div><strong>Duration:</strong> {{ log.duration }}ms</div>
-                                <div v-if="Object.keys(log.requestHeaders).length">
-                                    <strong>Request Headers:</strong><pre>{{ JSON.stringify(log.requestHeaders, null, 2) }}</pre>
-                                </div>
-                                <div v-if="Object.keys(log.responseHeaders).length">
-                                    <strong>Response Headers:</strong><pre>{{ JSON.stringify(log.responseHeaders, null, 2) }}</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <NetworkPanel
+                    v-if="!collapsed"
+                    :logs="currentPackage?.networkLogs || []"
+                    :current-time="currentTime"
+                />
             </van-tab>
         </van-tabs>
     </div>
@@ -177,20 +103,20 @@ function onResizeStart(e: MouseEvent) {
 .resize-bar { width: 40px; height: 3px; background: #2a2a38; border-radius: 2px; transition: background 0.15s; }
 .resize-handle:hover .resize-bar { background: #cba6f7; }
 .collapse-btn { margin-right: 10px; cursor: pointer; padding: 4px; }
-.tab-inner { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.search-field { flex-shrink: 0; background: #0f0f14 !important; }
-.log-list { flex: 1; overflow-y: auto; padding: 4px 0; }
-.log-item { padding: 6px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; font-size: 11px; transition: background 0.1s; }
-.log-item:hover { background: rgba(255,255,255,0.03); }
-.log-header { display: flex; align-items: center; gap: 6px; }
-.log-time { color: #585b70; min-width: 40px; font-variant-numeric: tabular-nums; font-size: 10px; }
-.log-level { font-weight: 700; font-size: 10px; min-width: 36px; }
-.log-method { font-weight: 700; font-size: 11px; color: #cdd6f4; min-width: 32px; }
-.log-status { font-weight: 600; font-size: 11px; min-width: 24px; }
-.log-preview { color: #bac2de; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.log-duration { color: #585b70; font-size: 10px; min-width: 36px; text-align: right; }
-.log-detail { margin-top: 6px; padding: 8px; background: #0f0f14; border-radius: 6px; font-size: 11px; color: #bac2de; max-height: 180px; overflow-y: auto; word-break: break-all; }
-.log-detail pre { margin-top: 4px; font-size: 10px; color: #a6adc8; white-space: pre-wrap; word-break: break-all; }
-.log-stack { margin-top: 6px; color: #f38ba8; }
-.log-stack pre { font-size: 10px; }
+
+/* 确保 tab 内容填满并可滚动 */
+.bottom-panel :deep(.van-tabs) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.bottom-panel :deep(.van-tabs__content) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+.bottom-panel :deep(.van-tab__panel) {
+    height: 100%;
+}
 </style>
