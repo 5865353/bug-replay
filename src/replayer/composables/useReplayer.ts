@@ -8,7 +8,7 @@ export function useRePlayer() {
     const hasLoaded = ref(false);
 
     const showAnnotations = ref(true);
-    const devtoolsVisible = ref(true);
+    const devtoolsVisible = ref(false);
     const currentTime = ref(0);
     const totalTime = ref(0);
     const isPlaying = ref(false);

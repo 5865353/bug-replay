@@ -11,34 +11,10 @@ defineProps<{
 }>();
 
 const activeTab = ref(0);
-const panelHeight = ref(220);
-let dragStartY = 0;
-let dragStartH = 0;
-
-function onResizeStart(e: MouseEvent) {
-    dragStartY = e.clientY;
-    dragStartH = panelHeight.value;
-    const onMove = (ev: MouseEvent) => {
-        panelHeight.value = Math.max(80, Math.min(500, dragStartH + (dragStartY - ev.clientY)));
-    };
-    const onUp = () => {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-}
 </script>
 
 <template>
-    <div
-        v-if="visible"
-        class="bottom-panel"
-        :style="{ height: `${panelHeight}px` }"
-    >
-        <div class="resize-handle" @mousedown="onResizeStart">
-            <div class="resize-bar" />
-        </div>
+    <div v-if="visible" class="bottom-panel">
 
         <van-tabs
             v-model:active="activeTab"
@@ -68,46 +44,13 @@ function onResizeStart(e: MouseEvent) {
 
 <style lang="scss" scoped>
 .bottom-panel {
-  flex-shrink: 0;
+  height: 100%;
   background: #18181f;
   border-top: 1px solid #2a2a38;
   display: flex;
   flex-direction: column;
-  position: relative;
   overflow: hidden;
 
-  // 折叠状态
-  &.bottom-collapsed {
-    overflow: hidden;
-  }
-
-  // 拖拽手柄
-  .resize-handle {
-    position: absolute;
-    top: -2px;
-    left: 0;
-    right: 0;
-    height: 8px;
-    cursor: ns-resize;
-    z-index: 10;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    .resize-bar {
-      width: 40px;
-      height: 3px;
-      background: #2a2a38;
-      border-radius: 2px;
-      transition: background 0.15s;
-    }
-
-    &:hover .resize-bar {
-      background: #cba6f7;
-    }
-  }
-
-  // van-tabs 填满
   :deep(.van-tabs) {
     display: flex;
     flex-direction: column;

@@ -16,6 +16,7 @@
         "fabric": "^6.9.1",
         "pinia": "^2.1.7",
         "rrweb": "^2.0.0-alpha.13",
+        "splitpanes": "^4.1.2",
         "vant": "^4.10.0",
         "vue": "^3.4.21",
         "webextension-polyfill": "^0.12.0"

@@ -161,8 +161,9 @@ function openFile() {
                 </button>
 
                 <button class="action-btn" title="切换面板" @click="emit('toggleDevtools')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
-                    <span>{{ devtoolsVisible ? '面板' : '面板' }}</span>
+                    <svg v-if="devtoolsVisible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
+                    <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15" /></svg>
+                    <span>{{ devtoolsVisible ? '收起' : '展开' }}</span>
                 </button>
             </div>
         </div>

@@ -5,7 +5,7 @@ defineProps<{
 </script>
 
 <template>
-    <van-nav-bar fixed placeholder z-index="100">
+    <van-nav-bar placeholder z-index="100">
         <template #left>
             <div class="flex items-center gap-2">
                 <img src="/icons/icon-16.png" alt="" class="w-50 h-50 rounded">

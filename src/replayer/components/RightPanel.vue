@@ -185,9 +185,15 @@ function showCookies() {
                                     <span class="tl-icon">🔗</span>
                                     <span class="tl-text">URL 变更</span>
                                     <div class="tl-detail">
-                                        <div class="tl-url">{{ ev.data.from }}</div>
-                                        <div class="tl-arrow">↓</div>
-                                        <div class="tl-url to">{{ ev.data.to }}</div>
+                                        <div class="tl-url">
+                                            {{ ev.data.from }}
+                                        </div>
+                                        <div class="tl-arrow">
+                                            ↓
+                                        </div>
+                                        <div class="tl-url to">
+                                            {{ ev.data.to }}
+                                        </div>
                                     </div>
                                 </template>
                                 <!-- Storage 变更 -->
@@ -262,7 +268,7 @@ function showCookies() {
 
 <style lang="scss" scoped>
 .right-panel {
-    width: 400px;
+    height: 100%;
     flex-shrink: 0;
     background: #18181f;
     border-left: 1px solid #2a2a38;
