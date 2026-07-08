@@ -1,50 +1,63 @@
 <script setup lang="ts">
 import type { Settings } from '../constants';
 import { MAX_DURATION_OPTIONS, REPLAY_SPEED_OPTIONS } from '../constants';
+
 defineProps<{ settings: Settings }>();
-const emit = defineEmits<{ 'update:maskInputs':[v:boolean]; 'update:mouseSample':[v:number]; 'update:scrollSample':[v:number]; 'update:maxDuration':[v:number]; 'update:replaySpeed':[v:number]; 'update:showAnnotations':[v:boolean] }>();
+const emit = defineEmits<{ 'update:maskInputs': [v: boolean]; 'update:mouseSample': [v: number]; 'update:scrollSample': [v: number]; 'update:maxDuration': [v: number]; 'update:replaySpeed': [v: number]; 'update:showAnnotations': [v: boolean] }>();
 </script>
 
 <template>
     <div class="p-16" style="display:flex;flex-direction:column;gap:14px">
         <section class="card">
-            <h3 class="card-title">🎬 录制</h3>
+            <h3 class="card-title">
+                🎬 录制
+            </h3>
             <!-- 屏蔽 -->
             <div class="row">
                 <span class="row-label">屏蔽密码等敏感输入</span>
-                <label class="toggle"><input type="checkbox" :checked="settings.maskInputs" @change="emit('update:maskInputs',($event.target as HTMLInputElement).checked)"><span class="slider"/></label>
+                <label class="toggle"><input type="checkbox" :checked="settings.maskInputs" @change="emit('update:maskInputs', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
             </div>
             <!-- 时长 -->
             <div class="row">
                 <span class="row-label">最大录制时长</span>
-                <select class="sel" :value="settings.maxDuration" @change="emit('update:maxDuration',Number(($event.target as HTMLSelectElement).value))">
-                    <option v-for="o in MAX_DURATION_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                <select class="sel" :value="settings.maxDuration" @change="emit('update:maxDuration', Number(($event.target as HTMLSelectElement).value))">
+                    <option v-for="o in MAX_DURATION_OPTIONS" :key="o.value" :value="o.value">
+                        {{ o.label }}
+                    </option>
                 </select>
             </div>
             <!-- 鼠标采样 -->
             <div class="row">
                 <span class="row-label">鼠标采样间隔</span>
-                <input class="inp-sm" type="number" :value="settings.mouseSample" min="10" max="500" @input="emit('update:mouseSample',Number(($event.target as HTMLInputElement).value))">
+                <input class="inp-sm" type="number" :value="settings.mouseSample" min="10" max="500" @input="emit('update:mouseSample', Number(($event.target as HTMLInputElement).value))">
             </div>
-            <p class="desc">ms，越小轨迹越流畅，文件越大</p>
+            <p class="desc">
+                ms，越小轨迹越流畅，文件越大
+            </p>
             <!-- 滚动采样 -->
             <div class="row">
                 <span class="row-label">滚动采样间隔</span>
-                <input class="inp-sm" type="number" :value="settings.scrollSample" min="50" max="1000" @input="emit('update:scrollSample',Number(($event.target as HTMLInputElement).value))">
+                <input class="inp-sm" type="number" :value="settings.scrollSample" min="50" max="1000" @input="emit('update:scrollSample', Number(($event.target as HTMLInputElement).value))">
             </div>
-            <p class="desc">ms，越小越精确，文件越大</p>
+            <p class="desc">
+                ms，越小越精确，文件越大
+            </p>
         </section>
         <section class="card">
-            <h3 class="card-title">▶️ 回放</h3>
+            <h3 class="card-title">
+                ▶️ 回放
+            </h3>
             <div class="row">
                 <span class="row-label">默认播放速度</span>
-                <select class="sel" :value="settings.replaySpeed" @change="emit('update:replaySpeed',Number(($event.target as HTMLSelectElement).value))">
-                    <option v-for="o in REPLAY_SPEED_OPTIONS" :key="o.value" :value="o.value">{{ o.label }}</option>
+                <select class="sel" :value="settings.replaySpeed" @change="emit('update:replaySpeed', Number(($event.target as HTMLSelectElement).value))">
+                    <option v-for="o in REPLAY_SPEED_OPTIONS" :key="o.value" :value="o.value">
+                        {{ o.label }}
+                    </option>
                 </select>
             </div>
             <div class="row">
                 <span class="row-label">默认显示标注</span>
-                <label class="toggle"><input type="checkbox" :checked="settings.showAnnotations" @change="emit('update:showAnnotations',($event.target as HTMLInputElement).checked)"><span class="slider"/></label>
+                <label class="toggle"><input type="checkbox" :checked="settings.showAnnotations" @change="emit('update:showAnnotations', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
             </div>
         </section>
     </div>

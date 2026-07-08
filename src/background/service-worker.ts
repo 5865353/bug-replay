@@ -10,17 +10,17 @@
  * TODO M6: 实现完整的消息路由和存储逻辑
  */
 
-import {
-    BackgroundToContentAction,
-    ContentToBackgroundAction,
-    type BackgroundToContentMessage,
-    type ContentToBackgroundMessage,
-    type RecordingSession,
-} from '@shared/types';
+import type { BackgroundToContentMessage, ContentToBackgroundMessage, RecordingSession } from '@shared/types';
 
 import type { JiraConfig } from '../platforms/jira';
 import type { ZentaoConfig } from '../platforms/zentao';
 import { EXTENSION_NAME } from '@shared/constants';
+import {
+    BackgroundToContentAction,
+
+    ContentToBackgroundAction,
+
+} from '@shared/types';
 import browser from 'webextension-polyfill';
 import { JiraPlatform } from '../platforms/jira';
 import { ZentaoPlatform } from '../platforms/zentao';

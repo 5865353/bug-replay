@@ -1,5 +1,5 @@
-import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import type { BackgroundToContentMessage } from '@shared/types';
+import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import { ref } from 'vue';
 import browser from 'webextension-polyfill';
 

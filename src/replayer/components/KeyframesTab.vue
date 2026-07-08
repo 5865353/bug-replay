@@ -15,14 +15,14 @@ function formatDuration(ms: number): string {
 
 <template>
     <div class="panel-content">
-        <van-empty v-if="annotations.length === 0" description="鏆傛棤鏍囨敞鍏抽敭甯? :image-size="50" />
+        <van-empty v-if="annotations.length === 0" description="暂无标注关键帧" :image-size="50" />
         <div v-else class="keyframe-list">
             <div v-for="(ann, i) in annotations" :key="i" class="kf-item">
                 <van-tag type="primary" size="medium">
                     {{ i + 1 }}
                 </van-tag>
                 <span class="kf-icon">
-                    {{ ann.type === 'rect' ? '猬? : ann.type === 'arrow' ? '鉃? : ann.type === 'text' ? '馃摑' : '鉁忥笍' }}
+                    {{ ann.type === 'rect' ? '⬜' : ann.type === 'arrow' ? '➡' : ann.type === 'text' ? '📝' : '✏️' }}
                 </span>
                 <span class="kf-type">{{ ann.type }}</span>
                 <span class="kf-time">{{ formatDuration(ann.timestamp) }}</span>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { Settings } from '../constants';
 import { HINT_JIRA_TOKEN, HINT_ZENTAO_TOKEN, JIRA_TOKEN_URL, LABEL_JIRA_EMAIL, LABEL_JIRA_PROJECT, LABEL_JIRA_TOKEN, LABEL_JIRA_URL, LABEL_VERIFY, LABEL_ZENTAO_PRODUCT, LABEL_ZENTAO_TOKEN, LABEL_ZENTAO_URL, PLACEHOLDER_JIRA_EMAIL, PLACEHOLDER_JIRA_PROJECT, PLACEHOLDER_JIRA_TOKEN, PLACEHOLDER_JIRA_URL, PLACEHOLDER_ZENTAO_PRODUCT, PLACEHOLDER_ZENTAO_TOKEN, PLACEHOLDER_ZENTAO_URL } from '../constants';
-defineProps<{ settings:Settings; isVerifying:boolean }>();
-const emit = defineEmits<{ 'update:jiraEnabled':[v:boolean]; 'update:jiraBaseUrl':[v:string]; 'update:jiraEmail':[v:string]; 'update:jiraApiToken':[v:string]; 'update:jiraProjectKey':[v:string]; 'update:zentaoEnabled':[v:boolean]; 'update:zentaoBaseUrl':[v:string]; 'update:zentaoApiToken':[v:string]; 'update:zentaoProductId':[v:string]; verify:[p:'jira'|'zentao'] }>();
+
+defineProps<{ settings: Settings; isVerifying: boolean }>();
+const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseUrl': [v: string]; 'update:jiraEmail': [v: string]; 'update:jiraApiToken': [v: string]; 'update:jiraProjectKey': [v: string]; 'update:zentaoEnabled': [v: boolean]; 'update:zentaoBaseUrl': [v: string]; 'update:zentaoApiToken': [v: string]; 'update:zentaoProductId': [v: string]; 'verify': [p: 'jira' | 'zentao'] }>();
 </script>
 
 <template>
@@ -10,40 +11,48 @@ const emit = defineEmits<{ 'update:jiraEnabled':[v:boolean]; 'update:jiraBaseUrl
         <!-- Jira -->
         <section class="card">
             <div class="flex items-center justify-between mb-14">
-                <h3 class="card-title">Jira</h3>
-                <label class="toggle"><input type="checkbox" :checked="settings.jiraEnabled" @change="emit('update:jiraEnabled',($event.target as HTMLInputElement).checked)"><span class="slider"/></label>
+                <h3 class="card-title">
+                    Jira
+                </h3>
+                <label class="toggle"><input type="checkbox" :checked="settings.jiraEnabled" @change="emit('update:jiraEnabled', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
             </div>
             <template v-if="settings.jiraEnabled">
                 <label class="lbl">{{ LABEL_JIRA_URL }}</label>
-                <input class="inp" :value="settings.jiraBaseUrl" :placeholder="PLACEHOLDER_JIRA_URL" @input="emit('update:jiraBaseUrl',($event.target as HTMLInputElement).value)">
+                <input class="inp" :value="settings.jiraBaseUrl" :placeholder="PLACEHOLDER_JIRA_URL" @input="emit('update:jiraBaseUrl', ($event.target as HTMLInputElement).value)">
                 <label class="lbl">{{ LABEL_JIRA_EMAIL }}</label>
-                <input class="inp" :value="settings.jiraEmail" :placeholder="PLACEHOLDER_JIRA_EMAIL" @input="emit('update:jiraEmail',($event.target as HTMLInputElement).value)">
+                <input class="inp" :value="settings.jiraEmail" :placeholder="PLACEHOLDER_JIRA_EMAIL" @input="emit('update:jiraEmail', ($event.target as HTMLInputElement).value)">
                 <label class="lbl">{{ LABEL_JIRA_TOKEN }}</label>
-                <input class="inp" type="password" :value="settings.jiraApiToken" :placeholder="PLACEHOLDER_JIRA_TOKEN" @input="emit('update:jiraApiToken',($event.target as HTMLInputElement).value)">
+                <input class="inp" type="password" :value="settings.jiraApiToken" :placeholder="PLACEHOLDER_JIRA_TOKEN" @input="emit('update:jiraApiToken', ($event.target as HTMLInputElement).value)">
                 <label class="lbl">{{ LABEL_JIRA_PROJECT }}</label>
-                <input class="inp" :value="settings.jiraProjectKey" :placeholder="PLACEHOLDER_JIRA_PROJECT" @input="emit('update:jiraProjectKey',($event.target as HTMLInputElement).value)">
-                <p class="hint">{{ HINT_JIRA_TOKEN }} <a :href="JIRA_TOKEN_URL" target="_blank">{{ JIRA_TOKEN_URL }}</a></p>
-                <button class="btn-verify" :disabled="isVerifying" @click="emit('verify','jira')">
-                    <span v-if="isVerifying" class="spinner"/> {{ isVerifying?'验证中...':LABEL_VERIFY }}
+                <input class="inp" :value="settings.jiraProjectKey" :placeholder="PLACEHOLDER_JIRA_PROJECT" @input="emit('update:jiraProjectKey', ($event.target as HTMLInputElement).value)">
+                <p class="hint">
+                    {{ HINT_JIRA_TOKEN }} <a :href="JIRA_TOKEN_URL" target="_blank">{{ JIRA_TOKEN_URL }}</a>
+                </p>
+                <button class="btn-verify" :disabled="isVerifying" @click="emit('verify', 'jira')">
+                    <span v-if="isVerifying" class="spinner" /> {{ isVerifying ? '验证中...' : LABEL_VERIFY }}
                 </button>
             </template>
         </section>
         <!-- 禅道 -->
         <section class="card">
             <div class="flex items-center justify-between mb-14">
-                <h3 class="card-title">禅道</h3>
-                <label class="toggle"><input type="checkbox" :checked="settings.zentaoEnabled" @change="emit('update:zentaoEnabled',($event.target as HTMLInputElement).checked)"><span class="slider"/></label>
+                <h3 class="card-title">
+                    禅道
+                </h3>
+                <label class="toggle"><input type="checkbox" :checked="settings.zentaoEnabled" @change="emit('update:zentaoEnabled', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
             </div>
             <template v-if="settings.zentaoEnabled">
                 <label class="lbl">{{ LABEL_ZENTAO_URL }}</label>
-                <input class="inp" :value="settings.zentaoBaseUrl" :placeholder="PLACEHOLDER_ZENTAO_URL" @input="emit('update:zentaoBaseUrl',($event.target as HTMLInputElement).value)">
+                <input class="inp" :value="settings.zentaoBaseUrl" :placeholder="PLACEHOLDER_ZENTAO_URL" @input="emit('update:zentaoBaseUrl', ($event.target as HTMLInputElement).value)">
                 <label class="lbl">{{ LABEL_ZENTAO_TOKEN }}</label>
-                <input class="inp" type="password" :value="settings.zentaoApiToken" :placeholder="PLACEHOLDER_ZENTAO_TOKEN" @input="emit('update:zentaoApiToken',($event.target as HTMLInputElement).value)">
+                <input class="inp" type="password" :value="settings.zentaoApiToken" :placeholder="PLACEHOLDER_ZENTAO_TOKEN" @input="emit('update:zentaoApiToken', ($event.target as HTMLInputElement).value)">
                 <label class="lbl">{{ LABEL_ZENTAO_PRODUCT }}</label>
-                <input class="inp" type="number" :value="settings.zentaoProductId" :placeholder="PLACEHOLDER_ZENTAO_PRODUCT" @input="emit('update:zentaoProductId',($event.target as HTMLInputElement).value)">
-                <p class="hint">{{ HINT_ZENTAO_TOKEN }}</p>
-                <button class="btn-verify" :disabled="isVerifying" @click="emit('verify','zentao')">
-                    <span v-if="isVerifying" class="spinner"/> {{ isVerifying?'验证中...':LABEL_VERIFY }}
+                <input class="inp" type="number" :value="settings.zentaoProductId" :placeholder="PLACEHOLDER_ZENTAO_PRODUCT" @input="emit('update:zentaoProductId', ($event.target as HTMLInputElement).value)">
+                <p class="hint">
+                    {{ HINT_ZENTAO_TOKEN }}
+                </p>
+                <button class="btn-verify" :disabled="isVerifying" @click="emit('verify', 'zentao')">
+                    <span v-if="isVerifying" class="spinner" /> {{ isVerifying ? '验证中...' : LABEL_VERIFY }}
                 </button>
             </template>
         </section>

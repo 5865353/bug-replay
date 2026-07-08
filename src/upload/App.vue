@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ContentToBackgroundAction, type BackgroundToContentMessage } from '@shared/types';
-import type { RecordingSession } from '@shared/types';
+import type { BackgroundToContentMessage, RecordingSession } from '@shared/types';
+import { ContentToBackgroundAction } from '@shared/types';
+
 import { showToast } from 'vant';
 import { computed, onMounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
@@ -34,13 +35,17 @@ const sessionInfo = ref<RecordingSession | null>(null);
 
 onMounted(async () => {
     const s = await browser.storage.local.get('bugreplay_settings');
-    if (s.bugreplay_settings) Object.assign(settings.value, s.bugreplay_settings);
-    if (settings.value.jiraEnabled) platform.value = 'jira';
-    else if (settings.value.zentaoEnabled) platform.value = 'zentao';
+    if (s.bugreplay_settings)
+        Object.assign(settings.value, s.bugreplay_settings);
+    if (settings.value.jiraEnabled)
+        platform.value = 'jira';
+    else if (settings.value.zentaoEnabled)
+        platform.value = 'zentao';
 
     if (sessionId) {
         const resp = await browser.runtime.sendMessage({ action: ContentToBackgroundAction.GET_SESSION, payload: { sessionId } }) as BackgroundToContentMessage;
-        if (resp.payload) sessionInfo.value = resp.payload as RecordingSession;
+        if (resp.payload)
+            sessionInfo.value = resp.payload as RecordingSession;
     }
 });
 
@@ -50,7 +55,8 @@ const hasAi = computed(() => !!settings.value.aiProvider && !!settings.value.aiA
 // AI 生成描述
 // ============================================================
 async function generateDescription() {
-    if (!hasAi.value || !sessionInfo.value) return;
+    if (!hasAi.value || !sessionInfo.value)
+        return;
     generatingAi.value = true;
     try {
         const ctx = [
@@ -72,9 +78,11 @@ async function generateDescription() {
         const text = data.choices?.[0]?.message?.content || '';
         description.value = text.trim();
         showToast({ message: 'AI 描述已生成', duration: 1500 });
-    } catch {
+    }
+    catch {
         showToast({ message: 'AI 生成失败，请检查配置', duration: 2000 });
-    } finally {
+    }
+    finally {
         generatingAi.value = false;
     }
 }
@@ -83,7 +91,8 @@ async function generateDescription() {
 // 提交
 // ============================================================
 async function submit() {
-    if (!sessionId || !platform.value) return;
+    if (!sessionId || !platform.value)
+        return;
     submitting.value = true;
     try {
         const cfg: any = platform.value === 'jira'
@@ -98,30 +107,43 @@ async function submit() {
         if (resp.action === 'SESSION_UPDATED') {
             const r = resp.payload as { issueUrl?: string };
             showToast({ message: r.issueUrl ? `已提交: ${r.issueUrl}` : '提交成功', duration: 4000 });
-            setTimeout(() => window.close(), 2000);
-        } else {
+            setTimeout(() => closeWindow(), 2000);
+        }
+        else {
             showToast({ message: `失败: ${resp.payload || '未知错误'}`, duration: 3000 });
         }
-    } catch (err: any) {
+    }
+    catch (err: any) {
         showToast({ message: `失败: ${err.message || '网络错误'}`, duration: 3000 });
-    } finally {
+    }
+    finally {
         submitting.value = false;
     }
 }
 
-function openSettings() { browser.runtime.openOptionsPage(); }
+function openSettings() {
+    browser.runtime.openOptionsPage();
+}
+
+function closeWindow() {
+    window.close();
+}
 </script>
 
 <template>
     <div class="shell">
         <header class="header">
-            <button class="back-btn" @click="window.close()">← 返回</button>
-            <h1 class="header-title">提交 Bug 报告</h1>
+            <button class="back-btn" @click="closeWindow">
+                ← 返回
+            </button>
+            <h1 class="header-title">
+                提交 Bug 报告
+            </h1>
         </header>
 
         <main class="body">
             <!-- 会话信息 -->
-            <section class="card" v-if="sessionInfo">
+            <section v-if="sessionInfo" class="card">
                 <div class="flex items-center gap-2 mb-3">
                     <span class="text-14 font-600" style="color:#7ba4f5">📋</span>
                     <span class="text-14 font-600" style="color:#b0b0c4">{{ sessionInfo.title }}</span>
@@ -135,10 +157,16 @@ function openSettings() { browser.runtime.openOptionsPage(); }
 
             <!-- 目标平台 -->
             <section class="card">
-                <h3 class="section-title">目标平台</h3>
+                <h3 class="section-title">
+                    目标平台
+                </h3>
                 <div class="flex gap-2">
-                    <button v-if="settings.jiraEnabled" class="platform-btn" :class="{ active: platform === 'jira' }" @click="platform = 'jira'">Jira</button>
-                    <button v-if="settings.zentaoEnabled" class="platform-btn" :class="{ active: platform === 'zentao' }" @click="platform = 'zentao'">禅道</button>
+                    <button v-if="settings.jiraEnabled" class="platform-btn" :class="{ active: platform === 'jira' }" @click="platform = 'jira'">
+                        Jira
+                    </button>
+                    <button v-if="settings.zentaoEnabled" class="platform-btn" :class="{ active: platform === 'zentao' }" @click="platform = 'zentao'">
+                        禅道
+                    </button>
                 </div>
                 <p v-if="!settings.jiraEnabled && !settings.zentaoEnabled" class="hint">
                     ⚠ 未配置 Bug 平台，请先在<a href="#" @click.prevent="openSettings">设置</a>中启用
@@ -147,25 +175,33 @@ function openSettings() { browser.runtime.openOptionsPage(); }
 
             <!-- 标题 -->
             <section class="card">
-                <h3 class="section-title">Bug 标题</h3>
-                <input v-model="title" class="inp" placeholder="简要描述 Bug 现象" />
+                <h3 class="section-title">
+                    Bug 标题
+                </h3>
+                <input v-model="title" class="inp" placeholder="简要描述 Bug 现象">
             </section>
 
             <!-- 描述 + AI -->
             <section class="card">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="section-title" style="margin-bottom:0">详细描述</h3>
+                    <h3 class="section-title" style="margin-bottom:0">
+                        详细描述
+                    </h3>
                     <button v-if="hasAi" class="ai-btn" :disabled="generatingAi" @click="generateDescription">
                         <span>{{ generatingAi ? '⚡ 生成中...' : '🤖 AI 生成' }}</span>
                     </button>
                 </div>
                 <textarea v-model="description" class="inp ta" rows="8" placeholder="复现步骤、预期结果、实际结果..." />
-                <p v-if="!hasAi" class="hint">💡 在<a href="#" @click.prevent="openSettings">设置</a>中配置 AI 后可自动生成描述</p>
+                <p v-if="!hasAi" class="hint">
+                    💡 在<a href="#" @click.prevent="openSettings">设置</a>中配置 AI 后可自动生成描述
+                </p>
             </section>
         </main>
 
         <footer class="footer">
-            <button class="btn-cancel" @click="window.close()">取消</button>
+            <button class="btn-cancel" @click="closeWindow">
+                取消
+            </button>
             <button class="btn-submit" :disabled="!platform || submitting" @click="submit">
                 {{ submitting ? '提交中...' : `提交到 ${platform === 'jira' ? 'Jira' : platform === 'zentao' ? '禅道' : '平台'}` }}
             </button>

@@ -15,7 +15,6 @@ const activeTab = ref(0);
 
 <template>
     <div v-if="visible" class="bottom-panel">
-
         <van-tabs
             v-model:active="activeTab"
             type="card"

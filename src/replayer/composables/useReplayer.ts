@@ -164,8 +164,6 @@ export function useRePlayer() {
             showWarning: false,
             showDebug: false,
             mouseTail: false,
-            // 允许回放页面执行脚本
-            UNSAFE_PLAYBACK_MODE: true,
         });
 
         // 自定义鼠标光标 — 比 rrweb 内置光标更显眼

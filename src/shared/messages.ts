@@ -2,12 +2,13 @@
 // src/shared/messages.ts — 消息协议辅助工具
 // ============================================================
 
-import {
+import type {
     BackgroundToContentAction,
-    type BackgroundToContentMessage,
+    BackgroundToContentMessage,
     ContentToBackgroundAction,
-    type ContentToBackgroundMessage,
+    ContentToBackgroundMessage,
 } from './types';
+
 import browser from 'webextension-polyfill';
 
 /**

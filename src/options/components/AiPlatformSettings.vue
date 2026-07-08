@@ -1,34 +1,46 @@
 <script setup lang="ts">
 import type { Settings } from '../constants';
 import { AI_PROVIDER_PRESETS, HINT_AI_DESC, LABEL_AI_KEY, LABEL_AI_MODEL, LABEL_AI_URL } from '../constants';
-const props = defineProps<{ settings:Settings }>();
-const emit = defineEmits<{ 'update:aiProvider':[v:string]; 'update:aiApiKey':[v:string]; 'update:aiBaseUrl':[v:string]; 'update:aiModel':[v:string] }>();
-function onSelect(v:string) {
-    const p = AI_PROVIDER_PRESETS.find(x=>x.value===v);
-    emit('update:aiProvider',v);
-    if(p) { emit('update:aiBaseUrl',p.baseUrl); emit('update:aiModel',p.defaultModel); }
+
+const props = defineProps<{ settings: Settings }>();
+const emit = defineEmits<{ 'update:aiProvider': [v: string]; 'update:aiApiKey': [v: string]; 'update:aiBaseUrl': [v: string]; 'update:aiModel': [v: string] }>();
+function onSelect(v: string) {
+    const p = AI_PROVIDER_PRESETS.find(x => x.value === v);
+    emit('update:aiProvider', v);
+    if (p) {
+        emit('update:aiBaseUrl', p.baseUrl);
+        emit('update:aiModel', p.defaultModel);
+    }
 }
-const cur = ()=> AI_PROVIDER_PRESETS.find(p=>p.value===props.settings.aiProvider);
-const isCustom = ()=> props.settings.aiProvider==='custom';
+const cur = () => AI_PROVIDER_PRESETS.find(p => p.value === props.settings.aiProvider);
+const isCustom = () => props.settings.aiProvider === 'custom';
 </script>
 
 <template>
     <div class="p-16">
         <section class="card">
-            <h3 class="card-title">🤖 AI 服务</h3>
-            <p class="desc">{{ HINT_AI_DESC }}</p>
+            <h3 class="card-title">
+                🤖 AI 服务
+            </h3>
+            <p class="desc">
+                {{ HINT_AI_DESC }}
+            </p>
             <label class="lbl">提供商</label>
             <select class="sel" :value="settings.aiProvider" @change="onSelect(($event.target as HTMLSelectElement).value)">
-                <option value="" disabled>请选择 AI 提供商</option>
-                <option v-for="p in AI_PROVIDER_PRESETS" :key="p.value" :value="p.value">{{ p.label }}</option>
+                <option value="" disabled>
+                    请选择 AI 提供商
+                </option>
+                <option v-for="p in AI_PROVIDER_PRESETS" :key="p.value" :value="p.value">
+                    {{ p.label }}
+                </option>
             </select>
             <label class="lbl">{{ LABEL_AI_KEY }}</label>
-            <input class="inp" type="password" :value="settings.aiApiKey" :placeholder="cur()?`${cur()?.label} API Key`:'输入 API Key'" @input="emit('update:aiApiKey',($event.target as HTMLInputElement).value)">
+            <input class="inp" type="password" :value="settings.aiApiKey" :placeholder="cur() ? `${cur()?.label} API Key` : '输入 API Key'" @input="emit('update:aiApiKey', ($event.target as HTMLInputElement).value)">
             <label class="lbl">{{ LABEL_AI_MODEL }}</label>
-            <input class="inp" :value="settings.aiModel" :placeholder="cur()?.defaultModel||'输入模型名称'" @input="emit('update:aiModel',($event.target as HTMLInputElement).value)">
-            <template v-if="isCustom()||(settings.aiProvider&&settings.aiBaseUrl)">
+            <input class="inp" :value="settings.aiModel" :placeholder="cur()?.defaultModel || '输入模型名称'" @input="emit('update:aiModel', ($event.target as HTMLInputElement).value)">
+            <template v-if="isCustom() || (settings.aiProvider && settings.aiBaseUrl)">
                 <label class="lbl">{{ LABEL_AI_URL }}</label>
-                <input class="inp" :value="settings.aiBaseUrl" placeholder="https://your-api.com/v1" @input="emit('update:aiBaseUrl',($event.target as HTMLInputElement).value)">
+                <input class="inp" :value="settings.aiBaseUrl" placeholder="https://your-api.com/v1" @input="emit('update:aiBaseUrl', ($event.target as HTMLInputElement).value)">
             </template>
         </section>
     </div>

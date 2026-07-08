@@ -33,7 +33,7 @@ const env = computed(() => props.package.environment);
 
 <template>
     <div class="panel-content">
-        <!-- 褰曞埗鍏冩暟鎹?-->
+        <!-- 褰曞埗鍏冩暟鎹? -->
         <div class="info-section">
             <div class="section-title">
                 馃摝 褰曞埗鍏冩暟鎹?
@@ -62,9 +62,11 @@ const env = computed(() => props.package.environment);
             </div>
             <div class="info-row">
                 <span>鎺у埗鍙版棩蹇?/span><span class="val">{{ package.consoleLogs.length }}</span>
+                </span>
             </div>
             <div class="info-row">
                 <span>鏍囨敞鍏抽敭甯?/span><span class="val">{{ package.annotations.length }}</span>
+                </span>
             </div>
             <div class="info-row">
                 <span>椤甸潰浜嬩欢</span><span class="val">{{ package.pageEvents?.length ?? 0 }}</span>
@@ -100,7 +102,8 @@ const env = computed(() => props.package.environment);
             <div class="divider" />
             <div class="info-row">
                 <span>灞忓箷鍒嗚鲸鐜?/span>
-                <span class="val">{{ env.screenResolution?.width }}脳{{ env.screenResolution?.height }}</span>
+                    <span class="val">{{ env.screenResolution?.width }}脳{{ env.screenResolution?.height }}</span>
+                </span>
             </div>
             <div class="info-row">
                 <span>瑙嗗彛 / DPR</span>
@@ -109,12 +112,15 @@ const env = computed(() => props.package.environment);
             <div class="divider" />
             <div class="clickable-row" @click="emit('showCookies')">
                 <span>Cookies</span><span class="val">{{ env.cookies?.length || 0 }} 椤?鈻?/span>
+                </span>
             </div>
             <div class="clickable-row" @click="emit('showStorage', 'LocalStorage', env.localStorage)">
                 <span>LocalStorage</span><span class="val">{{ storageCount(env.localStorage) }} 椤?鈻?/span>
+                </span>
             </div>
             <div class="clickable-row" @click="emit('showStorage', 'SessionStorage', env.sessionStorage)">
                 <span>SessionStorage</span><span class="val">{{ storageCount(env.sessionStorage) }} 椤?鈻?/span>
+                </span>
             </div>
             <div class="divider" />
             <div class="info-row ua-row">

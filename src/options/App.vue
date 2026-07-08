@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useSettings } from './composables/useSettings';
 import AiPlatformSettings from './components/AiPlatformSettings.vue';
 import BasicSettings from './components/BasicSettings.vue';
 import BugPlatformSettings from './components/BugPlatformSettings.vue';
+import { useSettings } from './composables/useSettings';
 import { LABEL_SAVE, TAB_AI_PLATFORM, TAB_BASIC, TAB_BUG_PLATFORM, TAB_TITLE_AI, TAB_TITLE_BASIC, TAB_TITLE_BUG } from './constants';
 
 const { settings, isVerifying, isSaving, save, verifyConnection } = useSettings();
@@ -21,8 +21,12 @@ const tabs = [
             <div class="flex items-center gap-3">
                 <img src="/icons/icon-48.png" class="w-36 h-36 rounded-lg">
                 <div>
-                    <h1 class="text-20 font-700 lh-none">BugReplay</h1>
-                    <p class="text-13 mt-1" style="color:#6b6b80">设置中心</p>
+                    <h1 class="text-20 font-700 lh-none">
+                        BugReplay
+                    </h1>
+                    <p class="text-13 mt-1" style="color:#6b6b80">
+                        设置中心
+                    </p>
                 </div>
             </div>
         </header>
@@ -33,29 +37,35 @@ const tabs = [
             </button>
         </nav>
         <main class="body">
-            <BasicSettings v-show="activeTab===TAB_BASIC" :settings="settings"
-                @update:mask-inputs="settings.maskInputs=$event"
-                @update:mouse-sample="settings.mouseSample=$event"
-                @update:scroll-sample="settings.scrollSample=$event"
-                @update:max-duration="settings.maxDuration=$event"
-                @update:replay-speed="settings.replaySpeed=$event"
-                @update:show-annotations="settings.showAnnotations=$event" />
-            <BugPlatformSettings v-show="activeTab===TAB_BUG_PLATFORM" :settings="settings" :is-verifying="isVerifying"
-                @update:jira-enabled="settings.jiraEnabled=$event"
-                @update:jira-base-url="settings.jiraBaseUrl=$event"
-                @update:jira-email="settings.jiraEmail=$event"
-                @update:jira-api-token="settings.jiraApiToken=$event"
-                @update:jira-project-key="settings.jiraProjectKey=$event"
-                @update:zentao-enabled="settings.zentaoEnabled=$event"
-                @update:zentao-base-url="settings.zentaoBaseUrl=$event"
-                @update:zentao-api-token="settings.zentaoApiToken=$event"
-                @update:zentao-product-id="settings.zentaoProductId=$event"
-                @verify="verifyConnection" />
-            <AiPlatformSettings v-show="activeTab===TAB_AI_PLATFORM" :settings="settings"
-                @update:ai-provider="settings.aiProvider=$event"
-                @update:ai-api-key="settings.aiApiKey=$event"
-                @update:ai-base-url="settings.aiBaseUrl=$event"
-                @update:ai-model="settings.aiModel=$event" />
+            <BasicSettings
+                v-show="activeTab === TAB_BASIC" :settings="settings"
+                @update:mask-inputs="settings.maskInputs = $event"
+                @update:mouse-sample="settings.mouseSample = $event"
+                @update:scroll-sample="settings.scrollSample = $event"
+                @update:max-duration="settings.maxDuration = $event"
+                @update:replay-speed="settings.replaySpeed = $event"
+                @update:show-annotations="settings.showAnnotations = $event"
+            />
+            <BugPlatformSettings
+                v-show="activeTab === TAB_BUG_PLATFORM" :settings="settings" :is-verifying="isVerifying"
+                @update:jira-enabled="settings.jiraEnabled = $event"
+                @update:jira-base-url="settings.jiraBaseUrl = $event"
+                @update:jira-email="settings.jiraEmail = $event"
+                @update:jira-api-token="settings.jiraApiToken = $event"
+                @update:jira-project-key="settings.jiraProjectKey = $event"
+                @update:zentao-enabled="settings.zentaoEnabled = $event"
+                @update:zentao-base-url="settings.zentaoBaseUrl = $event"
+                @update:zentao-api-token="settings.zentaoApiToken = $event"
+                @update:zentao-product-id="settings.zentaoProductId = $event"
+                @verify="verifyConnection"
+            />
+            <AiPlatformSettings
+                v-show="activeTab === TAB_AI_PLATFORM" :settings="settings"
+                @update:ai-provider="settings.aiProvider = $event"
+                @update:ai-api-key="settings.aiApiKey = $event"
+                @update:ai-base-url="settings.aiBaseUrl = $event"
+                @update:ai-model="settings.aiModel = $event"
+            />
         </main>
         <footer class="footer">
             <button class="btn-primary" :disabled="isSaving" @click="save">

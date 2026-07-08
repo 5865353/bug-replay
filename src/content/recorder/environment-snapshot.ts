@@ -13,6 +13,7 @@
  */
 
 import type { CookieEntry, EnvironmentSnapshot } from '@shared/types';
+import browser from 'webextension-polyfill';
 
 export class EnvironmentCollector {
     static async collect(): Promise<EnvironmentSnapshot> {
@@ -35,7 +36,7 @@ export class EnvironmentCollector {
     /** 通过 chrome.cookies API 获取完整 Cookie 信息 */
     private static async collectCookies(): Promise<CookieEntry[]> {
         try {
-            const cookies = await chrome.cookies.getAll({ url: window.location.href });
+            const cookies = await browser.cookies.getAll({ url: window.location.href });
             return cookies.map(c => ({
                 name: c.name,
                 value: c.value,
@@ -54,9 +55,12 @@ export class EnvironmentCollector {
                 const [key, ...vp] = cookie.trim().split('=');
                 if (key) {
                     result.push({
-                        name: key, value: vp.join('='),
-                        domain: '', path: '/',
-                        secure: false, httpOnly: false,
+                        name: key,
+                        value: vp.join('='),
+                        domain: '',
+                        path: '/',
+                        secure: false,
+                        httpOnly: false,
                     });
                 }
             });
