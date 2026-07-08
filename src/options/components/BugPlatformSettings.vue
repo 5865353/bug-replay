@@ -7,10 +7,10 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
 </script>
 
 <template>
-    <div class="p-16" style="display:flex;flex-direction:column;gap:14px">
+    <div class="tab-body">
         <!-- Jira -->
         <section class="card">
-            <div class="flex items-center justify-between mb-14">
+            <div class="card-header">
                 <h3 class="card-title">
                     Jira
                 </h3>
@@ -35,7 +35,7 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
         </section>
         <!-- 禅道 -->
         <section class="card">
-            <div class="flex items-center justify-between mb-14">
+            <div class="card-header">
                 <h3 class="card-title">
                     禅道
                 </h3>
@@ -60,15 +60,156 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
 </template>
 
 <style lang="scss" scoped>
-.card { background:#272732; border-radius:10px; padding:18px; border:1px solid #32323e; }
-.card-title { font-size:15px; font-weight:600; color:#d0d0dc; margin:0; }
-.lbl { display:block; font-size:12px; font-weight:600; color:#6b6b80; margin:12px 0 5px; text-transform:uppercase; letter-spacing:.4px; &:first-of-type { margin-top:0; } }
-.inp { width:100%; padding:10px 12px; border:1px solid #3a3a4e; border-radius:8px; background:#1e1e28; color:#d0d0dc; font-size:14px; outline:none; box-sizing:border-box; transition:border-color .15s; &::placeholder { color:#505060; } &:focus { border-color:#5b8def; } }
-.hint { font-size:12px; color:#606070; margin-top:12px; line-height:1.6; word-break:break-all; a { color:#7ba4f5; text-decoration:none; } }
-.btn-verify { width:100%; margin-top:14px; padding:10px; border:1px solid #3a3a4e; border-radius:8px; background:#272732; color:#7ba4f5; font-size:14px; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:6px; &:hover { border-color:#5b8def; background:#2a2a3a; } &:disabled { opacity:.5; cursor:not-allowed; } }
-.spinner { width:14px; height:14px; border:2px solid rgba(91,141,239,.25); border-top-color:#7ba4f5; border-radius:50%; animation:spin .6s linear infinite; }
-@keyframes spin { to{transform:rotate(360deg)} }
-.toggle { position:relative; display:inline-block; width:40px; height:22px; cursor:pointer; input { opacity:0; width:0; height:0; } }
-.slider { position:absolute; inset:0; background:#3a3a4e; border-radius:11px; transition:.2s; &::before { content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#707088; border-radius:50%; transition:.2s; } }
-.toggle input:checked+.slider { background:rgba(91,141,239,.3); &::before { background:#7ba4f5; transform:translateX(18px); } }
+.tab-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.card {
+    background: #272732;
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid #32323e;
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0d0dc;
+    margin: 0;
+}
+
+.lbl {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b6b80;
+    margin: 12px 0 5px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+
+    &:first-of-type { margin-top: 0; }
+}
+
+.inp {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .15s;
+
+    &::placeholder { color: #505060; }
+    &:focus { border-color: #5b8def; }
+}
+
+.hint {
+    font-size: 12px;
+    color: #606070;
+    margin-top: 12px;
+    line-height: 1.6;
+    word-break: break-all;
+
+    a {
+        color: #7ba4f5;
+        text-decoration: none;
+    }
+}
+
+.btn-verify {
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px;
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    background: #272732;
+    color: #7ba4f5;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+
+    &:hover {
+        border-color: #5b8def;
+        background: #2a2a3a;
+    }
+
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+}
+
+.spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(91, 141, 239, .25);
+    border-top-color: #7ba4f5;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    cursor: pointer;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background: #3a3a4e;
+    border-radius: 11px;
+    transition: .2s;
+
+    &::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        top: 3px;
+        background: #707088;
+        border-radius: 50%;
+        transition: .2s;
+    }
+}
+
+.toggle input:checked + .slider {
+    background: rgba(91, 141, 239, .3);
+
+    &::before {
+        background: #7ba4f5;
+        transform: translateX(18px);
+    }
+}
 </style>

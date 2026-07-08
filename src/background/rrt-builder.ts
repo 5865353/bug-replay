@@ -42,7 +42,6 @@ export function buildRRTPackage(session: RecordingSession): RRTPackage {
             description: session.description,
             tags: session.tags,
             extensionVersion: EXTENSION_VERSION,
-            createdBy: undefined,
             externalIssueId: session.externalIssueId,
         },
         environment: sanitizeEnvironment(session.environment!),

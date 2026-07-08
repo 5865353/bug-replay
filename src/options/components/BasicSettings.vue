@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import type { Settings } from '../constants';
-import { MAX_DURATION_OPTIONS, REPLAY_SPEED_OPTIONS } from '../constants';
+import { LABEL_USERNAME, MAX_DURATION_OPTIONS, PLACEHOLDER_USERNAME, REPLAY_SPEED_OPTIONS } from '../constants';
 
 defineProps<{ settings: Settings }>();
-const emit = defineEmits<{ 'update:maskInputs': [v: boolean]; 'update:mouseSample': [v: number]; 'update:scrollSample': [v: number]; 'update:maxDuration': [v: number]; 'update:replaySpeed': [v: number]; 'update:showAnnotations': [v: boolean] }>();
+const emit = defineEmits<{ 'update:username': [v: string]; 'update:maskInputs': [v: boolean]; 'update:mouseSample': [v: number]; 'update:scrollSample': [v: number]; 'update:maxDuration': [v: number]; 'update:replaySpeed': [v: number]; 'update:showAnnotations': [v: boolean] }>();
 </script>
 
 <template>
-    <div class="p-16" style="display:flex;flex-direction:column;gap:14px">
+    <div class="tab-body">
+        <section class="card">
+            <h3 class="card-title">
+                👤 {{ LABEL_USERNAME }}
+            </h3>
+            <input
+                class="inp"
+                :value="settings.username"
+                :placeholder="PLACEHOLDER_USERNAME"
+                @input="emit('update:username', ($event.target as HTMLInputElement).value)"
+            >
+        </section>
         <section class="card">
             <h3 class="card-title">
                 🎬 录制
@@ -64,16 +75,136 @@ const emit = defineEmits<{ 'update:maskInputs': [v: boolean]; 'update:mouseSampl
 </template>
 
 <style lang="scss" scoped>
-.card { background:#272732; border-radius:10px; padding:18px; border:1px solid #32323e; }
-.card-title { font-size:14px; font-weight:600; color:#d0d0dc; margin:0 0 14px; padding-bottom:10px; border-bottom:1px solid #32323e; }
-.row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; }
-.row-label { font-size:14px; color:#b0b0c4; }
-.desc { font-size:12px; color:#606070; margin:2px 0 8px 0; }
-.inp-sm { width:72px; padding:6px 8px; border:1px solid #3a3a4e; border-radius:6px; background:#1e1e28; color:#d0d0dc; font-size:14px; text-align:center; outline:none; &:focus { border-color:#5b8def; } }
-.sel { padding:6px 28px 6px 10px; border:1px solid #3a3a4e; border-radius:6px; background:#1e1e28; color:#d0d0dc; font-size:13px; outline:none; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23707088' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; option { background:#22222c; color:#d0d0dc; } }
-.toggle { position:relative; display:inline-block; width:40px; height:22px; cursor:pointer; input { opacity:0; width:0; height:0; } }
-.slider { position:absolute; inset:0; background:#3a3a4e; border-radius:11px; transition:.2s;
-    &::before { content:''; position:absolute; width:16px; height:16px; left:3px; top:3px; background:#707088; border-radius:50%; transition:.2s; }
+.tab-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
-.toggle input:checked+.slider { background:rgba(91,141,239,.3); &::before { background:#7ba4f5; transform:translateX(18px); } }
+
+.card {
+    background: #272732;
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid #32323e;
+}
+
+.card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #d0d0dc;
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #32323e;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+}
+
+.row-label {
+    font-size: 14px;
+    color: #b0b0c4;
+}
+
+.desc {
+    font-size: 12px;
+    color: #606070;
+    margin: 2px 0 8px 0;
+}
+
+.inp {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+
+    &::placeholder { color: #505060; }
+    &:focus { border-color: #5b8def; }
+}
+
+.inp-sm {
+    width: 72px;
+    padding: 6px 8px;
+    border: 1px solid #3a3a4e;
+    border-radius: 6px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+
+    &:focus { border-color: #5b8def; }
+}
+
+.sel {
+    padding: 6px 28px 6px 10px;
+    border: 1px solid #3a3a4e;
+    border-radius: 6px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23707088' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+
+    option {
+        background: #22222c;
+        color: #d0d0dc;
+    }
+}
+
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    cursor: pointer;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    background: #3a3a4e;
+    border-radius: 11px;
+    transition: .2s;
+
+    &::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 3px;
+        top: 3px;
+        background: #707088;
+        border-radius: 50%;
+        transition: .2s;
+    }
+}
+
+.toggle input:checked + .slider {
+    background: rgba(91, 141, 239, .3);
+
+    &::before {
+        background: #7ba4f5;
+        transform: translateX(18px);
+    }
+}
 </style>

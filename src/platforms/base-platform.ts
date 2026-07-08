@@ -2,8 +2,6 @@
  * src/platforms/base-platform.ts — 第三方平台抽象基类
  *
  * 定义统一的 Bug 提交流程接口，方便扩展 Jira / 禅道 / GitLab 等
- *
- * TODO M7: 实现平台集成
  */
 
 import type { RRTPackage } from '@shared/types';

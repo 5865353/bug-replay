@@ -1,7 +1,30 @@
 <script setup lang="ts">
 import type { RecordingSession } from '@shared/types';
+import { computed } from 'vue';
 
-defineProps<{ sessionInfo: RecordingSession }>();
+const props = defineProps<{ sessionInfo: RecordingSession }>();
+
+const duration = computed(() => {
+    const ms = props.sessionInfo.endTime
+        ? props.sessionInfo.endTime - props.sessionInfo.startTime
+        : Date.now() - props.sessionInfo.startTime;
+    const s = Math.floor(ms / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+});
+
+const recordDate = computed(() => {
+    const d = new Date(props.sessionInfo.startTime);
+    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+});
+
+const pageUrl = computed(() => {
+    try {
+        const u = props.sessionInfo.environment?.url;
+        return u ? new URL(u).hostname : '';
+    } catch { return ''; }
+});
 </script>
 
 <template>
@@ -9,6 +32,11 @@ defineProps<{ sessionInfo: RecordingSession }>();
         <div class="card-header">
             <span class="card-icon">📋</span>
             <span class="card-title">{{ sessionInfo.title }}</span>
+        </div>
+        <div class="card-meta">
+            <span v-if="pageUrl" class="meta-item">🌐 {{ pageUrl }}</span>
+            <span class="meta-item">⏱ {{ duration }}</span>
+            <span class="meta-item">📅 {{ recordDate }}</span>
         </div>
         <div class="card-stats">
             <div class="stat-item"><span class="stat-label">网络</span><br><span class="stat-value">{{ sessionInfo.networkLogs?.length || 0 }}</span></div>
@@ -44,6 +72,16 @@ defineProps<{ sessionInfo: RecordingSession }>();
     font-weight: 600;
     color: #b0b0c4;
 }
+
+.card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+}
+
+.meta-item { color: #606070; }
 
 .card-stats {
     display: grid;

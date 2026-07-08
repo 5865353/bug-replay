@@ -13,6 +13,8 @@ export const STORAGE_KEY_SETTINGS = 'bugreplay_settings' as const;
 // ============================================================
 
 export interface Settings {
+    // 用户
+    username: string;
     // 录制
     maskInputs: boolean;
     mouseSample: number;
@@ -39,6 +41,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+    username: '',
     maskInputs: true,
     mouseSample: 50,
     scrollSample: 150,
@@ -77,16 +80,6 @@ export const REPLAY_SPEED_OPTIONS = [
     { value: 1, label: '1×' },
     { value: 2, label: '2×' },
     { value: 4, label: '4×' },
-] as const;
-
-export const BUG_PLATFORM_OPTIONS = [
-    { name: 'jira', label: 'Jira' },
-    { name: 'zentao', label: '禅道' },
-] as const;
-
-export const AI_PROVIDER_OPTIONS = [
-    { name: 'openai', label: 'OpenAI' },
-    { name: 'custom', label: '自定义' },
 ] as const;
 
 // ============================================================
@@ -128,7 +121,6 @@ export const TOAST_SAVED = '保存成功';
 export const TOAST_VERIFY_JIRA_OK = 'Jira 连接验证成功';
 export const TOAST_VERIFY_ZENTAO_OK = '禅道连接验证成功';
 export const TOAST_VERIFY_FAIL = (status: number) => `验证失败: HTTP ${status}`;
-export const TOAST_NO_PLATFORM = '请先选择 Bug 平台';
 export const TOAST_NETWORK_ERROR = '网络错误';
 
 // ============================================================
@@ -143,12 +135,6 @@ export const PLACEHOLDER_JIRA_PROJECT = '如 PROJ';
 export const PLACEHOLDER_ZENTAO_URL = 'https://zentao.example.com';
 export const PLACEHOLDER_ZENTAO_TOKEN = '从禅道个人设置获取';
 export const PLACEHOLDER_ZENTAO_PRODUCT = '数字产品 ID';
-export const PLACEHOLDER_AI_KEY = 'sk-...';
-export const PLACEHOLDER_AI_KEY_CUSTOM = '输入 API Key';
-export const PLACEHOLDER_AI_URL_OPENAI = 'https://api.openai.com/v1';
-export const PLACEHOLDER_AI_URL_CUSTOM = 'https://your-api.com/v1';
-export const PLACEHOLDER_AI_MODEL_OPENAI = 'gpt-4o';
-export const PLACEHOLDER_AI_MODEL_CUSTOM = '输入模型名称';
 
 // ============================================================
 // Tab 标题
@@ -195,7 +181,7 @@ export const JIRA_TOKEN_URL = 'https://id.atlassian.com/manage-profile/security/
 
 export const HINT_JIRA_TOKEN = `API Token 获取地址：${JIRA_TOKEN_URL}`;
 export const HINT_ZENTAO_TOKEN = 'API Token 获取路径：禅道后台 → 个人设置 → API 密钥';
-export const HINT_AI_DESC = '配置 AI 服务后，可用于自动生成 Bug 描述、分析错误日志等（功能开发中）';
+export const HINT_AI_DESC = '配置 AI 服务后，可在提交 Bug 时自动生成描述内容';
 
 // ============================================================
 // 版本号

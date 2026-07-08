@@ -2,8 +2,6 @@
  * src/background/storage-manager.ts — IndexedDB 存储管理
  *
  * 封装 IndexedDB 操作，管理录制会话的持久化存储
- *
- * TODO M6: 实现完整的 IndexedDB CRUD 操作
  */
 
 import type { RecordingSession } from '@shared/types';

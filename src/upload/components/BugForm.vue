@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import browser from 'webextension-polyfill';
 
-defineProps<{ title: string; description: string; hasAi: boolean; generatingAi: boolean }>();
-defineEmits<{ 'update:title': [value: string]; 'update:description': [value: string]; generateAi: [] }>();
+defineProps<{ title: string; description: string; tags: string; hasAi: boolean; generatingAi: boolean }>();
+defineEmits<{ 'update:title': [value: string]; 'update:description': [value: string]; 'update:tags': [value: string]; generateAi: [] }>();
 
 function openSettings() { browser.runtime.openOptionsPage(); }
 </script>
@@ -26,6 +26,12 @@ function openSettings() { browser.runtime.openOptionsPage(); }
         <p v-if="!hasAi" class="hint">
             💡 在<a href="#" @click.prevent="openSettings">设置</a>中配置 AI 后可自动生成描述
         </p>
+    </section>
+
+    <!-- 标签 -->
+    <section class="card">
+        <h3 class="section-title">🏷 标签</h3>
+        <input :value="tags" class="inp" placeholder="用逗号分隔，如：UI, 登录, P0" @input="$emit('update:tags', ($event.target as HTMLInputElement).value)">
     </section>
 </template>
 

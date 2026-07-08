@@ -7,7 +7,7 @@
  * 3. 处理 .rrt 文件导出
  * 4. 第三方平台提交（预留）
  *
- * TODO M6: 实现完整的消息路由和存储逻辑
+ * TODO: 后续考虑按需清理过期会话、导出历史管理
  */
 
 import type { BackgroundToContentMessage, ContentToBackgroundMessage, RecordingSession } from '@shared/types';
@@ -332,6 +332,8 @@ async function handleMessage(
                 duration: s.endTime ? s.endTime - s.startTime : 0,
                 tags: s.tags,
                 hasAnnotations: s.annotations.length > 0,
+                networkLogCount: s.networkLogs.length,
+                consoleLogCount: s.consoleLogs.length,
             }));
             return {
                 action: BackgroundToContentAction.SESSIONS_LIST,
@@ -359,6 +361,26 @@ async function handleMessage(
             return {
                 action: BackgroundToContentAction.SESSION_DELETED,
                 payload: { sessionId },
+                requestId,
+            };
+        }
+
+        case ContentToBackgroundAction.UPDATE_SESSION_META: {
+            const { sessionId, updates } = payload as {
+                sessionId: string;
+                updates: { title?: string; tags?: string[]; description?: string };
+            };
+            const session = await storageManager.getSession(sessionId);
+            if (!session) {
+                return { action: BackgroundToContentAction.ERROR, payload: 'Session not found', requestId };
+            }
+            if (updates.title !== undefined) session.title = updates.title;
+            if (updates.tags !== undefined) session.tags = updates.tags;
+            if (updates.description !== undefined) session.description = updates.description;
+            await storageManager.saveSession(session);
+            return {
+                action: BackgroundToContentAction.SESSION_UPDATED,
+                payload: { sessionId, updates },
                 requestId,
             };
         }

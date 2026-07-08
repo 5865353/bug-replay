@@ -4,7 +4,7 @@ import PlatformSelector from './components/PlatformSelector.vue';
 import SessionInfoCard from './components/SessionInfoCard.vue';
 import { useUpload } from './composables/useUpload';
 
-const { settings, sessionInfo, platform, title, description, submitting, generatingAi, hasAi, generateDescription, submit } = useUpload();
+const { settings, sessionInfo, platform, title, description, tags, submitting, generatingAi, loading, loadError, hasAi, canSubmit, generateDescription, submit } = useUpload();
 
 function closePage() {
     window.close();
@@ -23,22 +23,37 @@ function closePage() {
         </header>
 
         <main class="body">
-            <SessionInfoCard v-if="sessionInfo" :session-info="sessionInfo" />
-            <PlatformSelector v-model:platform="platform" :settings="settings" />
-            <BugForm
-                v-model:title="title"
-                v-model:description="description"
-                :has-ai="hasAi"
-                :generating-ai="generatingAi"
-                @generate-ai="generateDescription"
-            />
+            <!-- 加载中 -->
+            <div v-if="loading" class="status-box">
+                <van-loading type="spinner" size="24" color="#7ba4f5" />
+                <span class="status-text">加载中...</span>
+            </div>
+
+            <!-- 错误 -->
+            <div v-else-if="loadError" class="status-box">
+                <span class="status-text" style="color:#f38ba8">⚠ {{ loadError }}</span>
+            </div>
+
+            <!-- 正常内容 -->
+            <template v-else>
+                <SessionInfoCard v-if="sessionInfo" :session-info="sessionInfo" />
+                <PlatformSelector v-model:platform="platform" :settings="settings" />
+                <BugForm
+                    v-model:title="title"
+                    v-model:description="description"
+                    v-model:tags="tags"
+                    :has-ai="hasAi"
+                    :generating-ai="generatingAi"
+                    @generate-ai="generateDescription"
+                />
+            </template>
         </main>
 
         <footer class="footer">
             <button class="btn-cancel" @click="closePage">
                 取消
             </button>
-            <button class="btn-submit" :disabled="!platform || submitting" @click="submit">
+            <button class="btn-submit" :disabled="!canSubmit" @click="submit">
                 {{ submitting ? '提交中...' : `提交到 ${platform === 'jira' ? 'Jira' : platform === 'zentao' ? '禅道' : '平台'}` }}
             </button>
         </footer>
@@ -87,6 +102,20 @@ function closePage() {
     display: flex;
     flex-direction: column;
     gap: 14px;
+}
+
+.status-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.status-text {
+    font-size: 14px;
+    color: #6b6b80;
 }
 
 .footer {

@@ -2,6 +2,7 @@ import type { Annotation, NetworkLog, PageEvent, RRTPackage } from '@shared/type
 import { ContentToBackgroundAction } from '@shared/types';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
+import { AnnotationOverlay } from './annotation-overlay';
 
 export function useRePlayer() {
     const currentPackage = ref<RRTPackage | null>(null);
@@ -53,16 +54,16 @@ export function useRePlayer() {
             const firstEvent = pkg.rrwebEvents[0] as { timestamp?: number } | undefined;
             recordingBaseTime = firstEvent?.timestamp ?? 0;
 
-            // 归一化所有时间戳为相对时间
-            pkg.networkLogs = normalizeNetworkLogs(pkg.networkLogs || []);
-            pkg.annotations = normalizeAnnotations(pkg.annotations || []);
-            pkg.pageEvents = normalizePageEvents(pkg.pageEvents || []);
+            // .rrt 文件中的时间戳已是相对值，无需归一化
+            pkg.networkLogs = pkg.networkLogs || [];
+            pkg.annotations = pkg.annotations || [];
+            pkg.pageEvents = pkg.pageEvents || [];
 
             // Initialize rrweb replayer
             await initRRWebRePlayer(pkg);
 
-            // Initialize annotations
-            initAnnotations(pkg.annotations);
+            // Initialize annotations (await to ensure overlay is ready before resize)
+            await initAnnotations(pkg.annotations);
 
             // 重新建立观察器（cleanup 中已销毁）
             await nextTick();
@@ -116,7 +117,7 @@ export function useRePlayer() {
             pkg.pageEvents = normalizePageEvents(pkg.pageEvents || []);
 
             await initRRWebRePlayer(pkg);
-            initAnnotations(pkg.annotations);
+            await initAnnotations(pkg.annotations);
 
             await nextTick();
             setupObservers();
@@ -168,6 +169,13 @@ export function useRePlayer() {
 
         // 自定义鼠标光标 — 比 rrweb 内置光标更显眼
         initCustomCursor(container as HTMLElement, pkg.rrwebEvents);
+
+        // 确保 iframe 在标注层之下
+        const iframe = container.querySelector('iframe') as HTMLIFrameElement | null;
+        if (iframe) {
+            iframe.style.position = 'relative';
+            iframe.style.zIndex = '0';
+        }
 
         // 渲染第一帧并缩放
         showFirstFrame();
@@ -413,21 +421,30 @@ export function useRePlayer() {
         }));
     }
 
-    function initAnnotations(annotations: Annotation[]) {
-        // Dynamic import for Fabric.js (only needed in replayer)
-        import('./annotation-overlay').then(({ AnnotationOverlay }) => {
+    function initAnnotations(annotations: Annotation[]): Promise<void> {
+        return new Promise((resolve) => {
             const container = document.getElementById('rrweb-player');
-            if (!container) return;
+            if (!container) { resolve(); return; }
 
             const overlay = new AnnotationOverlay();
             overlay.init(container, annotations);
             annotationOverlay = overlay;
             annotationWrapper = overlay.getWrapper();
+
+            // 同步尺寸
+            nextTick(() => {
+                syncContentScale();
+                resolve();
+            });
         });
     }
 
     function updateAnnotationOverlay(time: number) {
         annotationOverlay?.updateTime(time);
+        // 同步更新鼠标轨迹
+        if (mousePositions.length > 0) {
+            annotationOverlay?.updateMouseTrail(mousePositions, time);
+        }
     }
 
     function toggleAnnotations() {
@@ -463,6 +480,8 @@ export function useRePlayer() {
         iframe.style.height = `${vh}px`;
         iframe.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
         iframe.style.transformOrigin = 'top left';
+        iframe.style.position = 'relative';
+        iframe.style.zIndex = '0';
 
         if (annotationWrapper) {
             annotationWrapper.style.width = `${vw}px`;

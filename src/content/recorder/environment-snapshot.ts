@@ -9,7 +9,7 @@
  * - 显示信息：屏幕分辨率, 视口大小, DevicePixelRatio
  * - 存储状态：Cookies（非 HttpOnly）, LocalStorage, SessionStorage
  *
- * TODO M2: 完善敏感信息过滤逻辑
+ * TODO: Cookie 值可能包含会话令牌等敏感信息，建议脱敏处理
  */
 
 import type { CookieEntry, EnvironmentSnapshot } from '@shared/types';

@@ -2,24 +2,18 @@
  * src/upload/constants.ts — 上传页面常量
  */
 
+import type { Settings } from '@/options/constants';
+
 // ============================================================
-// 设置接口
+// 设置接口（从 Settings 中 Pick 上传所需字段）
 // ============================================================
-export interface UploadSettings {
-    jiraEnabled: boolean;
-    zentaoEnabled: boolean;
-    jiraBaseUrl: string;
-    jiraEmail: string;
-    jiraApiToken: string;
-    jiraProjectKey: string;
-    zentaoBaseUrl: string;
-    zentaoApiToken: string;
-    zentaoProductId: string;
-    aiProvider: string;
-    aiApiKey: string;
-    aiBaseUrl: string;
-    aiModel: string;
-}
+export type UploadSettings = Pick<
+    Settings,
+    | 'jiraEnabled' | 'zentaoEnabled'
+    | 'jiraBaseUrl' | 'jiraEmail' | 'jiraApiToken' | 'jiraProjectKey'
+    | 'zentaoBaseUrl' | 'zentaoApiToken' | 'zentaoProductId'
+    | 'aiProvider' | 'aiApiKey' | 'aiBaseUrl' | 'aiModel'
+>;
 
 export const DEFAULT_SETTINGS: UploadSettings = {
     jiraEnabled: false, zentaoEnabled: false,
@@ -33,7 +27,6 @@ export const DEFAULT_SETTINGS: UploadSettings = {
 // ============================================================
 export const TOAST_AI_OK = 'AI 描述已生成';
 export const TOAST_AI_FAIL = 'AI 生成失败，请检查配置';
-export const TOAST_SUBMIT_FAIL = '提交失败';
 export const TOAST_NETWORK_ERROR = '网络错误';
 
 // ============================================================

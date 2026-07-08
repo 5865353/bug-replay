@@ -19,27 +19,41 @@ export class AnnotationOverlay {
     private visible = true;
     private annotations: Annotation[] = [];
     private container: HTMLElement | null = null;
-    private lastShownCount = 0;
+    private renderedIds = new Set<string>();
+    private animFrameId: number | null = null;
+    private mouseTrail: Path | null = null;
+
+    /** 渐显动画时长 (ms) */
+    private static readonly FADE_DURATION = 350;
+    /** 鼠标轨迹保留时长 (ms) */
+    private static readonly TRAIL_DURATION = 500;
 
     init(container: HTMLElement, annotations: Annotation[]): void {
         this.container = container;
         this.annotations = annotations;
 
+        const cw = container.clientWidth || 1280;
+        const ch = container.clientHeight || 720;
+
         this.wrapperEl = document.createElement('div');
-        this.wrapperEl.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;background:transparent;';
+        this.wrapperEl.style.cssText = `position:absolute;top:0;left:0;width:${cw}px;height:${ch}px;pointer-events:none;z-index:10;`;
         container.style.position = 'relative';
         container.appendChild(this.wrapperEl);
 
         const canvasEl = document.createElement('canvas');
+        canvasEl.width = cw;
+        canvasEl.height = ch;
+        canvasEl.style.cssText = 'position:absolute;top:0;left:0;';
         this.wrapperEl.appendChild(canvasEl);
 
         this.canvas = new Canvas(canvasEl, {
-            width: container.clientWidth || 1280,
-            height: container.clientHeight || 720,
+            width: cw,
+            height: ch,
             selection: false,
-            renderOnAddRemove: true,
+            renderOnAddRemove: false,
             backgroundColor: 'transparent',
         });
+        this.canvas.renderAll();
 
         window.addEventListener('resize', this.handleResize);
     }
@@ -47,12 +61,69 @@ export class AnnotationOverlay {
     updateTime(currentTime: number): void {
         if (!this.visible || !this.canvas) return;
         const active = this.annotations.filter(a => a.timestamp <= currentTime);
-        if (active.length === this.lastShownCount) return;
-        this.lastShownCount = active.length;
 
-        this.canvas.clear();
-        for (const ann of active) this.renderAnnotation(ann);
-        this.canvas.requestRenderAll();
+        // 回退时重置（seeking backward / replay）
+        if (active.length < this.renderedIds.size) {
+            this.renderedIds.clear();
+            this.mouseTrail = null;
+            this.canvas.clear();
+            this.canvas.backgroundColor = 'transparent';
+        }
+
+        const newIds: string[] = [];
+
+        for (const ann of active) {
+            if (!this.renderedIds.has(ann.id)) {
+                this.renderedIds.add(ann.id);
+                newIds.push(ann.id);
+                this.renderAnnotation(ann, true);
+            }
+        }
+
+        // 有新标注时启动渐显动画
+        if (newIds.length > 0) {
+            this.startFadeIn();
+        }
+
+        this.canvas.renderAll();
+    }
+
+    /**
+     * 渲染鼠标移动轨迹
+     * @param positions 全部鼠标位置数组 [{ time, x, y }, ...]
+     * @param currentTime 当前回放时间
+     */
+    updateMouseTrail(positions: Array<{ time: number; x: number; y: number }>, currentTime: number): void {
+        if (!this.canvas) return;
+
+        if (this.mouseTrail) {
+            this.canvas.remove(this.mouseTrail);
+            this.mouseTrail = null;
+        }
+
+        const cutoff = currentTime - AnnotationOverlay.TRAIL_DURATION;
+        const trail = positions.filter(p => p.time > cutoff && p.time <= currentTime);
+        if (trail.length < 2) {
+            this.canvas.renderAll();
+            return;
+        }
+
+        const pathStr = trail.reduce(
+            (acc, p, i) => acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`),
+            '',
+        );
+
+        this.mouseTrail = new Path(pathStr, {
+            stroke: '#7ba4f5',
+            strokeWidth: 2,
+            fill: '',
+            opacity: 0.4,
+            selectable: false,
+            evented: false,
+        });
+
+        this.canvas.add(this.mouseTrail);
+        this.canvas.renderAll();
     }
 
     toggle(): boolean {
@@ -70,17 +141,72 @@ export class AnnotationOverlay {
 
     resize(w: number, h: number): void {
         if (!this.canvas) return;
+        const canvasEl = this.canvas.getElement();
+        canvasEl.width = w;
+        canvasEl.height = h;
         this.canvas.setWidth(w);
         this.canvas.setHeight(h);
-        this.canvas.requestRenderAll();
+        this.canvas.renderAll();
     }
 
     destroy(): void {
+        this.stopFadeIn();
         window.removeEventListener('resize', this.handleResize);
+        if (this.mouseTrail) {
+            this.canvas?.remove(this.mouseTrail);
+            this.mouseTrail = null;
+        }
         this.canvas?.dispose();
         this.canvas = null;
         this.wrapperEl?.remove();
         this.wrapperEl = null;
+        this.renderedIds.clear();
+    }
+
+    // ============================================================
+    // 渐显动画
+    // ============================================================
+    private startFadeIn(): void {
+        if (this.animFrameId) return;
+
+        const startTime = performance.now();
+        const duration = AnnotationOverlay.FADE_DURATION;
+        const canvas = this.canvas!;
+
+        const animate = (now: number) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // ease-out cubic
+            const t = 1 - Math.pow(1 - progress, 3);
+
+            const objects = canvas.getObjects();
+            let allDone = true;
+
+            for (const obj of objects) {
+                const o = obj as any;
+                if (o.opacity !== undefined && o.opacity < 1) {
+                    o.set({ opacity: t, scaleX: 0.9 + 0.1 * t, scaleY: 0.9 + 0.1 * t });
+                    allDone = false;
+                }
+            }
+
+            canvas.renderAll();
+
+            if (allDone) {
+                this.animFrameId = null;
+            } else {
+                this.animFrameId = requestAnimationFrame(animate);
+            }
+        };
+
+        this.animFrameId = requestAnimationFrame(animate);
+    }
+
+    private stopFadeIn(): void {
+        if (this.animFrameId) {
+            cancelAnimationFrame(this.animFrameId);
+            this.animFrameId = null;
+        }
     }
 
     private handleResize = (): void => {
@@ -90,8 +216,11 @@ export class AnnotationOverlay {
         this.canvas.requestRenderAll();
     };
 
-    private renderAnnotation(ann: Annotation): void {
+    private renderAnnotation(ann: Annotation, fadeIn = false): void {
         let obj = null;
+        const scale = fadeIn ? 0.9 : 1;
+        const opacity = fadeIn ? 0 : 1;
+
         switch (ann.type) {
             case 'rect':
                 obj = new Rect({
@@ -106,6 +235,9 @@ export class AnnotationOverlay {
                     ry: 4,
                     selectable: false,
                     evented: false,
+                    opacity,
+                    scaleX: scale,
+                    scaleY: scale,
                 });
                 break;
             case 'arrow': {
@@ -115,6 +247,7 @@ export class AnnotationOverlay {
                     strokeWidth: lineWidth,
                     selectable: false,
                     evented: false,
+                    opacity,
                 });
                 this.canvas!.add(line);
 
@@ -124,7 +257,14 @@ export class AnnotationOverlay {
                     { x: endX, y: endY },
                     { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
                     { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
-                ], { fill: color, stroke: color, strokeWidth: 2, selectable: false, evented: false });
+                ], {
+                    fill: color,
+                    stroke: color,
+                    strokeWidth: 2,
+                    selectable: false,
+                    evented: false,
+                    opacity,
+                });
                 this.canvas!.add(tri);
                 break;
             }
@@ -139,6 +279,9 @@ export class AnnotationOverlay {
                     padding: 4,
                     selectable: false,
                     evented: false,
+                    opacity,
+                    scaleX: scale,
+                    scaleY: scale,
                 });
                 break;
             case 'freehand': {
@@ -151,6 +294,7 @@ export class AnnotationOverlay {
                         fill: '',
                         selectable: false,
                         evented: false,
+                        opacity,
                     },
                 );
                 this.canvas!.add(path);

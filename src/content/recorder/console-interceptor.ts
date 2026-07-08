@@ -7,8 +7,6 @@
  * - 参数循环引用检测与序列化
  * - 特殊类型处理（BigInt, Symbol, Function, Error 等）
  * - 调用栈采集（仅 error/warn 级别）
- *
- * TODO M2: 实现完整的 console 劫持逻辑
  */
 
 import type { ConsoleLevel, ConsoleLog } from '@shared/types';

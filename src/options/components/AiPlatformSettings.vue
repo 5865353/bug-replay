@@ -17,7 +17,7 @@ const isCustom = () => props.settings.aiProvider === 'custom';
 </script>
 
 <template>
-    <div class="p-16">
+    <div class="tab-body">
         <section class="card">
             <h3 class="card-title">
                 🤖 AI 服务
@@ -47,10 +47,81 @@ const isCustom = () => props.settings.aiProvider === 'custom';
 </template>
 
 <style lang="scss" scoped>
-.card { background:#272732; border-radius:10px; padding:18px; border:1px solid #32323e; }
-.card-title { font-size:15px; font-weight:600; color:#d0d0dc; margin:0 0 14px; padding-bottom:10px; border-bottom:1px solid #32323e; }
-.desc { font-size:13px; color:#6b6b80; line-height:1.6; margin-bottom:14px; }
-.lbl { display:block; font-size:12px; font-weight:600; color:#6b6b80; margin:12px 0 5px; text-transform:uppercase; letter-spacing:.4px; &:first-of-type { margin-top:0; } }
-.inp { width:100%; padding:10px 12px; border:1px solid #3a3a4e; border-radius:8px; background:#1e1e28; color:#d0d0dc; font-size:14px; outline:none; box-sizing:border-box; transition:border-color .15s; &::placeholder { color:#505060; } &:focus { border-color:#5b8def; } }
-.sel { width:100%; padding:10px 12px; border:1px solid #3a3a4e; border-radius:8px; background:#1e1e28; color:#d0d0dc; font-size:14px; outline:none; cursor:pointer; box-sizing:border-box; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23707088' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; transition:border-color .15s; &:focus { border-color:#5b8def; } option { background:#22222c; color:#d0d0dc; } }
+.tab-body { padding: 16px; }
+
+.card {
+    background: #272732;
+    border-radius: 10px;
+    padding: 18px;
+    border: 1px solid #32323e;
+}
+
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #d0d0dc;
+    margin: 0 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #32323e;
+}
+
+.desc {
+    font-size: 13px;
+    color: #6b6b80;
+    line-height: 1.6;
+    margin-bottom: 14px;
+}
+
+.lbl {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b6b80;
+    margin: 12px 0 5px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+
+    &:first-of-type { margin-top: 0; }
+}
+
+.inp {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .15s;
+
+    &::placeholder { color: #505060; }
+    &:focus { border-color: #5b8def; }
+}
+
+.sel {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    box-sizing: border-box;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23707088' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    transition: border-color .15s;
+
+    &:focus { border-color: #5b8def; }
+
+    option {
+        background: #22222c;
+        color: #d0d0dc;
+    }
+}
 </style>
