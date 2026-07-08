@@ -177,7 +177,7 @@ export class CanvasLayer {
         this.canvas!.add(tri);
 
         this.trackObject(line, 'arrow');
-        this.trackObject(tri, 'arrow');
+        // 三角形不单独跟踪，避免序列化时产生脏数据（它只是 line 的视觉附属）
         this.canvas!.setActiveObject(line);
         this.canvas!.requestRenderAll();
         this.notifyChange();
@@ -391,14 +391,16 @@ export class CanvasLayer {
             }
             case 'arrow': {
                 const l = obj as Line;
+                // Fabric v6 的 Line 构造函数后 x1/y1/x2/y2 保持原始绝对坐标，
+                // left/top 是包围盒中心点（由 _setWidthHeight 设置），不应相加
                 return {
                     ...base,
                     type: 'arrow',
                     data: {
-                        startX: (l.x1 ?? 0) + (l.left ?? 0),
-                        startY: (l.y1 ?? 0) + (l.top ?? 0),
-                        endX: (l.x2 ?? 0) + (l.left ?? 0),
-                        endY: (l.y2 ?? 0) + (l.top ?? 0),
+                        startX: l.x1 ?? 0,
+                        startY: l.y1 ?? 0,
+                        endX: l.x2 ?? 0,
+                        endY: l.y2 ?? 0,
                         color: String(l.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
                         lineWidth: l.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
                     },

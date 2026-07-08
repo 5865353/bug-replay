@@ -77,9 +77,9 @@ function showCookies() {
     <div class="right-panel">
         <van-tabs
             v-model:active="activeTab"
-            type="card" color="#cba6f7"
-            title-active-color="#cdd6f4" title-inactive-color="#585b70"
-            background="#18181f"
+            type="card" color="#7ba4f5"
+            title-active-color="#d0d0dc" title-inactive-color="#6b6b80"
+            background="#272732"
         >
             <van-tab title="录制信息">
                 <div class="panel-content">
@@ -238,7 +238,7 @@ function showCookies() {
     <van-popup
         v-model:show="storagePopup.show"
         position="bottom"
-        :style="{ height: '60%', background: '#18181f' }"
+        :style="{ height: '60%', background: '#272732' }"
         round
         closeable
     >
@@ -270,8 +270,8 @@ function showCookies() {
 .right-panel {
     height: 100%;
     flex-shrink: 0;
-    background: #18181f;
-    border-left: 1px solid #2a2a38;
+    background: #272732;
+    border-left: 1px solid #3a3a4e;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -289,7 +289,7 @@ function showCookies() {
     .section-title {
         font-size: 13px;
         font-weight: 600;
-        color: #585b70;
+        color: #6b6b80;
         margin-bottom: 8px;
         letter-spacing: 0.5px;
     }
@@ -309,10 +309,10 @@ function showCookies() {
     font-size: 12px;
     gap: 8px;
 
-    span:first-child { color: #585b70; flex-shrink: 0; }
+    span:first-child { color: #6b6b80; flex-shrink: 0; }
 
     .val {
-        color: #9399b2;
+        color: #b0b0c4;
         text-align: right;
         word-break: break-all;
     }
@@ -324,7 +324,7 @@ function showCookies() {
         .ua {
             font-size: 10px;
             text-align: left;
-            color: #6c7086;
+            color: #6b6b80;
             line-height: 1.4;
         }
     }
@@ -342,8 +342,8 @@ function showCookies() {
 
     &:hover { background: rgba(255, 255, 255, 0.03); }
 
-    span:first-child { color: #585b70; }
-    .val { color: #9399b2; }
+    span:first-child { color: #6b6b80; }
+    .val { color: #b0b0c4; }
 }
 
 .keyframe-list {
@@ -365,12 +365,12 @@ function showCookies() {
 
     &:hover {
         background: #1e1e28;
-        border-color: #2a2a38;
+        border-color: #3a3a4e;
     }
 
     .kf-icon { flex-shrink: 0; font-size: 14px; }
-    .kf-type { color: #9399b2; flex: 1; }
-    .kf-time { color: #585b70; font-size: 10px; font-variant-numeric: tabular-nums; }
+    .kf-type { color: #b0b0c4; flex: 1; }
+    .kf-time { color: #6b6b80; font-size: 10px; font-variant-numeric: tabular-nums; }
 }
 
 /* 时间轴 */
@@ -385,7 +385,7 @@ function showCookies() {
         top: 4px;
         bottom: 4px;
         width: 2px;
-        background: #252530;
+        background: #32323e;
     }
 }
 
@@ -402,10 +402,10 @@ function showCookies() {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #585b70;
-        border: 2px solid #18181f;
+        background: #6b6b80;
+        border: 2px solid #272732;
 
-        &.url_change { background: #cba6f7; }
+        &.url_change { background: #7ba4f5; }
         &.storage_change { background: #a6e3a1; }
     }
 
@@ -416,7 +416,7 @@ function showCookies() {
 
     .tl-time {
         font-size: 10px;
-        color: #585b70;
+        color: #6b6b80;
         font-variant-numeric: tabular-nums;
         margin-right: 4px;
     }
@@ -427,35 +427,35 @@ function showCookies() {
 
     .tl-text {
         font-size: 12px;
-        color: #cdd6f4;
+        color: #d0d0dc;
     }
 
     .tl-detail {
         margin-top: 3px;
         padding: 4px 6px;
-        background: #101016;
+        background: #1e1e28;
         border-radius: 4px;
         font-size: 10px;
 
         .tl-url {
-            color: #6c7086;
+            color: #6b6b80;
             word-break: break-all;
-            &.to { color: #9399b2; }
+            &.to { color: #b0b0c4; }
         }
 
         .tl-arrow {
-            color: #585b70;
+            color: #6b6b80;
             text-align: center;
             font-size: 10px;
         }
 
         .tl-key {
-            color: #a6adc8;
+            color: #a8aac0;
             font-weight: 600;
         }
 
         .tl-val {
-            color: #6c7086;
+            color: #6b6b80;
             word-break: break-all;
         }
     }
@@ -472,26 +472,26 @@ function showCookies() {
     justify-content: space-between;
     align-items: center;
     padding: 14px 40px 10px 16px;
-    border-bottom: 1px solid #252530;
+    border-bottom: 1px solid #32323e;
     flex-shrink: 0;
 
     .popup-title {
         font-size: 15px;
         font-weight: 700;
-        color: #cdd6f4;
+        color: #d0d0dc;
     }
 
     .copy-all-btn {
         padding: 4px 12px;
-        border: 1px solid #2a2a38;
+        border: 1px solid #3a3a4e;
         border-radius: 4px;
         background: transparent;
-        color: #585b70;
+        color: #6b6b80;
         font-size: 11px;
         cursor: pointer;
         transition: all 0.15s;
 
-        &:hover { border-color: #cba6f7; color: #cba6f7; }
+        &:hover { border-color: #7ba4f5; color: #7ba4f5; }
     }
 }
 
@@ -509,7 +509,7 @@ function showCookies() {
         font-size: 12px;
 
         .s-key {
-            color: #a6adc8;
+            color: #a8aac0;
             flex-shrink: 0;
             font-weight: 600;
             min-width: 100px;
@@ -520,7 +520,7 @@ function showCookies() {
         }
 
         .s-val {
-            color: #6c7086;
+            color: #6b6b80;
             flex: 1;
             word-break: break-all;
             line-height: 1.5;
@@ -534,14 +534,14 @@ function showCookies() {
             border: none;
             border-radius: 3px;
             background: transparent;
-            color: #585b70;
+            color: #6b6b80;
             cursor: pointer;
             opacity: 0;
             transition: opacity 0.15s, color 0.15s;
             display: flex;
             align-items: center;
 
-            &:hover { color: #cba6f7; }
+            &:hover { color: #7ba4f5; }
         }
 
         &:hover .copy-btn { opacity: 1; }
@@ -551,8 +551,8 @@ function showCookies() {
 
 <style lang="scss">
 .copy-toast {
-    background: #2a2a38 !important;
-    color: #cdd6f4 !important;
+    background: #3a3a4e !important;
+    color: #d0d0dc !important;
     border-radius: 8px !important;
     font-size: 13px !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;

@@ -65,16 +65,15 @@ window.addEventListener('message', (event) => {
 });
 
 // 注入拦截脚本到页面主世界（通过 <script src>，不违反 CSP）
-// 只在录制开始时注入，而非 document_start 全局注入
-let interceptorInjected = false;
-
+// document_start 立即注入骨架；脚本内部有 _isRecording 守卫，只在录制时产生日志
 function injectNetworkInterceptor(): void {
-    if (interceptorInjected) return;
-    interceptorInjected = true;
     const script = document.createElement('script');
     script.src = browser.runtime.getURL(INTERCEPTOR_SCRIPT_PATH);
     (document.head || document.documentElement).appendChild(script);
 }
+
+// document_start 立即注入
+injectNetworkInterceptor();
 
 // ============================================================
 // useContentScript — 主 composable
@@ -147,8 +146,6 @@ function useContentScript() {
 
     async function startRecording(): Promise<void> {
         try {
-            // 录制开始时才注入页面拦截器，不在页面加载时全局拦截
-            injectNetworkInterceptor();
             // 通知页面主世界拦截器开始上报
             sendInterceptorControl(PM_ACTION_START);
             currentSession = await recorder.start();

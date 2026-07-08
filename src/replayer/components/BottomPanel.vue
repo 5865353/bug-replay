@@ -19,9 +19,9 @@ const activeTab = ref(0);
         <van-tabs
             v-model:active="activeTab"
             type="card"
-            color="#cba6f7"
-            title-active-color="#cdd6f4"
-            title-inactive-color="#585b70"
+            color="#7ba4f5"
+            title-active-color="#d0d0dc"
+            title-inactive-color="#6b6b80"
             background="#0f0f14"
             :border="false"
         >
@@ -45,8 +45,8 @@ const activeTab = ref(0);
 <style lang="scss" scoped>
 .bottom-panel {
   height: 100%;
-  background: #18181f;
-  border-top: 1px solid #2a2a38;
+  background: #272732;
+  border-top: 1px solid #3a3a4e;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -22,6 +22,8 @@ const emit = defineEmits<{
     toggleDevtools: [];
     replay: [];
     fileSelected: [event: Event];
+    exportRRT: [];
+    copyToClipboard: [];
 }>();
 
 // ---- 自定义进度条拖拽 ----
@@ -160,10 +162,20 @@ function openFile() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                 </button>
 
+                <button class="action-btn" title="复制 RRT" @click="emit('copyToClipboard')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                    <span>复制</span>
+                </button>
+
+                <button class="action-btn export-btn" title="导出 .rrt" @click="emit('exportRRT')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                    <span>导出</span>
+                </button>
+
                 <button class="action-btn" title="切换面板" @click="emit('toggleDevtools')">
                     <svg v-if="devtoolsVisible" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9" /></svg>
                     <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15" /></svg>
-                    <span>{{ devtoolsVisible ? '收起' : '展开' }}</span>
+                    <span>底部面板</span>
                 </button>
             </div>
         </div>
@@ -172,8 +184,8 @@ function openFile() {
 
 <style scoped>
 .player-bar {
-    background: #14141c;
-    border-top: 1px solid #252530;
+    background: #22222c;
+    border-top: 1px solid #32323e;
     flex-shrink: 0;
     user-select: none;
 }
@@ -196,7 +208,7 @@ function openFile() {
     top: 50%;
     transform: translateY(-50%);
     height: 5px;
-    background: #2a2a38;
+    background: #3a3a4e;
     border-radius: 3px;
     transition: height 0.15s;
 }
@@ -211,7 +223,7 @@ function openFile() {
     top: 50%;
     transform: translateY(-50%);
     height: 5px;
-    background: linear-gradient(90deg, #cba6f7, #a78bfa);
+    background: linear-gradient(90deg, #5b8def, #7ba4f5);
     border-radius: 3px;
     transition: height 0.15s;
     pointer-events: none;
@@ -291,8 +303,8 @@ function openFile() {
     height: 38px;
     border: none;
     border-radius: 50%;
-    background: #cba6f7;
-    color: #0f0f14;
+    background: #5b8def;
+    color: #fff;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -302,7 +314,7 @@ function openFile() {
 }
 
 .play-btn:hover {
-    background: #d4b8ff;
+    background: #6b9df5;
     transform: scale(1.06);
 }
 
@@ -339,7 +351,7 @@ function openFile() {
 }
 
 .time-text.dim {
-    color: #585b70;
+    color: #6b6b80;
 }
 
 .time-divider {
@@ -351,10 +363,10 @@ function openFile() {
 /* 速度按钮 */
 .speed-btn {
     padding: 3px 10px;
-    border: 1px solid #2a2a38;
+    border: 1px solid #3a3a4e;
     border-radius: 5px;
     background: transparent;
-    color: #585b70;
+    color: #6b6b80;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -367,9 +379,9 @@ function openFile() {
 }
 
 .speed-btn.active {
-    border-color: #cba6f7;
-    background: rgba(203, 166, 247, 0.12);
-    color: #cba6f7;
+    border-color: #5b8def;
+    background: rgba(91,141,239,.12);
+    color: #7ba4f5;
 }
 
 /* 功能按钮 */
@@ -388,8 +400,8 @@ function openFile() {
 }
 
 .action-btn:hover {
-    background: #252530;
-    color: #cdd6f4;
+    background: #32323e;
+    color: #d0d0dc;
 }
 
 .hidden {

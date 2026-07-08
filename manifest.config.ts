@@ -22,6 +22,10 @@ export default defineManifest({
             128: 'icons/icon-128.png',
         },
     },
+    options_ui: {
+        page: 'src/options/index.html',
+        open_in_tab: true,
+    },
     background: {
         service_worker: 'src/background/service-worker.ts',
         type: 'module',
@@ -38,6 +42,7 @@ export default defineManifest({
         {
             resources: [
                 'src/replayer/index.html',
+                'src/upload/index.html',
                 'src/content/recorder/page-interceptor.js',
                 'assets/*',
                 'chunks/*',

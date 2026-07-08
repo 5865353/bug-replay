@@ -12,14 +12,8 @@ const props = defineProps<{
 
 const canExport = computed(() => props.sessions.length > 0);
 
-function getSessionId(): string | null {
-    if (props.activeSessionId)
-        return props.activeSessionId;
-    return null;
-}
-
 function checkSelected(): string | null {
-    const id = getSessionId();
+    const id = props.activeSessionId || (props.sessions[0]?.id ?? null);
     if (!id) {
         showToast({ message: '请先选择一条录制记录', position: 'top' });
         return null;
@@ -27,7 +21,7 @@ function checkSelected(): string | null {
     return id;
 }
 
-function openReplayer() {
+async function openReplayer() {
     const base = browser.runtime.getURL('src/replayer/index.html');
     const url = props.activeSessionId
         ? `${base}?sessionId=${props.activeSessionId}`
@@ -35,11 +29,13 @@ function openReplayer() {
     browser.tabs.create({ url });
 }
 
-async function uploadRRT() {
-    const sessionId = checkSelected();
-    if (!sessionId)
+function openUpload() {
+    const id = checkSelected();
+    if (!id)
         return;
-    await browser.runtime.sendMessage({ action: ContentToBackgroundAction.EXPORT_RRT, payload: { sessionId } });
+    const base = browser.runtime.getURL('src/upload/index.html');
+    const title = encodeURIComponent(props.sessions.find(s => s.id === id)?.title || '');
+    browser.tabs.create({ url: `${base}?sessionId=${id}&title=${title}` });
 }
 
 async function exportRRT() {
@@ -66,7 +62,7 @@ async function copyToClipboard() {
                 </div>
                 <span class="footer-btn-label">回放</span>
             </div>
-            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="uploadRRT">
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="openUpload">
                 <div class="footer-btn-icon" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc)">
                     <van-icon name="upgrade" size="18" color="#3b82f6" />
                 </div>

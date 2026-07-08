@@ -78,14 +78,17 @@
     let origSetReqHeader = OrigXHR.prototype.setRequestHeader;
 
     OrigXHR.prototype.open = function (method, url) {
-        this.__br = {
-            id: genId(),
-            method: method.toUpperCase(),
-            url: String(url),
-            startTime: Date.now(),
-            reqHeaders: {},
-            reqBody: null,
-        };
+        // 只在录制中附加 __br 元数据，避免非录制时的开销
+        if (_isRecording) {
+            this.__br = {
+                id: genId(),
+                method: method.toUpperCase(),
+                url: String(url),
+                startTime: Date.now(),
+                reqHeaders: {},
+                reqBody: null,
+            };
+        }
         return origOpen.apply(this, arguments);
     };
 
@@ -215,10 +218,34 @@
         }, PM_TARGET_ORIGIN);
     }
 
+    // Storage 事件去重：同一 key 短时间内多次变化只保留最后一条
+    let _pendingStorageEvents = {};
+    let _storageDebounceTimer = null;
+    const STORAGE_DEBOUNCE_MS = 100;
+
+    function postStorageEvent(data) {
+        if (!_isRecording) return;
+        const eventKey = `${data.storageType}:${data.action}:${data.key || ''}`;
+        _pendingStorageEvents[eventKey] = data;
+        if (!_storageDebounceTimer) {
+            _storageDebounceTimer = setTimeout(() => {
+                _storageDebounceTimer = null;
+                const now = Date.now();
+                for (const d of Object.values(_pendingStorageEvents)) {
+                    window.postMessage({
+                        source: PM_SOURCE_PAGE_EVENT,
+                        payload: { timestamp: now, type: EVENT_STORAGE_CHANGE, data: d },
+                    }, PM_TARGET_ORIGIN);
+                }
+                _pendingStorageEvents = {};
+            }, STORAGE_DEBOUNCE_MS);
+        }
+    }
+
     function checkUrl() {
         let current = location.href;
         if (current !== lastUrl) {
-            postEvent(EVENT_URL_CHANGE, { from: lastUrl, to: current });
+            postEvent(EVENT_URL_CHANGE, { type: EVENT_URL_CHANGE, from: lastUrl, to: current });
             lastUrl = current;
         }
     }
@@ -232,11 +259,11 @@
     let origReplace = history.replaceState;
     history.pushState = function () {
         origPush.apply(this, arguments);
-        checkUrl();
+        if (_isRecording) checkUrl();
     };
     history.replaceState = function () {
         origReplace.apply(this, arguments);
-        checkUrl();
+        if (_isRecording) checkUrl();
     };
 
     // ===== Storage 变更追踪 =====
@@ -246,20 +273,32 @@
         let origClear = storage.clear;
 
         storage.setItem = function (key, value) {
-            let oldVal = origSet.name ? null : storage.getItem(key);
-            origSet.apply(this, arguments);
-            postEvent(EVENT_STORAGE_CHANGE, { storageType: name, action: STORAGE_ACTION_SET, key, oldValue: oldVal, newValue: value });
+            if (_isRecording) {
+                let oldVal = origSet.name ? null : storage.getItem(key);
+                origSet.apply(this, arguments);
+                postStorageEvent({ type: EVENT_STORAGE_CHANGE, storageType: name, action: STORAGE_ACTION_SET, key, oldValue: oldVal, newValue: value });
+            } else {
+                origSet.apply(this, arguments);
+            }
         };
 
         storage.removeItem = function (key) {
-            let oldVal = origRemove.name ? null : storage.getItem(key);
-            origRemove.apply(this, arguments);
-            postEvent(EVENT_STORAGE_CHANGE, { storageType: name, action: STORAGE_ACTION_REMOVE, key, oldValue: oldVal, newValue: null });
+            if (_isRecording) {
+                let oldVal = origRemove.name ? null : storage.getItem(key);
+                origRemove.apply(this, arguments);
+                postStorageEvent({ type: EVENT_STORAGE_CHANGE, storageType: name, action: STORAGE_ACTION_REMOVE, key, oldValue: oldVal, newValue: null });
+            } else {
+                origRemove.apply(this, arguments);
+            }
         };
 
         storage.clear = function () {
-            origClear.apply(this, arguments);
-            postEvent(EVENT_STORAGE_CHANGE, { storageType: name, action: STORAGE_ACTION_CLEAR });
+            if (_isRecording) {
+                origClear.apply(this, arguments);
+                postStorageEvent({ type: EVENT_STORAGE_CHANGE, storageType: name, action: STORAGE_ACTION_CLEAR });
+            } else {
+                origClear.apply(this, arguments);
+            }
         };
     }
 

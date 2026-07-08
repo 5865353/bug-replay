@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import browser from 'webextension-polyfill';
 import FooterActions from './components/FooterActions.vue';
 import RecordingControls from './components/RecordingControls.vue';
 import SessionsList from './components/SessionsList.vue';
@@ -29,7 +30,10 @@ onMounted(async () => {
                 <img src="/icons/icon-48.png" width="22" height="22" alt="" class="nav-logo">
             </template>
             <template #right>
-                <StatusBadge :is-recording="isRecording" :is-paused="isPaused" />
+                <div class="flex items-center gap-2">
+                    <van-icon name="setting-o" size="20" class="settings-icon" @click="browser.runtime.openOptionsPage()" />
+                    <StatusBadge :is-recording="isRecording" :is-paused="isPaused" />
+                </div>
             </template>
         </van-nav-bar>
 

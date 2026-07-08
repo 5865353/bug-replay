@@ -50,6 +50,7 @@ export function buildRRTPackage(session: RecordingSession): RRTPackage {
         networkLogs: sanitizeNetworkLogs(session.networkLogs),
         consoleLogs: sanitizeConsoleLogs(session.consoleLogs),
         annotations: session.annotations,
+        pageEvents: session.pageEvents,
     };
 }
 

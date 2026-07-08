@@ -6,6 +6,7 @@ import type { Annotation } from './annotation';
 import type { ConsoleLog } from './console';
 import type { EnvironmentSnapshot } from './environment';
 import type { NetworkLog } from './network';
+import type { PageEvent } from './recording';
 
 // ============================================================
 // rrweb 事件类型引用
@@ -59,6 +60,8 @@ export interface RRTPackage {
     consoleLogs: ConsoleLog[];
     /** 标注数据 */
     annotations: Annotation[];
+    /** 页面事件时间轴（URL跳转、Storage变更等） */
+    pageEvents: PageEvent[];
 }
 
 /** .rrt 包元数据 */

@@ -50,7 +50,7 @@ function onClickDropZone() {
             @drop="onDrop"
         >
             <div class="drop-zone-icon">
-                <van-icon name="cloud-upload-o" size="48" color="#585b70" />
+                <van-icon name="cloud-upload-o" size="48" color="#6b6b80" />
             </div>
             <div class="drop-zone-title">
                 点击或拖放 .rrt 文件
@@ -88,7 +88,7 @@ function onClickDropZone() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a10 70%);
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #1c1c24 70%);
 }
 
 .drop-zone {
@@ -98,7 +98,7 @@ function onClickDropZone() {
   justify-content: center;
   gap: 10px;
   padding: 40px;
-  border: 2px dashed #2a2a38;
+  border: 2px dashed #3a3a4e;
   border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -107,7 +107,7 @@ function onClickDropZone() {
 
 .drop-zone:hover,
 .drop-zone-active {
-  border-color: #cba6f7;
+  border-color: #7ba4f5;
   background: rgba(203,166,247,0.04);
 }
 
@@ -118,12 +118,12 @@ function onClickDropZone() {
 .drop-zone-title {
   font-size: 15px;
   font-weight: 600;
-  color: #cdd6f4;
+  color: #d0d0dc;
 }
 
 .drop-zone-hint {
   font-size: 12px;
-  color: #585b70;
+  color: #6b6b80;
 }
 
 .player-container {

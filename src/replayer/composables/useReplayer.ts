@@ -1,4 +1,4 @@
-import type { Annotation, NetworkLog, RRTPackage } from '@shared/types';
+import type { Annotation, NetworkLog, PageEvent, RRTPackage } from '@shared/types';
 import { ContentToBackgroundAction } from '@shared/types';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
@@ -56,6 +56,7 @@ export function useRePlayer() {
             // 归一化所有时间戳为相对时间
             pkg.networkLogs = normalizeNetworkLogs(pkg.networkLogs || []);
             pkg.annotations = normalizeAnnotations(pkg.annotations || []);
+            pkg.pageEvents = normalizePageEvents(pkg.pageEvents || []);
 
             // Initialize rrweb replayer
             await initRRWebRePlayer(pkg);
@@ -100,6 +101,7 @@ export function useRePlayer() {
                 networkLogs: session.networkLogs || [],
                 consoleLogs: session.consoleLogs || [],
                 annotations: session.annotations || [],
+                pageEvents: session.pageEvents || [],
             };
 
             currentPackage.value = pkg;
@@ -111,6 +113,7 @@ export function useRePlayer() {
 
             pkg.networkLogs = normalizeNetworkLogs(pkg.networkLogs || []);
             pkg.annotations = normalizeAnnotations(pkg.annotations || []);
+            pkg.pageEvents = normalizePageEvents(pkg.pageEvents || []);
 
             await initRRWebRePlayer(pkg);
             initAnnotations(pkg.annotations);
@@ -401,6 +404,14 @@ export function useRePlayer() {
         return logs.map(l => ({
             ...l,
             startTime: l.startTime - recordingBaseTime,
+        }));
+    }
+
+    function normalizePageEvents(events: PageEvent[]): PageEvent[] {
+        if (!recordingBaseTime) return events;
+        return events.map(ev => ({
+            ...ev,
+            timestamp: ev.timestamp - recordingBaseTime,
         }));
     }
 

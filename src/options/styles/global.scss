@@ -1,0 +1,10 @@
+// 设置页面全局样式
+html, body {
+    height: 100%; margin: 0; padding: 0;
+    background: #1c1c24;
+    color: #e4e4ec;
+}
+#app { height: 100%; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.06); border-radius: 2px; }

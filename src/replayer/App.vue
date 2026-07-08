@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { Pane, Splitpanes } from 'splitpanes';
+import { showToast } from 'vant';
+import { useExport } from '../shared/composables/useExport';
 import BottomPanel from './components/BottomPanel.vue';
 import PlayerStage from './components/PlayerStage.vue';
 import RePlayerHeader from './components/RePlayerHeader.vue';
@@ -39,6 +41,31 @@ function onFileSelected(event: Event) {
     if (file)
         loadFile(file);
 }
+
+// ---- 导出 ----
+const { exportRRT, copyToClipboard } = useExport({
+    currentPackage,
+});
+
+async function handleExportRRT() {
+    try {
+        await exportRRT();
+        showToast({ message: '导出成功', position: 'top', duration: 1500 });
+    }
+    catch (err) {
+        showToast({ message: `导出失败: ${err instanceof Error ? err.message : '未知错误'}`, position: 'top' });
+    }
+}
+
+async function handleCopyToClipboard() {
+    try {
+        await copyToClipboard();
+        showToast({ message: '已复制到剪贴板', position: 'top', duration: 1500 });
+    }
+    catch (err) {
+        showToast({ message: `复制失败: ${err instanceof Error ? err.message : '未知错误'}`, position: 'top' });
+    }
+}
 </script>
 
 <template>
@@ -76,6 +103,8 @@ function onFileSelected(event: Event) {
                                     @toggle-devtools="toggleDevtools"
                                     @replay="replay"
                                     @file-selected="onFileSelected"
+                                    @export-r-r-t="handleExportRRT"
+                                    @copy-to-clipboard="handleCopyToClipboard"
                                 />
                             </div>
                         </Pane>

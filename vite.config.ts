@@ -36,6 +36,8 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 replayer: path.resolve(__dirname, 'src/replayer/index.html'),
+                options: path.resolve(__dirname, 'src/options/index.html'),
+                upload: path.resolve(__dirname, 'src/upload/index.html'),
             },
         },
     },
