@@ -7,6 +7,17 @@
 
 import type { Canvas, TPointerEventInfo } from 'fabric';
 import { Rect } from 'fabric';
+import {
+    CURSOR_CROSSHAIR,
+    CURSOR_DEFAULT,
+    FABRIC_EVENT_MOUSE_DOWN,
+    FABRIC_EVENT_MOUSE_MOVE,
+    FABRIC_EVENT_MOUSE_UP,
+    PREVIEW_DASH_ARRAY,
+    PREVIEW_FILL_OPACITY,
+    PREVIEW_STROKE_WIDTH,
+    RECT_MIN_SIZE,
+} from '../../constants';
 import { BaseTool } from './base-tool';
 
 export class RectTool extends BaseTool {
@@ -20,18 +31,18 @@ export class RectTool extends BaseTool {
         this.isActive = true;
         this.fc = this.canvasLayer.getFabricCanvas();
         if (!this.fc) return;
-        this.fc.defaultCursor = 'crosshair';
-        this.fc.on('mouse:down', this.onDown);
-        this.fc.on('mouse:move', this.onMove);
-        this.fc.on('mouse:up', this.onUp);
+        this.fc.defaultCursor = CURSOR_CROSSHAIR;
+        this.fc.on(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
+        this.fc.on(FABRIC_EVENT_MOUSE_MOVE, this.onMove);
+        this.fc.on(FABRIC_EVENT_MOUSE_UP, this.onUp);
     }
 
     deactivate(): void {
         if (this.fc) {
-            this.fc.off('mouse:down', this.onDown);
-            this.fc.off('mouse:move', this.onMove);
-            this.fc.off('mouse:up', this.onUp);
-            this.fc.defaultCursor = 'default';
+            this.fc.off(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
+            this.fc.off(FABRIC_EVENT_MOUSE_MOVE, this.onMove);
+            this.fc.off(FABRIC_EVENT_MOUSE_UP, this.onUp);
+            this.fc.defaultCursor = CURSOR_DEFAULT;
         }
         this.removePreview();
         this.fc = null;
@@ -52,10 +63,10 @@ export class RectTool extends BaseTool {
             top: ptr.y,
             width: 0,
             height: 0,
-            fill: `${this.color}18`,
+            fill: `${this.color}${PREVIEW_FILL_OPACITY}`,
             stroke: this.color,
-            strokeWidth: 2,
-            strokeDashArray: [6, 3],
+            strokeWidth: PREVIEW_STROKE_WIDTH,
+            strokeDashArray: [...PREVIEW_DASH_ARRAY],
             selectable: false,
             evented: false,
         });
@@ -84,7 +95,7 @@ export class RectTool extends BaseTool {
         const ptr = this.fc!.getScenePoint(e.e);
         const w = Math.abs(ptr.x - this.startX);
         const h = Math.abs(ptr.y - this.startY);
-        if (w < 5 || h < 5) return;
+        if (w < RECT_MIN_SIZE || h < RECT_MIN_SIZE) return;
 
         this.canvasLayer.addRect(this.startX, this.startY, ptr.x - this.startX, ptr.y - this.startY, this.color);
     };

@@ -18,6 +18,7 @@ import {
     generateUUID,
     serializeConsoleArgs,
 } from '@shared/utils';
+import { CONSOLE_LEVELS } from '../constants';
 
 export interface ConsoleInterceptorOptions {
     /** 日志回调 */
@@ -40,7 +41,7 @@ export class ConsoleInterceptor {
      * 开始劫持 console
      */
     start(): void {
-        const levels: ConsoleLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
+        const levels = [...CONSOLE_LEVELS];
 
         // 先保存原始引用
         for (const level of levels) {
@@ -68,7 +69,7 @@ export class ConsoleInterceptor {
      * 停止劫持（恢复原始 console）
      */
     stop(): void {
-        const levels: ConsoleLevel[] = ['log', 'info', 'warn', 'error', 'debug'];
+        const levels = [...CONSOLE_LEVELS];
         for (const level of levels) {
             if (this.originals[level]) {
                 console[level] = this.originals[level];

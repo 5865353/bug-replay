@@ -12,6 +12,29 @@ import type { FabricObject } from 'fabric';
 import { DEFAULT_ANNOTATION_CONFIG } from '@shared/types';
 import { generateUUID } from '@shared/utils';
 import { Canvas, classRegistry, IText, Line, Path, PencilBrush, Polygon, Rect } from 'fabric';
+import {
+    ARROW_HEAD_ANGLE,
+    ARROW_HEAD_SIZE,
+    ARROW_HEAD_STROKE_WIDTH,
+    DOM_EVENT_KEYDOWN,
+    DOM_EVENT_RESIZE,
+    DOM_EVENT_WHEEL,
+    FABRIC_EVENT_OBJECT_MODIFIED,
+    FABRIC_EVENT_PATH_CREATED,
+    FILL_OPACITY_RECT,
+    FILL_OPACITY_TEXT,
+    ID_CANVAS_LAYER,
+    ID_FABRIC_CANVAS,
+    KEY_DELETE,
+    POINTER_EVENTS_AUTO,
+    POINTER_EVENTS_NONE,
+    RECT_CORNER_RADIUS,
+    TEXT_EDIT_DELAY,
+    TEXT_PADDING,
+    TEXT_PLACEHOLDER,
+    TOUCH_ACTION_NONE,
+    Z_INDEX_CANVAS,
+} from '../constants';
 
 // 注册 Fabric 类以支持 fromJSON 反序列化
 classRegistry.setClass(Rect, 'Rect');
@@ -48,16 +71,16 @@ export class CanvasLayer {
 
         // 外层容器
         this.wrapperEl = document.createElement('div');
-        this.wrapperEl.id = 'bugreplay-canvas-layer';
+        this.wrapperEl.id = ID_CANVAS_LAYER;
         this.wrapperEl.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 2147483646; pointer-events: none;
+            z-index: ${Z_INDEX_CANVAS}; pointer-events: ${POINTER_EVENTS_NONE};
         `;
         document.body.appendChild(this.wrapperEl);
 
         // Fabric Canvas
         const canvasEl = document.createElement('canvas');
-        canvasEl.id = 'bugreplay-fabric-canvas';
+        canvasEl.id = ID_FABRIC_CANVAS;
         this.wrapperEl.appendChild(canvasEl);
 
         this.canvas = new Canvas(canvasEl, {
@@ -73,20 +96,20 @@ export class CanvasLayer {
         // 画布始终渲染（绘图预览、最终图形都可见），但不拦截点击
         setTimeout(() => {
             const container = this.wrapperEl?.querySelector('.canvas-container') as HTMLElement | null;
-            if (container) container.style.pointerEvents = 'none';
+            if (container) container.style.pointerEvents = POINTER_EVENTS_NONE;
         }, 0);
 
         // Delete 键删除选中对象
-        this.canvas.on('object:modified', () => this.notifyChange());
-        document.addEventListener('keydown', this.handleKeyDown);
+        this.canvas.on(FABRIC_EVENT_OBJECT_MODIFIED, () => this.notifyChange());
+        document.addEventListener(DOM_EVENT_KEYDOWN, this.handleKeyDown);
 
         // 响应式缩放
-        window.addEventListener('resize', this.handleResize);
+        window.addEventListener(DOM_EVENT_RESIZE, this.handleResize);
     }
 
     hide(): void {
-        document.removeEventListener('keydown', this.handleKeyDown);
-        window.removeEventListener('resize', this.handleResize);
+        document.removeEventListener(DOM_EVENT_KEYDOWN, this.handleKeyDown);
+        window.removeEventListener(DOM_EVENT_RESIZE, this.handleResize);
         if (this.canvas) {
             this.canvas.dispose();
             this.canvas = null;
@@ -109,11 +132,11 @@ export class CanvasLayer {
             top: Math.min(y, y + height),
             width: Math.abs(width),
             height: Math.abs(height),
-            fill: `${color}20`,
+            fill: `${color}${FILL_OPACITY_RECT}`,
             stroke: color,
             strokeWidth: DEFAULT_ANNOTATION_CONFIG.strokeWidth,
-            rx: 4,
-            ry: 4,
+            rx: RECT_CORNER_RADIUS,
+            ry: RECT_CORNER_RADIUS,
             selectable: true,
             evented: true,
         });
@@ -137,17 +160,17 @@ export class CanvasLayer {
 
         // 三角形箭头头部
         const angle = Math.atan2(toY - fromY, toX - fromX);
-        const h = 14;
+        const h = ARROW_HEAD_SIZE;
         const px = toX;
         const py = toY;
         const tri = new Polygon([
             { x: px, y: py },
-            { x: px - h * Math.cos(angle - Math.PI / 6), y: py - h * Math.sin(angle - Math.PI / 6) },
-            { x: px - h * Math.cos(angle + Math.PI / 6), y: py - h * Math.sin(angle + Math.PI / 6) },
+            { x: px - h * Math.cos(angle - ARROW_HEAD_ANGLE), y: py - h * Math.sin(angle - ARROW_HEAD_ANGLE) },
+            { x: px - h * Math.cos(angle + ARROW_HEAD_ANGLE), y: py - h * Math.sin(angle + ARROW_HEAD_ANGLE) },
         ], {
             fill: color,
             stroke: color,
-            strokeWidth: 2,
+            strokeWidth: ARROW_HEAD_STROKE_WIDTH,
             selectable: false,
             evented: false,
         });
@@ -163,15 +186,15 @@ export class CanvasLayer {
 
     /** 添加文本 */
     addText(x: number, y: number, text: string, color: string): FabricObject {
-        const displayText = text || '输入批注...';
+        const displayText = text || TEXT_PLACEHOLDER;
         const itext = new IText(displayText, {
             left: x,
             top: y,
             fontSize: DEFAULT_ANNOTATION_CONFIG.fontSize,
             fontFamily: DEFAULT_ANNOTATION_CONFIG.fontFamily,
             fill: color,
-            backgroundColor: `${color}15`,
-            padding: 6,
+            backgroundColor: `${color}${FILL_OPACITY_TEXT}`,
+            padding: TEXT_PADDING,
             selectable: true,
             evented: true,
             editable: true,
@@ -187,7 +210,7 @@ export class CanvasLayer {
             this.canvas!.setActiveObject(itext);
             itext.enterEditing();
             if (text === '') itext.selectAll();
-        }, 50);
+        }, TEXT_EDIT_DELAY);
 
         return itext;
     }
@@ -207,11 +230,11 @@ export class CanvasLayer {
             this.notifyChange();
             canvas.requestRenderAll();
         };
-        canvas.on('path:created', onPathCreated);
+        canvas.on(FABRIC_EVENT_PATH_CREATED, onPathCreated);
 
         return () => {
             canvas.isDrawingMode = false;
-            canvas.off('path:created', onPathCreated);
+            canvas.off(FABRIC_EVENT_PATH_CREATED, onPathCreated);
             this.setInteractive(false);
             canvas.requestRenderAll();
         };
@@ -271,17 +294,17 @@ export class CanvasLayer {
     setInteractive(enabled: boolean): void {
         const container = this.wrapperEl?.querySelector('.canvas-container') as HTMLElement | null;
         if (container) {
-            container.style.pointerEvents = enabled ? 'auto' : 'none';
-            container.style.touchAction = enabled ? 'none' : '';
+            container.style.pointerEvents = enabled ? POINTER_EVENTS_AUTO : POINTER_EVENTS_NONE;
+            container.style.touchAction = enabled ? TOUCH_ACTION_NONE : '';
         }
         // 绘制时防止页面滚动
         if (this.wrapperEl) {
-            this.wrapperEl.style.touchAction = enabled ? 'none' : '';
+            this.wrapperEl.style.touchAction = enabled ? TOUCH_ACTION_NONE : '';
             if (enabled) {
-                this.wrapperEl.addEventListener('wheel', this.preventDefault, { passive: false });
+                this.wrapperEl.addEventListener(DOM_EVENT_WHEEL, this.preventDefault, { passive: false });
             }
             else {
-                this.wrapperEl.removeEventListener('wheel', this.preventDefault);
+                this.wrapperEl.removeEventListener(DOM_EVENT_WHEEL, this.preventDefault);
             }
         }
     }
@@ -501,7 +524,7 @@ export class CanvasLayer {
     }
 
     private handleKeyDown = (e: KeyboardEvent): void => {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (e.key === KEY_DELETE || e.key === 'Backspace') {
             // 避免在文本编辑时删除
             const active = document.activeElement;
             if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true')) {

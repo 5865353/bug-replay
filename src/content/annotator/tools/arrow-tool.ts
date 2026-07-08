@@ -7,6 +7,16 @@
 
 import type { Canvas, TPointerEventInfo } from 'fabric';
 import { Line } from 'fabric';
+import {
+    ARROW_MIN_DISTANCE,
+    CURSOR_CROSSHAIR,
+    CURSOR_DEFAULT,
+    FABRIC_EVENT_MOUSE_DOWN,
+    FABRIC_EVENT_MOUSE_MOVE,
+    FABRIC_EVENT_MOUSE_UP,
+    PREVIEW_DASH_ARRAY,
+    PREVIEW_STROKE_WIDTH,
+} from '../../constants';
 import { BaseTool } from './base-tool';
 
 export class ArrowTool extends BaseTool {
@@ -20,18 +30,18 @@ export class ArrowTool extends BaseTool {
         this.isActive = true;
         this.fc = this.canvasLayer.getFabricCanvas();
         if (!this.fc) return;
-        this.fc.defaultCursor = 'crosshair';
-        this.fc.on('mouse:down', this.onDown);
-        this.fc.on('mouse:move', this.onMove);
-        this.fc.on('mouse:up', this.onUp);
+        this.fc.defaultCursor = CURSOR_CROSSHAIR;
+        this.fc.on(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
+        this.fc.on(FABRIC_EVENT_MOUSE_MOVE, this.onMove);
+        this.fc.on(FABRIC_EVENT_MOUSE_UP, this.onUp);
     }
 
     deactivate(): void {
         if (this.fc) {
-            this.fc.off('mouse:down', this.onDown);
-            this.fc.off('mouse:move', this.onMove);
-            this.fc.off('mouse:up', this.onUp);
-            this.fc.defaultCursor = 'default';
+            this.fc.off(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
+            this.fc.off(FABRIC_EVENT_MOUSE_MOVE, this.onMove);
+            this.fc.off(FABRIC_EVENT_MOUSE_UP, this.onUp);
+            this.fc.defaultCursor = CURSOR_DEFAULT;
         }
         this.removePreview();
         this.fc = null;
@@ -61,7 +71,7 @@ export class ArrowTool extends BaseTool {
         const ptr = this.fc!.getScenePoint(e.e);
         const dx = ptr.x - this.startX;
         const dy = ptr.y - this.startY;
-        if (Math.sqrt(dx * dx + dy * dy) < 10) return;
+        if (Math.sqrt(dx * dx + dy * dy) < ARROW_MIN_DISTANCE) return;
 
         this.canvasLayer.addArrow(this.startX, this.startY, ptr.x, ptr.y, this.color);
     };
@@ -70,10 +80,10 @@ export class ArrowTool extends BaseTool {
         this.removePreview();
         this.preview = new Line([this.startX, this.startY, ex, ey], {
             stroke: this.color,
-            strokeWidth: 2,
+            strokeWidth: PREVIEW_STROKE_WIDTH,
             selectable: false,
             evented: false,
-            strokeDashArray: [6, 3],
+            strokeDashArray: [...PREVIEW_DASH_ARRAY],
         });
         this.fc!.add(this.preview);
         this.fc!.requestRenderAll();

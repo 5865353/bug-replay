@@ -6,6 +6,11 @@
  */
 
 import type { Canvas, TPointerEventInfo } from 'fabric';
+import {
+    CURSOR_CROSSHAIR,
+    CURSOR_DEFAULT,
+    FABRIC_EVENT_MOUSE_DOWN,
+} from '../../constants';
 import { BaseTool } from './base-tool';
 
 export class FreehandTool extends BaseTool {
@@ -19,14 +24,14 @@ export class FreehandTool extends BaseTool {
         if (!this.fc) return;
 
         this.enableDrawing();
-        this.fc.on('mouse:down', this.onDown);
+        this.fc.on(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
     }
 
     deactivate(): void {
         if (this.fc) {
-            this.fc.off('mouse:down', this.onDown);
+            this.fc.off(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
             this.disableDrawing();
-            this.fc.defaultCursor = 'default';
+            this.fc.defaultCursor = CURSOR_DEFAULT;
         }
         this.fc = null;
         super.deactivate();
@@ -45,7 +50,7 @@ export class FreehandTool extends BaseTool {
         if (this.drawingEnabled) return;
         this.drawingEnabled = true;
         this.disableFreehand = this.canvasLayer.enableFreehand(this.color);
-        if (this.fc) this.fc.defaultCursor = 'crosshair';
+        if (this.fc) this.fc.defaultCursor = CURSOR_CROSSHAIR;
     }
 
     private disableDrawing(): void {

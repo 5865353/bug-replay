@@ -10,13 +10,23 @@
  * 使用 document_start 时机注入，确保尽早拦截网络和控制台
  */
 
-import type { BackgroundToContentMessage, PageEvent, RecordingSession } from '@shared/types';
-import type { NetworkLog } from '@shared/types';
+import type { BackgroundToContentMessage, NetworkLog, PageEvent, RecordingSession } from '@shared/types';
+
 import { EXTENSION_NAME } from '@shared/constants';
 import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import browser from 'webextension-polyfill';
 import { useAnnotator } from './composables/useAnnotator';
 import { useRecorder } from './composables/useRecorder';
+import {
+    INTERCEPTOR_SCRIPT_PATH,
+    PM_ACTION_START,
+    PM_ACTION_STOP,
+    PM_SOURCE_CONTROL,
+    PM_SOURCE_NETWORK,
+    PM_SOURCE_PAGE_EVENT,
+    PM_TARGET_ORIGIN,
+    STORAGE_KEY_PREFIX,
+} from './constants';
 
 // ============================================================
 // 页面主世界拦截器（注入 <script> 到页面 DOM）
@@ -28,32 +38,43 @@ let networkLogCallback: ((log: NetworkLog) => void) | null = null;
 const pageEventBuffer: PageEvent[] = [];
 let pageEventCallback: ((e: PageEvent) => void) | null = null;
 
+// 发送控制消息给页面主世界的拦截器（开启/关闭拦截上报）
+function sendInterceptorControl(action: typeof PM_ACTION_START | typeof PM_ACTION_STOP): void {
+    window.postMessage({ source: PM_SOURCE_CONTROL, action }, PM_TARGET_ORIGIN);
+}
+
 // 监听注入脚本发回的 postMessage（网络 + 页面事件）
 window.addEventListener('message', (event) => {
     if (event.source !== window) return;
 
-    if (event.data?.source === 'bugreplay-network') {
+    if (event.data?.source === PM_SOURCE_NETWORK) {
         const log = event.data.payload as NetworkLog;
-        if (networkLogCallback) { networkLogCallback(log); }
+        if (networkLogCallback) {
+            networkLogCallback(log);
+        }
         else { networkBuffer.push(log); }
     }
 
-    if (event.data?.source === 'bugreplay-page-event') {
+    if (event.data?.source === PM_SOURCE_PAGE_EVENT) {
         const ev = event.data.payload as PageEvent;
-        if (pageEventCallback) { pageEventCallback(ev); }
+        if (pageEventCallback) {
+            pageEventCallback(ev);
+        }
         else { pageEventBuffer.push(ev); }
     }
 });
 
 // 注入拦截脚本到页面主世界（通过 <script src>，不违反 CSP）
+// 只在录制开始时注入，而非 document_start 全局注入
+let interceptorInjected = false;
+
 function injectNetworkInterceptor(): void {
+    if (interceptorInjected) return;
+    interceptorInjected = true;
     const script = document.createElement('script');
-    script.src = browser.runtime.getURL('src/content/recorder/page-interceptor.js');
+    script.src = browser.runtime.getURL(INTERCEPTOR_SCRIPT_PATH);
     (document.head || document.documentElement).appendChild(script);
 }
-
-// document_start 立即注入
-injectNetworkInterceptor();
 
 // ============================================================
 // useContentScript — 主 composable
@@ -126,6 +147,10 @@ function useContentScript() {
 
     async function startRecording(): Promise<void> {
         try {
+            // 录制开始时才注入页面拦截器，不在页面加载时全局拦截
+            injectNetworkInterceptor();
+            // 通知页面主世界拦截器开始上报
+            sendInterceptorControl(PM_ACTION_START);
             currentSession = await recorder.start();
 
             // Recreate annotator with proper hooks
@@ -158,12 +183,18 @@ function useContentScript() {
 
     async function stopRecording(): Promise<void> {
         try {
+            // 通知页面主世界拦截器停止上报
+            sendInterceptorControl(PM_ACTION_STOP);
+            // 清空缓冲区，避免残留数据
+            networkBuffer.length = 0;
+            pageEventBuffer.length = 0;
+
             const session = await recorder.stop();
             session.annotations = annotator.getAnnotations();
             annotator.hide();
 
             // Use chrome.storage for large data (avoids sendMessage size limit)
-            const key = `temp_session_${session.id}`;
+            const key = `${STORAGE_KEY_PREFIX}${session.id}`;
             await browser.storage.local.set({ [key]: session });
 
             await browser.runtime.sendMessage({

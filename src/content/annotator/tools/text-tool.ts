@@ -6,6 +6,11 @@
  */
 
 import type { Canvas, TPointerEventInfo } from 'fabric';
+import {
+    CURSOR_DEFAULT,
+    CURSOR_TEXT,
+    FABRIC_EVENT_MOUSE_DOWN,
+} from '../../constants';
 import { BaseTool } from './base-tool';
 
 export class TextTool extends BaseTool {
@@ -15,14 +20,14 @@ export class TextTool extends BaseTool {
         this.isActive = true;
         this.fc = this.canvasLayer.getFabricCanvas();
         if (!this.fc) return;
-        this.fc.defaultCursor = 'text';
-        this.fc.on('mouse:down', this.onDown);
+        this.fc.defaultCursor = CURSOR_TEXT;
+        this.fc.on(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
     }
 
     deactivate(): void {
         if (this.fc) {
-            this.fc.off('mouse:down', this.onDown);
-            this.fc.defaultCursor = 'default';
+            this.fc.off(FABRIC_EVENT_MOUSE_DOWN, this.onDown);
+            this.fc.defaultCursor = CURSOR_DEFAULT;
         }
         this.fc = null;
         super.deactivate();

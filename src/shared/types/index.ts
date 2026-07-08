@@ -34,6 +34,7 @@ export type {
 export { MAX_RESPONSE_BODY_SIZE, SENSITIVE_HEADERS } from './network';
 
 export type {
+    PageEvent,
     RecordingSession,
     RecordingStatus,
 } from './recording';

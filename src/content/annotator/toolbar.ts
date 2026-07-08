@@ -10,6 +10,47 @@
 
 import type { AnnotationToolType } from '@shared/types';
 import { ANNOTATION_COLORS } from '@shared/types';
+import {
+    BADGE_FONT_SIZE,
+    COLOR_BADGE_END,
+    COLOR_BADGE_START,
+    COLOR_DIVIDER,
+    COLOR_DRAG_HANDLE,
+    COLOR_HINT_ACCENT,
+    COLOR_HINT_BG,
+    COLOR_HINT_TEXT,
+    COLOR_HOVER_BG,
+    COLOR_ICON_PRIMARY,
+    COLOR_PICKER_SIZE,
+    COLOR_RECORDING,
+    DIVIDER_HEIGHT,
+    DOM_EVENT_CLICK,
+    DOM_EVENT_INPUT,
+    DOM_EVENT_MOUSE_DOWN,
+    DOM_EVENT_MOUSE_ENTER,
+    DOM_EVENT_MOUSE_LEAVE,
+    DOM_EVENT_MOUSE_MOVE,
+    DOM_EVENT_MOUSE_UP,
+    DOT_SIZE,
+    DRAG_MARGIN,
+    ICON_BTN_RADIUS,
+    ICON_BTN_SIZE,
+    ID_TOOLBAR,
+    LABEL_CLEAR_ALL,
+    LABEL_PAUSE,
+    LABEL_PICK_COLOR,
+    LABEL_RESUME,
+    LABEL_STOP,
+    LABEL_UNDO,
+    TIMER_FONT_SIZE,
+    TIMER_INITIAL,
+    TIMER_INTERVAL,
+    TOOLBAR_BORDER_RADIUS,
+    TOOLBAR_BOTTOM,
+    TOOLBAR_GAP,
+    TOOLBAR_PADDING,
+    Z_INDEX_TOOLBAR,
+} from '../constants';
 
 // ============================================================
 // 回调接口
@@ -136,7 +177,7 @@ export class Toolbar {
         if (this.pauseBtn) {
             this.pauseBtn.innerHTML = '';
             this.pauseBtn.appendChild(createSvg('play'));
-            this.pauseBtn.title = '继续录制';
+            this.pauseBtn.title = LABEL_RESUME;
         }
     }
 
@@ -147,7 +188,7 @@ export class Toolbar {
         if (this.pauseBtn) {
             this.pauseBtn.innerHTML = '';
             this.pauseBtn.appendChild(createSvg('pause'));
-            this.pauseBtn.title = '暂停录制';
+            this.pauseBtn.title = LABEL_PAUSE;
         }
     }
 
@@ -157,21 +198,21 @@ export class Toolbar {
 
     private buildToolbar(): HTMLDivElement {
         const el = document.createElement('div');
-        el.id = 'bugreplay-toolbar';
+        el.id = ID_TOOLBAR;
         el.style.cssText = `
             position: fixed;
-            bottom: 24px;
+            bottom: ${TOOLBAR_BOTTOM}px;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 2147483647;
+            z-index: ${Z_INDEX_TOOLBAR};
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: ${TOOLBAR_BORDER_RADIUS}px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-            padding: 6px 10px;
+            padding: ${TOOLBAR_PADDING};
             display: inline-flex;
             flex-direction: row;
             align-items: center;
-            gap: 6px;
+            gap: ${TOOLBAR_GAP}px;
             font-family: system-ui, -apple-system, sans-serif;
             user-select: none;
             cursor: default;
@@ -184,19 +225,19 @@ export class Toolbar {
 
         // ---- 录制指示器 + 计时器 ----
         const dot = document.createElement('span');
-        dot.style.cssText = 'width:8px;height:8px;background:#ef4444;border-radius:50%;flex-shrink:0;animation:bugreplay-pulse 1.5s infinite;';
+        dot.style.cssText = `width:${DOT_SIZE}px;height:${DOT_SIZE}px;background:${COLOR_RECORDING};border-radius:50%;flex-shrink:0;animation:bugreplay-pulse 1.5s infinite;`;
         el.appendChild(dot);
 
         this.timerEl = document.createElement('span');
-        this.timerEl.style.cssText = 'font-size:13px;font-weight:600;color:#ef4444;font-variant-numeric:tabular-nums;';
-        this.timerEl.textContent = '00:00';
+        this.timerEl.style.cssText = `font-size:${TIMER_FONT_SIZE}px;font-weight:600;color:${COLOR_RECORDING};font-variant-numeric:tabular-nums;`;
+        this.timerEl.textContent = TIMER_INITIAL;
         el.appendChild(this.timerEl);
 
         // ---- 绘制中标识 ----
         this.drawingBadge = document.createElement('span');
         this.drawingBadge.style.cssText = `
-            font-size: 11px; font-weight: 700; color: #fff;
-            background: linear-gradient(135deg, #6467f0, #8b5cf6);
+            font-size: ${BADGE_FONT_SIZE}px; font-weight: 700; color: #fff;
+            background: linear-gradient(135deg, ${COLOR_BADGE_START}, ${COLOR_BADGE_END});
             padding: 2px 7px; border-radius: 5px; display: none;
             flex-shrink: 0; letter-spacing: 0.5px; cursor: help;
             align-items: center; gap: 3px;
@@ -209,7 +250,7 @@ export class Toolbar {
         el.appendChild(this.createDivider());
 
         // ---- 暂停 / 停止 ----
-        this.pauseBtn = this.createIconBtn('pause', '暂停录制', () => {
+        this.pauseBtn = this.createIconBtn('pause', LABEL_PAUSE, () => {
             if (this.recordingState === 'recording') {
                 this.setPaused();
                 this.callbacks.onPause();
@@ -221,7 +262,7 @@ export class Toolbar {
         });
         el.appendChild(this.pauseBtn);
 
-        this.stopBtn = this.createIconBtn('stop', '停止录制', () => this.callbacks.onStop());
+        this.stopBtn = this.createIconBtn('stop', LABEL_STOP, () => this.callbacks.onStop());
         el.appendChild(this.stopBtn);
 
         // ---- 分隔线 ----
@@ -244,28 +285,28 @@ export class Toolbar {
         el.appendChild(this.createDivider());
 
         // ---- 撤销 + 清除 ----
-        el.appendChild(this.createIconBtn('undo', '撤销', () => this.callbacks.onUndo()));
-        el.appendChild(this.createIconBtn('trash', '清除全部', () => this.callbacks.onClearAll()));
+        el.appendChild(this.createIconBtn('undo', LABEL_UNDO, () => this.callbacks.onUndo()));
+        el.appendChild(this.createIconBtn('trash', LABEL_CLEAR_ALL, () => this.callbacks.onClearAll()));
 
         // ---- 拖拽事件 ----
-        handle.addEventListener('mousedown', this.onDragStart);
-        document.addEventListener('mousemove', this.onDragMove);
-        document.addEventListener('mouseup', this.onDragEnd);
+        handle.addEventListener(DOM_EVENT_MOUSE_DOWN, this.onDragStart);
+        document.addEventListener(DOM_EVENT_MOUSE_MOVE, this.onDragMove);
+        document.addEventListener(DOM_EVENT_MOUSE_UP, this.onDragEnd);
 
         // ---- 绘制提示面板 ----
         this.hintPanel = document.createElement('div');
         this.hintPanel.style.cssText = `
             position: fixed; left: 50%; transform: translateX(-50%);
             display: none; flex-direction: column; gap: 0;
-            z-index: 2147483647; pointer-events: none;
+            z-index: ${Z_INDEX_TOOLBAR}; pointer-events: none;
         `;
         this.hintPanel.innerHTML = `
-            <div style="background:#1f2937;color:#f9fafb;padding:8px 14px;border-radius:10px;font-size:12px;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;text-align:center;">
+            <div style="background:${COLOR_HINT_BG};color:${COLOR_HINT_TEXT};padding:8px 14px;border-radius:10px;font-size:12px;line-height:1.7;box-shadow:0 4px 16px rgba(0,0,0,0.25);white-space:nowrap;text-align:center;">
                 <div>✋ 页面滚动和点击已禁用</div>
-                <div>🗑 按 <b style="color:#cba6f7">Delete</b> 删除选中标注</div>
-                <div>↩ 点击 <b style="color:#cba6f7">撤销</b> 移除最后一条</div>
+                <div>🗑 按 <b style="color:${COLOR_HINT_ACCENT}">Delete</b> 删除选中标注</div>
+                <div>↩ 点击 <b style="color:${COLOR_HINT_ACCENT}">撤销</b> 移除最后一条</div>
             </div>
-            <div style="width:0;height:0;margin:-1px auto 0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid #1f2937;"></div>
+            <div style="width:0;height:0;margin:-1px auto 0;border-left:8px solid transparent;border-right:8px solid transparent;border-top:8px solid ${COLOR_HINT_BG};"></div>
         `;
         document.body.appendChild(this.hintPanel);
 
@@ -280,7 +321,7 @@ export class Toolbar {
         const handle = document.createElement('div');
         handle.style.cssText = `
             display: flex; align-items: center; justify-content: center;
-            padding: 0 2px; cursor: grab; color: #9ca3af;
+            padding: 0 2px; cursor: grab; color: ${COLOR_DRAG_HANDLE};
             font-size: 14px; letter-spacing: 1px;
         `;
         handle.appendChild(createSvg('drag'));
@@ -293,18 +334,18 @@ export class Toolbar {
         btn.style.cssText = this.iconBtnStyle();
         btn.appendChild(createSvg(config.icon));
 
-        btn.addEventListener('mouseenter', () => {
+        btn.addEventListener(DOM_EVENT_MOUSE_ENTER, () => {
             if (this.selectedTool !== config.type) {
-                btn.style.background = '#f3f4f6';
+                btn.style.background = COLOR_HOVER_BG;
             }
         });
-        btn.addEventListener('mouseleave', () => {
+        btn.addEventListener(DOM_EVENT_MOUSE_LEAVE, () => {
             if (this.selectedTool !== config.type) {
                 btn.style.background = 'transparent';
             }
         });
 
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener(DOM_EVENT_CLICK, (e) => {
             e.stopPropagation();
             if (this.selectedTool === config.type) {
                 this.deselectAllTools();
@@ -323,16 +364,16 @@ export class Toolbar {
         const input = document.createElement('input');
         input.type = 'color';
         input.value = ANNOTATION_COLORS[0];
-        input.title = '选择颜色';
+        input.title = LABEL_PICK_COLOR;
         input.style.cssText = `
-            width: 26px; height: 26px; border: 2px solid #e5e7eb; border-radius: 6px;
+            width: ${COLOR_PICKER_SIZE}px; height: ${COLOR_PICKER_SIZE}px; border: 2px solid ${COLOR_DIVIDER}; border-radius: 6px;
             cursor: pointer; padding: 0; background: none; flex-shrink: 0;
         `;
-        input.addEventListener('input', () => {
+        input.addEventListener(DOM_EVENT_INPUT, () => {
             this.selectedColor = input.value;
             this.callbacks.onColorChange(input.value);
         });
-        input.addEventListener('click', e => e.stopPropagation());
+        input.addEventListener(DOM_EVENT_CLICK, e => e.stopPropagation());
         return input;
     }
 
@@ -341,13 +382,13 @@ export class Toolbar {
         btn.title = title;
         btn.style.cssText = this.iconBtnStyle();
         btn.appendChild(createSvg(iconName));
-        btn.addEventListener('mouseenter', () => {
-            btn.style.background = '#f3f4f6';
+        btn.addEventListener(DOM_EVENT_MOUSE_ENTER, () => {
+            btn.style.background = COLOR_HOVER_BG;
         });
-        btn.addEventListener('mouseleave', () => {
+        btn.addEventListener(DOM_EVENT_MOUSE_LEAVE, () => {
             btn.style.background = 'transparent';
         });
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener(DOM_EVENT_CLICK, (e) => {
             e.stopPropagation();
             onClick();
         });
@@ -356,17 +397,17 @@ export class Toolbar {
 
     private createDivider(): HTMLDivElement {
         const div = document.createElement('div');
-        div.style.cssText = 'border-left: 1px solid #e5e7eb; width: 0; height: 24px; margin: 0 2px;';
+        div.style.cssText = `border-left: 1px solid ${COLOR_DIVIDER}; width: 0; height: ${DIVIDER_HEIGHT}px; margin: 0 2px;`;
         return div;
     }
 
     private iconBtnStyle(): string {
         return `
             display: flex; align-items: center; justify-content: center;
-            width: 34px; height: 34px; border: 2px solid transparent;
-            border-radius: 8px; background: transparent; cursor: pointer;
+            width: ${ICON_BTN_SIZE}px; height: ${ICON_BTN_SIZE}px; border: 2px solid transparent;
+            border-radius: ${ICON_BTN_RADIUS}px; background: transparent; cursor: pointer;
             font-size: 16px; transition: all 0.15s ease; padding: 0;
-            flex-shrink: 0; color: #374151;
+            flex-shrink: 0; color: ${COLOR_ICON_PRIMARY};
         `;
     }
 
@@ -399,7 +440,7 @@ export class Toolbar {
         this.drawingBadge.onmouseenter = () => {
             const badgeRect = this.drawingBadge!.getBoundingClientRect();
             this.hintPanel!.style.display = 'flex';
-            this.hintPanel!.style.bottom = `${window.innerHeight - badgeRect.top + 8}px`;
+            this.hintPanel!.style.bottom = `${window.innerHeight - badgeRect.top + DRAG_MARGIN}px`;
             this.hintPanel!.style.left = `${badgeRect.left + badgeRect.width / 2}px`;
             this.hintPanel!.style.transform = 'translateX(-50%)';
             this.hintPanel!.style.top = 'auto';
@@ -436,7 +477,7 @@ export class Toolbar {
             this.timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
         };
         update();
-        this.timerInterval = setInterval(update, 1000);
+        this.timerInterval = setInterval(update, TIMER_INTERVAL);
     }
 
     private stopTimer(): void {
@@ -477,8 +518,8 @@ export class Toolbar {
 
         const maxLeft = window.innerWidth - this.container.offsetWidth - 8;
         const maxTop = window.innerHeight - this.container.offsetHeight - 8;
-        newLeft = Math.max(8, Math.min(newLeft, maxLeft));
-        newTop = Math.max(8, Math.min(newTop, maxTop));
+        newLeft = Math.max(DRAG_MARGIN, Math.min(newLeft, maxLeft));
+        newTop = Math.max(DRAG_MARGIN, Math.min(newTop, maxTop));
 
         this.container.style.left = `${newLeft}px`;
         this.container.style.top = `${newTop}px`;
@@ -498,8 +539,8 @@ export class Toolbar {
 
     destroy(): void {
         this.stopTimer();
-        document.removeEventListener('mousemove', this.onDragMove);
-        document.removeEventListener('mouseup', this.onDragEnd);
+        document.removeEventListener(DOM_EVENT_MOUSE_MOVE, this.onDragMove);
+        document.removeEventListener(DOM_EVENT_MOUSE_UP, this.onDragEnd);
         this.hide();
     }
 }

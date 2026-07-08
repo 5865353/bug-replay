@@ -13,6 +13,7 @@ export default antfu(
             'node_modules',
             '.vscode',
             '**/*.d.ts',
+            './src/content/recorder/page-interceptor.js',
         ],
         globals: {
             browser: 'readonly',
