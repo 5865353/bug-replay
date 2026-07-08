@@ -71,23 +71,93 @@ function toggleItem(key: string) {
     </div>
 </template>
 
-<style scoped>
-.con-panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-.search-field { flex-shrink: 0; background: #0f0f14 !important; }
-.con-list { flex: 1; overflow-y: auto; }
-.empty-hint { text-align: center; padding: 16px; color: #6b6b80; font-size: 11px; }
-.con-item {
-    padding: 5px 10px; border-bottom: 1px solid rgba(255,255,255,0.03);
-    cursor: pointer; font-size: 11px; transition: background 0.1s;
+<style lang="scss" scoped>
+.con-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
-.con-item:hover { background: rgba(255,255,255,0.03); }
-.con-header { display: flex; align-items: center; gap: 6px; }
-.con-time { color: #6b6b80; min-width: 36px; font-variant-numeric: tabular-nums; font-size: 10px; }
-.con-level { font-weight: 700; font-size: 10px; min-width: 34px; }
-.con-preview { color: #bac2de; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.con-detail { margin-top: 4px; padding: 6px 8px; background: #1e1e28; border-radius: 4px; font-size: 11px; color: #bac2de; max-height: 180px; overflow-y: auto; }
-.con-arg { margin-bottom: 4px; word-break: break-all; }
-.con-arg strong { color: #b0b0c4; }
-.con-stack { margin-top: 4px; color: #f38ba8; }
-.con-stack pre { font-size: 10px; white-space: pre-wrap; }
+
+.search-field {
+    flex-shrink: 0;
+    background: #0f0f14 !important;
+}
+
+.con-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.empty-hint {
+    text-align: center;
+    padding: 16px;
+    color: #6b6b80;
+    font-size: 11px;
+}
+
+.con-item {
+    padding: 5px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, .03);
+    cursor: pointer;
+    font-size: 11px;
+    transition: background .1s;
+
+    &:hover { background: rgba(255, 255, 255, .03); }
+}
+
+.con-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.con-time {
+    color: #6b6b80;
+    min-width: 36px;
+    font-variant-numeric: tabular-nums;
+    font-size: 10px;
+}
+
+.con-level {
+    font-weight: 700;
+    font-size: 10px;
+    min-width: 34px;
+}
+
+.con-preview {
+    color: #bac2de;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.con-detail {
+    margin-top: 4px;
+    padding: 6px 8px;
+    background: #1e1e28;
+    border-radius: 4px;
+    font-size: 11px;
+    color: #bac2de;
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.con-arg {
+    margin-bottom: 4px;
+    word-break: break-all;
+
+    strong { color: #b0b0c4; }
+}
+
+.con-stack {
+    margin-top: 4px;
+    color: #f38ba8;
+
+    pre {
+        font-size: 10px;
+        white-space: pre-wrap;
+    }
+}
 </style>

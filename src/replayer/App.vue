@@ -127,7 +127,7 @@ async function handleCopyToClipboard() {
     </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .replayer-shell {
     height: 100vh;
     display: flex;
@@ -143,10 +143,13 @@ async function handleCopyToClipboard() {
     min-width: 0;
     overflow: hidden;
 }
+
+.flex-1 { flex: 1; }
+.h-0 { height: 0; }
 </style>
 
-<style>
-.default-theme.splitpanes .splitpanes__splitter{
+<style lang="scss">
+.default-theme.splitpanes .splitpanes__splitter {
     background-color: #2a2a38;
     border-color: #2a2a38;
 }

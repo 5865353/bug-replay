@@ -167,7 +167,7 @@ function openFile() {
                     <span>复制</span>
                 </button>
 
-                <button class="action-btn export-btn" title="导出 .rrt" @click="emit('exportRRT')">
+                <button class="action-btn" title="导出 .rrt" @click="emit('exportRRT')">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                     <span>导出</span>
                 </button>
@@ -182,7 +182,7 @@ function openFile() {
     </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .player-bar {
     background: #22222c;
     border-top: 1px solid #32323e;

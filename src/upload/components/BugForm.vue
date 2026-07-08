@@ -1,0 +1,100 @@
+<script setup lang="ts">
+import browser from 'webextension-polyfill';
+
+defineProps<{ title: string; description: string; hasAi: boolean; generatingAi: boolean }>();
+defineEmits<{ 'update:title': [value: string]; 'update:description': [value: string]; generateAi: [] }>();
+
+function openSettings() { browser.runtime.openOptionsPage(); }
+</script>
+
+<template>
+    <!-- 标题 -->
+    <section class="card">
+        <h3 class="section-title">Bug 标题</h3>
+        <input :value="title" class="inp" placeholder="简要描述 Bug 现象" @input="$emit('update:title', ($event.target as HTMLInputElement).value)">
+    </section>
+
+    <!-- 描述 + AI -->
+    <section class="card">
+        <div class="desc-header">
+            <h3 class="section-title section-title--tight">详细描述</h3>
+            <button v-if="hasAi" class="ai-btn" :disabled="generatingAi" @click="$emit('generateAi')">
+                {{ generatingAi ? '⚡ 生成中...' : '🤖 AI 生成' }}
+            </button>
+        </div>
+        <textarea :value="description" class="inp ta" rows="8" placeholder="复现步骤、预期结果、实际结果..." @input="$emit('update:description', ($event.target as HTMLTextAreaElement).value)" />
+        <p v-if="!hasAi" class="hint">
+            💡 在<a href="#" @click.prevent="openSettings">设置</a>中配置 AI 后可自动生成描述
+        </p>
+    </section>
+</template>
+
+<style lang="scss" scoped>
+.card {
+    background: #272732;
+    border: 1px solid #32323e;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #b0b0c4;
+    margin: 0 0 10px;
+
+    &--tight { margin-bottom: 0; }
+}
+
+.desc-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.inp {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #3a3a4e;
+    border-radius: 8px;
+    background: #1e1e28;
+    color: #d0d0dc;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+
+    &::placeholder { color: #505060; }
+    &:focus { border-color: #5b8def; }
+}
+
+.ta {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.hint {
+    font-size: 12px;
+    color: #6b6b80;
+    margin-top: 8px;
+
+    a { color: #7ba4f5; }
+}
+
+.ai-btn {
+    padding: 5px 14px;
+    border: 1px solid rgba(91, 141, 239, .3);
+    border-radius: 6px;
+    background: rgba(91, 141, 239, .08);
+    color: #7ba4f5;
+    font-size: 12px;
+    cursor: pointer;
+    transition: .15s;
+
+    &:hover { background: rgba(91, 141, 239, .15); }
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+}
+</style>

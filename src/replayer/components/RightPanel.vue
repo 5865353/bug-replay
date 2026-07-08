@@ -238,11 +238,11 @@ function showCookies() {
     <van-popup
         v-model:show="storagePopup.show"
         position="bottom"
-        :style="{ height: '60%', background: '#272732' }"
+        popup-class="storage-popup"
         round
         closeable
     >
-        <div class="flex-col h-full">
+        <div class="popup-shell">
             <div class="popup-head">
                 <span class="popup-title">{{ storagePopup.title }}</span>
                 <button class="copy-all-btn" @click="copyAll">
@@ -315,6 +315,9 @@ function showCookies() {
         color: #b0b0c4;
         text-align: right;
         word-break: break-all;
+
+        &.break { word-break: break-all; }
+        &.text-right { text-align: right; }
     }
 
     &.ua-row {
@@ -465,6 +468,17 @@ function showCookies() {
 :deep(.van-popup) {
     display: flex;
     flex-direction: column;
+}
+
+:deep(.storage-popup) {
+    height: 60% !important;
+    background: #272732 !important;
+}
+
+.popup-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .popup-head {

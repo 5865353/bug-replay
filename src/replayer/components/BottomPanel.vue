@@ -43,28 +43,28 @@ const activeTab = ref(0);
 
 <style lang="scss" scoped>
 .bottom-panel {
-  height: 100%;
-  background: #272732;
-  border-top: 1px solid #3a3a4e;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-
-  :deep(.van-tabs) {
+    height: 100%;
+    background: #272732;
+    border-top: 1px solid #3a3a4e;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
+    overflow: hidden;
 
-    .van-tabs__content {
-      flex: 1;
-      min-height: 0;
-      overflow: hidden;
-    }
+    :deep(.van-tabs) {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
 
-    .van-tab__panel {
-      height: 100%;
+        .van-tabs__content {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .van-tab__panel {
+            height: 100%;
+        }
     }
-  }
 }
 </style>
