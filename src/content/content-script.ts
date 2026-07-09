@@ -38,7 +38,14 @@ let networkLogCallback: ((log: NetworkLog) => void) | null = null;
 const pageEventBuffer: PageEvent[] = [];
 let pageEventCallback: ((e: PageEvent) => void) | null = null;
 
-// 发送控制消息给页面主世界的拦截器（开启/关闭拦截上报）
+/** 每次 flush 的存储 key 前缀 */
+const FLUSH_KEY_PREFIX = `${STORAGE_KEY_PREFIX}chunk_`;
+
+/** 每 30 秒自动 flush 一次 */
+const FLUSH_INTERVAL_MS = 30000;
+
+/** rrweb 事件数达到此阈值触发 flush */
+const FLUSH_EVENT_THRESHOLD = 5000;
 function sendInterceptorControl(action: typeof PM_ACTION_START | typeof PM_ACTION_STOP): void {
     window.postMessage({ source: PM_SOURCE_CONTROL, action }, PM_TARGET_ORIGIN);
 }
@@ -81,9 +88,45 @@ injectNetworkInterceptor();
 
 function useContentScript() {
     let currentSession: RecordingSession | null = null;
+    let flushTimer: ReturnType<typeof setInterval> | null = null;
+    /** 当前 session 已 flush 的 chunk 计数 */
+    let chunkIndex = 0;
+
+    /** 将当前 session 的大数组刷到 chrome.storage.local，清空内存 */
+    async function flushSessionToStorage(): Promise<void> {
+        if (!currentSession || currentSession.status !== 'recording') return;
+
+        const sessionId = currentSession.id;
+        const chunk = {
+            events: currentSession.events.splice(0),
+            networkLogs: currentSession.networkLogs.splice(0),
+            consoleLogs: currentSession.consoleLogs.splice(0),
+            pageEvents: currentSession.pageEvents.splice(0),
+        };
+
+        // 跳过空 flush
+        if (chunk.events.length === 0
+            && chunk.networkLogs.length === 0
+            && chunk.consoleLogs.length === 0
+            && chunk.pageEvents.length === 0) {
+            return;
+        }
+
+        const key = `${FLUSH_KEY_PREFIX}${sessionId}_${chunkIndex++}`;
+        await browser.storage.local.set({ [key]: chunk });
+
+        console.log(
+            `[${EXTENSION_NAME}] Flushed chunk #${chunkIndex - 1}: `
+            + `events=${chunk.events.length} network=${chunk.networkLogs.length} `
+            + `console=${chunk.consoleLogs.length} pageEvents=${chunk.pageEvents.length}`,
+        );
+    }
 
     const recorder = useRecorder({
         onBeforeStart: () => {
+            // 重置 chunk 计数
+            chunkIndex = 0;
+
             // 网络日志回调
             networkLogCallback = (log) => {
                 if (currentSession) currentSession.networkLogs.push(log);
@@ -103,6 +146,12 @@ function useContentScript() {
             }
             pageEventBuffer.length = 0;
             return flushed;
+        },
+        /** rrweb 事件数达到阈值时触发 flush */
+        onEventThreshold: () => {
+            flushSessionToStorage().catch((err) => {
+                console.error(`[${EXTENSION_NAME}] Flush failed:`, err);
+            });
         },
     });
     const annotator = useAnnotator({
@@ -128,7 +177,7 @@ function useContentScript() {
     async function handleMessage(message: BackgroundToContentMessage): Promise<void> {
         switch (message.action) {
             case BackgroundToContentAction.RECORDING_STARTED:
-                await startRecording();
+                await startRecording(message.payload);
                 break;
             case BackgroundToContentAction.RECORDING_STOPPED:
                 await stopRecording();
@@ -144,11 +193,19 @@ function useContentScript() {
         }
     }
 
-    async function startRecording(): Promise<void> {
+    async function startRecording(settings?: unknown): Promise<void> {
         try {
             // 通知页面主世界拦截器开始上报
             sendInterceptorControl(PM_ACTION_START);
-            currentSession = await recorder.start();
+            const recSettings = settings as { maskInputs?: boolean; mouseSample?: number; scrollSample?: number; maxDuration?: number } | undefined;
+            currentSession = await recorder.start(recSettings);
+
+            // 🔧 启动定时 flush（每 30 秒）
+            flushTimer = setInterval(() => {
+                flushSessionToStorage().catch((err) => {
+                    console.error(`[${EXTENSION_NAME}] Periodic flush failed:`, err);
+                });
+            }, FLUSH_INTERVAL_MS);
 
             // Recreate annotator with proper hooks
             const newAnnotator = useAnnotator({
@@ -180,19 +237,31 @@ function useContentScript() {
 
     async function stopRecording(): Promise<void> {
         try {
+            // 🔧 停止定时 flush
+            if (flushTimer) {
+                clearInterval(flushTimer);
+                flushTimer = null;
+            }
+
             // 通知页面主世界拦截器停止上报
             sendInterceptorControl(PM_ACTION_STOP);
             // 清空缓冲区，避免残留数据
             networkBuffer.length = 0;
             pageEventBuffer.length = 0;
 
+            // 🔧 最终 flush：确保所有数据落盘
+            await flushSessionToStorage();
+
             const session = await recorder.stop();
             session.annotations = annotator.getAnnotations();
             annotator.hide();
 
-            // Use chrome.storage for large data (avoids sendMessage size limit)
-            const key = `${STORAGE_KEY_PREFIX}${session.id}`;
-            await browser.storage.local.set({ [key]: session });
+            // 🔧 保存 session 元数据（不含大数组）+ chunk 数量，供后台合并
+            const { events: _e, networkLogs: _n, consoleLogs: _c, pageEvents: _p, ...metadata } = session;
+            const metaKey = `${STORAGE_KEY_PREFIX}${session.id}`;
+            await browser.storage.local.set({
+                [metaKey]: { ...metadata, chunkCount: chunkIndex },
+            });
 
             await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.STOP_RECORDING,

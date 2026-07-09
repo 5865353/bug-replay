@@ -3,7 +3,7 @@ import type { Settings } from '../constants';
 import { LABEL_USERNAME, MAX_DURATION_OPTIONS, PLACEHOLDER_USERNAME, REPLAY_SPEED_OPTIONS } from '../constants';
 
 defineProps<{ settings: Settings }>();
-const emit = defineEmits<{ 'update:username': [v: string]; 'update:maskInputs': [v: boolean]; 'update:mouseSample': [v: number]; 'update:scrollSample': [v: number]; 'update:maxDuration': [v: number]; 'update:replaySpeed': [v: number]; 'update:showAnnotations': [v: boolean] }>();
+const emit = defineEmits<{ 'update:username': [v: string]; 'update:maskInputs': [v: boolean]; 'update:mouseSample': [v: number]; 'update:scrollSample': [v: number]; 'update:maxDuration': [v: number]; 'update:replaySpeed': [v: number]; 'update:showAnnotations': [v: boolean]; 'update:showMouseTrail': [v: boolean] }>();
 </script>
 
 <template>
@@ -69,6 +69,10 @@ const emit = defineEmits<{ 'update:username': [v: string]; 'update:maskInputs': 
             <div class="row">
                 <span class="row-label">默认显示标注</span>
                 <label class="toggle"><input type="checkbox" :checked="settings.showAnnotations" @change="emit('update:showAnnotations', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
+            </div>
+            <div class="row">
+                <span class="row-label">显示鼠标轨迹</span>
+                <label class="toggle"><input type="checkbox" :checked="settings.showMouseTrail" @change="emit('update:showMouseTrail', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
             </div>
         </section>
     </div>

@@ -10,6 +10,9 @@ import { SENSITIVE_HEADERS } from '@shared/types';
 import { formatTimestamp, safeStringify } from '@shared/utils';
 import browser from 'webextension-polyfill';
 
+/** 设置存储 key（与 options/constants.ts 保持一致） */
+const STORAGE_KEY_SETTINGS = 'bugreplay_settings';
+
 /**
  * 计算录制时长
  */
@@ -17,7 +20,6 @@ function calculateDuration(session: RecordingSession): number {
     if (session.endTime) {
         return session.endTime - session.startTime;
     }
-    // 如果未正常结束，使用最后一个事件的时间
     const lastEvent = session.events[session.events.length - 1];
     if (lastEvent) {
         return lastEvent.timestamp - session.startTime;
@@ -26,12 +28,27 @@ function calculateDuration(session: RecordingSession): number {
 }
 
 /**
+ * 读取用户名设置
+ */
+async function getCreatedBy(): Promise<string | undefined> {
+    try {
+        const stored = await browser.storage.local.get(STORAGE_KEY_SETTINGS);
+        const settings = stored[STORAGE_KEY_SETTINGS] as { username?: string } | undefined;
+        return settings?.username || undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
+
+/**
  * 将 RecordingSession 转换为 RRTPackage
  *
  * 在此进行最终的安全过滤，确保敏感数据不会泄露到 .rrt 文件中。
  */
-export function buildRRTPackage(session: RecordingSession): RRTPackage {
+export async function buildRRTPackage(session: RecordingSession): Promise<RRTPackage> {
     const duration = calculateDuration(session);
+    const createdBy = await getCreatedBy();
 
     return {
         version: '1.0.0',
@@ -42,6 +59,7 @@ export function buildRRTPackage(session: RecordingSession): RRTPackage {
             description: session.description,
             tags: session.tags,
             extensionVersion: EXTENSION_VERSION,
+            createdBy: createdBy || undefined,
             externalIssueId: session.externalIssueId,
         },
         environment: sanitizeEnvironment(session.environment!),
@@ -71,7 +89,7 @@ export function generateRRTFilename(session: RecordingSession): string {
 export async function downloadRRTFile(
     session: RecordingSession,
 ): Promise<void> {
-    const rrtPackage = buildRRTPackage(session);
+    const rrtPackage = await buildRRTPackage(session);
     const jsonStr = JSON.stringify(rrtPackage, null, 2);
     const filename = generateRRTFilename(session);
 
@@ -92,7 +110,7 @@ export async function downloadRRTFile(
 export async function copyRRTToClipboard(
     session: RecordingSession,
 ): Promise<void> {
-    const rrtPackage = buildRRTPackage(session);
+    const rrtPackage = await buildRRTPackage(session);
     const jsonStr = safeStringify(rrtPackage) ?? JSON.stringify(rrtPackage);
     await navigator.clipboard.writeText(jsonStr);
 }

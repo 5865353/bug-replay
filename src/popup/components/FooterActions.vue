@@ -10,23 +10,22 @@ const props = defineProps<{
     sessions: RecordingSessionSummary[];
 }>();
 
-const canExport = computed(() => props.sessions.length > 0);
+const hasActive = computed(() => props.activeSessionId !== null);
 
 function checkSelected(): string | null {
-    const id = props.activeSessionId || (props.sessions[0]?.id ?? null);
-    if (!id) {
+    if (!props.activeSessionId) {
         showToast({ message: '请先选择一条录制记录', position: 'top' });
         return null;
     }
-    return id;
+    return props.activeSessionId;
 }
 
 async function openReplayer() {
+    const id = checkSelected();
+    if (!id)
+        return;
     const base = browser.runtime.getURL('src/replayer/index.html');
-    const url = props.activeSessionId
-        ? `${base}?sessionId=${props.activeSessionId}`
-        : base;
-    browser.tabs.create({ url });
+    browser.tabs.create({ url: `${base}?sessionId=${id}` });
 }
 
 function openUpload() {
@@ -56,25 +55,25 @@ async function copyToClipboard() {
 <template>
     <div class="footer-bar">
         <div class="footer-row">
-            <div class="footer-btn" @click="openReplayer">
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !hasActive }" @click="openReplayer">
                 <div class="footer-btn-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)">
                     <van-icon name="play-circle-o" size="18" color="#7c3aed" />
                 </div>
                 <span class="footer-btn-label">回放</span>
             </div>
-            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="openUpload">
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !hasActive }" @click="openUpload">
                 <div class="footer-btn-icon" style="background:linear-gradient(135deg,#e8f0fe,#d2e3fc)">
                     <van-icon name="upgrade" size="18" color="#3b82f6" />
                 </div>
                 <span class="footer-btn-label">上传</span>
             </div>
-            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="exportRRT">
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !hasActive }" @click="exportRRT">
                 <div class="footer-btn-icon" style="background:linear-gradient(135deg,#fef3e2,#fde8c8)">
                     <van-icon name="down" size="18" color="#e4943a" />
                 </div>
                 <span class="footer-btn-label">导出</span>
             </div>
-            <div class="footer-btn" :class="{ 'footer-btn-disabled': !canExport }" @click="copyToClipboard">
+            <div class="footer-btn" :class="{ 'footer-btn-disabled': !hasActive }" @click="copyToClipboard">
                 <div class="footer-btn-icon" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9)">
                     <van-icon name="coupon-o" size="18" color="#4caf50" />
                 </div>

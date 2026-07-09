@@ -31,6 +31,13 @@ export function useSessions() {
         await loadSessions();
     }
 
+    async function deleteAllSessions() {
+        await browser.runtime.sendMessage({
+            action: ContentToBackgroundAction.DELETE_ALL_SESSIONS,
+        });
+        await loadSessions();
+    }
+
     // Reload sessions when recording stops
     browser.runtime.onMessage.addListener((message: unknown) => {
         const msg = message as BackgroundToContentMessage;
@@ -39,5 +46,5 @@ export function useSessions() {
         }
     });
 
-    return { sessions, loadSessions, deleteSession };
+    return { sessions, loadSessions, deleteSession, deleteAllSessions };
 }

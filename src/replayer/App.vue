@@ -19,6 +19,7 @@ const {
     isPlaying,
     speed,
     showAnnotations,
+    showMouseTrail,
     devtoolsVisible,
     loadFile,
     togglePlayPause,
@@ -27,6 +28,7 @@ const {
     stepForward,
     stepBack,
     toggleAnnotations,
+    toggleMouseTrail,
     toggleDevtools,
     replay,
 } = useRePlayer();
@@ -66,6 +68,10 @@ async function handleCopyToClipboard() {
         showToast({ message: `复制失败: ${err instanceof Error ? err.message : '未知错误'}`, position: 'top' });
     }
 }
+
+function handleTimelineSeek(time: number) {
+    seekTo(time);
+}
 </script>
 
 <template>
@@ -93,6 +99,7 @@ async function handleCopyToClipboard() {
                                     :is-playing="isPlaying"
                                     :speed="speed"
                                     :show-annotations="showAnnotations"
+                                    :show-mouse-trail="showMouseTrail"
                                     :devtools-visible="devtoolsVisible"
                                     @play-pause="togglePlayPause"
                                     @seek="seekTo"
@@ -100,6 +107,7 @@ async function handleCopyToClipboard() {
                                     @step-forward="stepForward"
                                     @step-back="stepBack"
                                     @toggle-annotations="toggleAnnotations"
+                                    @toggle-mouse-trail="toggleMouseTrail"
                                     @toggle-devtools="toggleDevtools"
                                     @replay="replay"
                                     @file-selected="onFileSelected"
@@ -110,7 +118,7 @@ async function handleCopyToClipboard() {
                         </Pane>
                         <!-- 右侧面板 -->
                         <Pane v-if="hasLoaded && currentPackage" :size="35" :min-size="25" :max-size="50">
-                            <RightPanel :package="currentPackage" />
+                            <RightPanel :package="currentPackage" @seek="handleTimelineSeek" />
                         </Pane>
                     </Splitpanes>
                 </Pane>

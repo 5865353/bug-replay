@@ -2,8 +2,9 @@
 import type { Settings } from '../constants';
 import { AI_PROVIDER_PRESETS, HINT_AI_DESC, LABEL_AI_KEY, LABEL_AI_MODEL, LABEL_AI_URL } from '../constants';
 
-const props = defineProps<{ settings: Settings }>();
-const emit = defineEmits<{ 'update:aiProvider': [v: string]; 'update:aiApiKey': [v: string]; 'update:aiBaseUrl': [v: string]; 'update:aiModel': [v: string] }>();
+const props = defineProps<{ settings: Settings; isVerifying: boolean }>();
+const emit = defineEmits<{ 'update:aiProvider': [v: string]; 'update:aiApiKey': [v: string]; 'update:aiBaseUrl': [v: string]; 'update:aiModel': [v: string]; 'verify': [] }>();
+
 function onSelect(v: string) {
     const p = AI_PROVIDER_PRESETS.find(x => x.value === v);
     emit('update:aiProvider', v);
@@ -26,7 +27,10 @@ const isCustom = () => props.settings.aiProvider === 'custom';
                 {{ HINT_AI_DESC }}
             </p>
             <label class="lbl">提供商</label>
-            <select class="sel" :value="settings.aiProvider" @change="onSelect(($event.target as HTMLSelectElement).value)">
+            <select
+                class="sel" :value="settings.aiProvider"
+                @change="onSelect(($event.target as HTMLSelectElement).value)"
+            >
                 <option value="" disabled>
                     请选择 AI 提供商
                 </option>
@@ -35,19 +39,37 @@ const isCustom = () => props.settings.aiProvider === 'custom';
                 </option>
             </select>
             <label class="lbl">{{ LABEL_AI_KEY }}</label>
-            <input class="inp" type="password" :value="settings.aiApiKey" :placeholder="cur() ? `${cur()?.label} API Key` : '输入 API Key'" @input="emit('update:aiApiKey', ($event.target as HTMLInputElement).value)">
+            <input
+                class="inp" type="password" :value="settings.aiApiKey"
+                :placeholder="cur() ? `${cur()?.label} API Key` : '输入 API Key'"
+                @input="emit('update:aiApiKey', ($event.target as HTMLInputElement).value)"
+            >
             <label class="lbl">{{ LABEL_AI_MODEL }}</label>
-            <input class="inp" :value="settings.aiModel" :placeholder="cur()?.defaultModel || '输入模型名称'" @input="emit('update:aiModel', ($event.target as HTMLInputElement).value)">
+            <input
+                class="inp" :value="settings.aiModel" :placeholder="cur()?.defaultModel || '输入模型名称'"
+                @input="emit('update:aiModel', ($event.target as HTMLInputElement).value)"
+            >
             <template v-if="isCustom() || (settings.aiProvider && settings.aiBaseUrl)">
                 <label class="lbl">{{ LABEL_AI_URL }}</label>
-                <input class="inp" :value="settings.aiBaseUrl" placeholder="https://your-api.com/v1" @input="emit('update:aiBaseUrl', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" :value="settings.aiBaseUrl" placeholder="https://your-api.com/v1"
+                    @input="emit('update:aiBaseUrl', ($event.target as HTMLInputElement).value)"
+                >
             </template>
+            <button
+                v-if="settings.aiProvider" class="btn-verify" :disabled="isVerifying || !settings.aiApiKey"
+                @click="emit('verify')"
+            >
+                <span v-if="isVerifying" class="spinner" /> {{ isVerifying ? '验证中...' : '验证连接' }}
+            </button>
         </section>
     </div>
 </template>
 
 <style lang="scss" scoped>
-.tab-body { padding: 16px; }
+.tab-body {
+    padding: 16px;
+}
 
 .card {
     background: #272732;
@@ -81,7 +103,9 @@ const isCustom = () => props.settings.aiProvider === 'custom';
     text-transform: uppercase;
     letter-spacing: .4px;
 
-    &:first-of-type { margin-top: 0; }
+    &:first-of-type {
+        margin-top: 0;
+    }
 }
 
 .inp {
@@ -96,8 +120,13 @@ const isCustom = () => props.settings.aiProvider === 'custom';
     box-sizing: border-box;
     transition: border-color .15s;
 
-    &::placeholder { color: #505060; }
-    &:focus { border-color: #5b8def; }
+    &::placeholder {
+        color: #505060;
+    }
+
+    &:focus {
+        border-color: #5b8def;
+    }
 }
 
 .sel {
@@ -117,11 +146,55 @@ const isCustom = () => props.settings.aiProvider === 'custom';
     background-position: right 12px center;
     transition: border-color .15s;
 
-    &:focus { border-color: #5b8def; }
+    &:focus {
+        border-color: #5b8def;
+    }
 
     option {
         background: #22222c;
         color: #d0d0dc;
+    }
+}
+
+.btn-verify {
+    display: block;
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px 0;
+    border: 1px solid #5b8def;
+    border-radius: 8px;
+    background: transparent;
+    color: #5b8def;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+
+    &:hover:not(:disabled) {
+        background: rgba(91, 141, 239, .1);
+    }
+
+    &:disabled {
+        opacity: .4;
+        cursor: not-allowed;
+    }
+}
+
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(91, 141, 239, .3);
+    border-top-color: #5b8def;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }
 </style>

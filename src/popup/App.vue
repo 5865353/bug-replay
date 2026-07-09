@@ -9,12 +9,17 @@ import { useRecording } from './composables/useRecording';
 import { useSessions } from './composables/useSessions';
 
 const { isRecording, isPaused, toggleRecording, initStatus } = useRecording();
-const { sessions, loadSessions, deleteSession } = useSessions();
+const { sessions, loadSessions, deleteSession, deleteAllSessions } = useSessions();
 
 const selectedSessionId = ref<string | null>(null);
 
 function selectSession(id: string) {
     selectedSessionId.value = id;
+}
+
+async function handleDeleteAll() {
+    await deleteAllSessions();
+    selectedSessionId.value = null;
 }
 
 onMounted(async () => {
@@ -52,6 +57,7 @@ onMounted(async () => {
                     :active-session-id="selectedSessionId"
                     @select="selectSession"
                     @delete="deleteSession"
+                    @delete-all="handleDeleteAll"
                 />
             </div>
         </div>

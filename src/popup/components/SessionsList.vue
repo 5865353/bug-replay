@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { RecordingSessionSummary } from '@shared/types';
+import { showConfirmDialog } from 'vant';
 import SessionItem from './SessionItem.vue';
 
-defineProps<{
+const props = defineProps<{
     sessions: RecordingSessionSummary[];
     activeSessionId: string | null;
 }>();
@@ -10,7 +11,21 @@ defineProps<{
 const emit = defineEmits<{
     select: [sessionId: string];
     delete: [sessionId: string];
+    deleteAll: [];
 }>();
+
+function handleDeleteAll() {
+    if (props.sessions.length === 0)
+        return;
+    showConfirmDialog({
+        title: '全部删除',
+        message: `确定要删除全部 ${props.sessions.length} 条录制记录吗？此操作不可撤销。`,
+        confirmButtonText: '全部删除',
+        confirmButtonColor: '#ee4141',
+    }).then(() => {
+        emit('deleteAll');
+    }).catch(() => {});
+}
 </script>
 
 <template>
@@ -20,7 +35,17 @@ const emit = defineEmits<{
                 <van-icon name="orders-o" size="15" color="#323233" />
                 <span>历史录制</span>
             </div>
-            <span v-if="sessions.length" class="sessions-count">{{ sessions.length }}</span>
+            <div class="sessions-header-right">
+                <span v-if="sessions.length" class="sessions-count">{{ sessions.length }}</span>
+                <button
+                    v-if="sessions.length > 0"
+                    class="delete-all-btn"
+                    @click="handleDeleteAll"
+                >
+                    <van-icon name="delete-o" size="13" />
+                    <span>清空</span>
+                </button>
+            </div>
         </div>
 
         <div class="session-list">
@@ -61,6 +86,12 @@ const emit = defineEmits<{
   color: #323233;
 }
 
+.sessions-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sessions-count {
   font-size: 11px;
   font-weight: 600;
@@ -70,6 +101,25 @@ const emit = defineEmits<{
   border-radius: 10px;
   min-width: 20px;
   text-align: center;
+}
+
+.delete-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #c8c9cc;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #fff0f0;
+    color: #ee4141;
+  }
 }
 
 .session-list{

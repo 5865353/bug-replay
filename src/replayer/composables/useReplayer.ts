@@ -4,11 +4,14 @@ import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
 import { AnnotationOverlay } from './annotation-overlay';
 
+const STORAGE_KEY_SETTINGS = 'bugreplay_settings';
+
 export function useRePlayer() {
     const currentPackage = ref<RRTPackage | null>(null);
     const hasLoaded = ref(false);
 
     const showAnnotations = ref(true);
+    const showMouseTrail = ref(true);
     const devtoolsVisible = ref(false);
     const currentTime = ref(0);
     const totalTime = ref(0);
@@ -30,6 +33,26 @@ export function useRePlayer() {
     let cursorPos = { x: 0, y: 0, visible: false };
 
     const metadataTitle = computed(() => currentPackage.value?.metadata?.title || '回放');
+
+    /** 读取用户回放配置并应用 */
+    async function applyReplaySettings() {
+        try {
+            const stored = await browser.storage.local.get(STORAGE_KEY_SETTINGS);
+            const s = stored[STORAGE_KEY_SETTINGS] as Record<string, unknown> | undefined;
+            if (s) {
+                if (typeof s.replaySpeed === 'number') {
+                    speed.value = s.replaySpeed;
+                }
+                if (typeof s.showAnnotations === 'boolean') {
+                    showAnnotations.value = s.showAnnotations;
+                }
+                if (typeof s.showMouseTrail === 'boolean') {
+                    showMouseTrail.value = s.showMouseTrail;
+                }
+            }
+        }
+        catch { /* ignore */ }
+    }
 
     // ============================================================
     // File Loading
@@ -134,6 +157,8 @@ export function useRePlayer() {
         if (sessionId) {
             loadFromSessionId(sessionId);
         }
+        // 读取用户配置
+        applyReplaySettings();
         // 延迟设置观察器，确保 DOM 已渲染
         nextTick(() => {
             setupObservers();
@@ -424,12 +449,20 @@ export function useRePlayer() {
     function initAnnotations(annotations: Annotation[]): Promise<void> {
         return new Promise((resolve) => {
             const container = document.getElementById('rrweb-player');
-            if (!container) { resolve(); return; }
+            if (!container) {
+                resolve();
+                return;
+            }
 
             const overlay = new AnnotationOverlay();
             overlay.init(container, annotations);
             annotationOverlay = overlay;
             annotationWrapper = overlay.getWrapper();
+
+            // 应用用户配置：默认是否显示标注
+            if (!showAnnotations.value) {
+                overlay.setVisible(false);
+            }
 
             // 同步尺寸
             nextTick(() => {
@@ -441,15 +474,22 @@ export function useRePlayer() {
 
     function updateAnnotationOverlay(time: number) {
         annotationOverlay?.updateTime(time);
-        // 同步更新鼠标轨迹
-        if (mousePositions.length > 0) {
+        // 根据配置决定是否绘制鼠标拖尾线条
+        if (showMouseTrail.value && mousePositions.length > 0) {
             annotationOverlay?.updateMouseTrail(mousePositions, time);
+        }
+        else {
+            annotationOverlay?.updateMouseTrail([], 0);
         }
     }
 
     function toggleAnnotations() {
         showAnnotations.value = annotationOverlay?.toggle() ?? !showAnnotations.value;
         return showAnnotations.value;
+    }
+
+    function toggleMouseTrail() {
+        showMouseTrail.value = !showMouseTrail.value;
     }
 
     function toggleDevtools() {
@@ -567,6 +607,7 @@ export function useRePlayer() {
         totalTime.value = 0;
         isPlaying.value = false;
         showAnnotations.value = true;
+        showMouseTrail.value = true;
         recordingBaseTime = 0;
     }
 
@@ -579,6 +620,7 @@ export function useRePlayer() {
         isPlaying,
         speed,
         showAnnotations,
+        showMouseTrail,
         devtoolsVisible,
         // Computed
         metadataTitle,
@@ -593,6 +635,7 @@ export function useRePlayer() {
         stepBack,
         replay,
         toggleAnnotations,
+        toggleMouseTrail,
         toggleDevtools,
         syncContentScale,
         cleanup,

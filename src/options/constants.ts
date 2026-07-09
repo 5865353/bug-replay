@@ -23,6 +23,7 @@ export interface Settings {
     // 回放
     replaySpeed: number;
     showAnnotations: boolean;
+    showMouseTrail: boolean;
     // Bug 平台
     jiraEnabled: boolean;
     jiraBaseUrl: string;
@@ -48,6 +49,7 @@ export const DEFAULT_SETTINGS: Settings = {
     maxDuration: 30,
     replaySpeed: 1,
     showAnnotations: true,
+    showMouseTrail: true,
     jiraEnabled: false,
     jiraBaseUrl: '',
     jiraEmail: '',
@@ -121,6 +123,8 @@ export const TOAST_SAVED = '保存成功';
 export const TOAST_VERIFY_JIRA_OK = 'Jira 连接验证成功';
 export const TOAST_VERIFY_ZENTAO_OK = '禅道连接验证成功';
 export const TOAST_VERIFY_FAIL = (status: number) => `验证失败: HTTP ${status}`;
+export const TOAST_AI_OK = 'AI 服务连接验证成功';
+export const TOAST_AI_FAIL = (msg: string) => `AI 验证失败: ${msg}`;
 export const TOAST_NETWORK_ERROR = '网络错误';
 
 // ============================================================

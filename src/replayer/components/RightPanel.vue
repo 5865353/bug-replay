@@ -10,6 +10,10 @@ defineProps<{
     package: RRTPackage;
 }>();
 
+const emit = defineEmits<{
+    seek: [time: number];
+}>();
+
 const activeTab = ref(0);
 
 // ---- 存储弹窗 ----
@@ -42,7 +46,7 @@ function showCookies() {
             </van-tab>
 
             <van-tab title="时间轴">
-                <TimelineTab :page-events="package.pageEvents || []" />
+                <TimelineTab :page-events="package.pageEvents || []" @seek="emit('seek', $event)" />
             </van-tab>
 
             <van-tab title="关键帧">

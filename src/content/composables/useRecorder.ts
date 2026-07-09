@@ -8,7 +8,7 @@
  */
 
 import type { NetworkLog, RecordingSession, RecordingStatus } from '@shared/types';
-import { EXTENSION_NAME, MAX_RECORDING_DURATION } from '@shared/constants';
+import { EXTENSION_NAME } from '@shared/constants';
 import { generateUUID } from '@shared/utils';
 import { ConsoleInterceptor } from '../recorder/console-interceptor';
 import { EnvironmentCollector } from '../recorder/environment-snapshot';
@@ -21,15 +21,30 @@ export interface RecorderHooks {
     onBeforeStart?: () => NetworkLog[];
     /** 录制期间实时网络日志回调 */
     onNetworkLog?: (log: NetworkLog) => void;
+    /** rrweb 事件数达到阈值时触发 flush */
+    onEventThreshold?: () => void;
 }
+
+export interface RecordingSettings {
+    maskInputs?: boolean;
+    mouseSample?: number;
+    scrollSample?: number;
+    maxDuration?: number;
+}
+
+/** rrweb 事件数达到此阈值触发 onEventThreshold 回调 */
+const FLUSH_EVENT_THRESHOLD = 5000;
 
 export function useRecorder(hooks: RecorderHooks = {}) {
     let session: RecordingSession | null = null;
     let rrwebRecorder: RRWebRecorder | null = null;
     let consoleInterceptor: ConsoleInterceptor | null = null;
     let maxDurationTimer: ReturnType<typeof setTimeout> | null = null;
+    let currentMaxDuration = 30 * 60 * 1000; // 默认 30 分钟
+    /** 自上次 flush 以来累积的事件数 */
+    let eventCountSinceFlush = 0;
 
-    async function start(): Promise<RecordingSession> {
+    async function start(settings?: RecordingSettings): Promise<RecordingSession> {
         if (session && session.status === 'recording') {
             throw new Error('Recording is already in progress');
         }
@@ -39,8 +54,15 @@ export function useRecorder(hooks: RecorderHooks = {}) {
             return session;
         }
 
+        const maskInputs = settings?.maskInputs ?? true;
+        const mouseSample = settings?.mouseSample ?? 50;
+        const scrollSample = settings?.scrollSample ?? 150;
+        const maxDuration = (settings?.maxDuration ?? 30) * 60 * 1000; // 分钟转毫秒
+        currentMaxDuration = maxDuration;
+
         session = createEmptySession();
         session.environment = await EnvironmentCollector.collect();
+        eventCountSinceFlush = 0;
 
         // 把 document_start 起缓冲的网络日志刷入 session
         if (hooks.onBeforeStart) {
@@ -51,9 +73,20 @@ export function useRecorder(hooks: RecorderHooks = {}) {
         // Start sub-modules
         rrwebRecorder = new RRWebRecorder({
             onEvent: (event) => {
-                if (session) session.events.push(event);
+                if (session) {
+                    session.events.push(event);
+                    eventCountSinceFlush++;
+                    if (eventCountSinceFlush >= FLUSH_EVENT_THRESHOLD) {
+                        hooks.onEventThreshold?.();
+                        eventCountSinceFlush = 0;
+                    }
+                }
             },
-            maskAllInputs: true,
+            maskAllInputs: maskInputs,
+            sampling: {
+                mousemove: mouseSample,
+                scroll: scrollSample,
+            },
         });
         await rrwebRecorder.start();
 
@@ -73,7 +106,7 @@ export function useRecorder(hooks: RecorderHooks = {}) {
                 console.warn(`[${EXTENSION_NAME}] Max duration reached, auto-stopping...`);
                 stop();
             }
-        }, MAX_RECORDING_DURATION);
+        }, maxDuration);
 
         hooks.onStatusChange?.(session.status);
         console.log(`[${EXTENSION_NAME}] Recording started: ${session.id}`);
@@ -98,7 +131,7 @@ export function useRecorder(hooks: RecorderHooks = {}) {
         await rrwebRecorder?.start();
 
         const elapsed = Date.now() - session.startTime;
-        const remaining = MAX_RECORDING_DURATION - elapsed;
+        const remaining = currentMaxDuration - elapsed;
         if (remaining > 0) {
             maxDurationTimer = setTimeout(() => {
                 if (session?.status === 'recording') stop();

@@ -6,7 +6,7 @@ import BugPlatformSettings from './components/BugPlatformSettings.vue';
 import { useSettings } from './composables/useSettings';
 import { LABEL_SAVE, TAB_AI_PLATFORM, TAB_BASIC, TAB_BUG_PLATFORM, TAB_TITLE_AI, TAB_TITLE_BASIC, TAB_TITLE_BUG } from './constants';
 
-const { settings, isVerifying, isSaving, save, verifyConnection } = useSettings();
+const { settings, isVerifying, isSaving, save, verifyConnection, verifyAiConnection } = useSettings();
 const activeTab = ref(TAB_BASIC);
 const tabs = [
     { key: TAB_BASIC, icon: '⚙️', label: TAB_TITLE_BASIC },
@@ -21,8 +21,12 @@ const tabs = [
             <div class="brand">
                 <img src="/icons/icon-48.png" class="brand-logo">
                 <div>
-                    <h1 class="brand-name">BugReplay</h1>
-                    <p class="brand-sub">设置中心</p>
+                    <h1 class="brand-name">
+                        BugReplay
+                    </h1>
+                    <p class="brand-sub">
+                        设置中心
+                    </p>
                 </div>
             </div>
         </header>
@@ -42,6 +46,7 @@ const tabs = [
                 @update:max-duration="settings.maxDuration = $event"
                 @update:replay-speed="settings.replaySpeed = $event"
                 @update:show-annotations="settings.showAnnotations = $event"
+                @update:show-mouse-trail="settings.showMouseTrail = $event"
             />
             <BugPlatformSettings
                 v-show="activeTab === TAB_BUG_PLATFORM" :settings="settings" :is-verifying="isVerifying"
@@ -57,11 +62,12 @@ const tabs = [
                 @verify="verifyConnection"
             />
             <AiPlatformSettings
-                v-show="activeTab === TAB_AI_PLATFORM" :settings="settings"
+                v-show="activeTab === TAB_AI_PLATFORM" :settings="settings" :is-verifying="isVerifying"
                 @update:ai-provider="settings.aiProvider = $event"
                 @update:ai-api-key="settings.aiApiKey = $event"
                 @update:ai-base-url="settings.aiBaseUrl = $event"
                 @update:ai-model="settings.aiModel = $event"
+                @verify="verifyAiConnection"
             />
         </main>
         <footer class="footer">

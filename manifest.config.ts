@@ -57,6 +57,7 @@ export default defineManifest({
         'cookies',
         'downloads',
         'tabs',
+        'webRequest',
     ],
     host_permissions: ['<all_urls>'],
     browser_specific_settings: {

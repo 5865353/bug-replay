@@ -19,7 +19,8 @@
     const PM_ACTION_STOP = 'stop';
     const PM_TARGET_ORIGIN = '*';
 
-    const MAX_BODY_SIZE = 5000;
+    // 响应体最大字节数（与 shared/types/network.ts 中 MAX_RESPONSE_BODY_SIZE 对齐）
+    const MAX_BODY_SIZE = 100 * 1024; // 100KB
     const HTTP_ERROR_THRESHOLD = 400;
     const REQUEST_TYPE_XHR = 'xhr';
     const REQUEST_TYPE_FETCH = 'fetch';
@@ -123,23 +124,39 @@
             };
         }
 
-        self.addEventListener('readystatechange', () => {
+        function onReady() {
             if (self.readyState !== 4) return;
+            cleanup();
             let resHeaders = parseXHRHeaders(self.getAllResponseHeaders());
             post(makeLog(self.status, self.statusText, self.responseText, resHeaders, self.status >= 400, self.status >= 400 ? `HTTP ${self.status}` : undefined));
-        });
+        }
 
-        self.addEventListener('error', () => {
+        function onErr() {
+            cleanup();
             post(makeLog(0, 'Network Error', null, {}, true, 'XHR request failed'));
-        });
+        }
 
-        self.addEventListener('abort', () => {
+        function onAbort() {
+            cleanup();
             post(makeLog(0, 'Aborted', null, {}, true, 'XHR aborted'));
-        });
+        }
 
-        self.addEventListener('timeout', () => {
+        function onTimeout() {
+            cleanup();
             post(makeLog(0, 'Timeout', null, {}, true, 'XHR timeout'));
-        });
+        }
+
+        function cleanup() {
+            self.removeEventListener('readystatechange', onReady);
+            self.removeEventListener('error', onErr);
+            self.removeEventListener('abort', onAbort);
+            self.removeEventListener('timeout', onTimeout);
+        }
+
+        self.addEventListener('readystatechange', onReady);
+        self.addEventListener('error', onErr);
+        self.addEventListener('abort', onAbort);
+        self.addEventListener('timeout', onTimeout);
 
         return origSend.apply(self, arguments);
     };
@@ -147,11 +164,26 @@
     // ===== Fetch 拦截 =====
     let origFetch = window.fetch;
     window.fetch = function (input, init) {
+        // 🔧 未录制时直接透传，不做任何拦截（避免 clone 内存泄漏）
+        if (!_isRecording) {
+            return origFetch.apply(this, arguments);
+        }
+
         let url = typeof input === 'string' ? input : (input && input.url) || '';
-        let method = (init && init.method) || 'GET';
+        let method = (init && init.method) || (input && input.method) || 'GET';
         let started = Date.now();
         let reqHeaders = {};
 
+        // 从 Request 对象中提取已有的请求头（input 可能是 Request 实例）
+        if (input && typeof input !== 'string' && input.headers) {
+            try {
+                if (input.headers.forEach) {
+                    input.headers.forEach((v, k) => { reqHeaders[k] = v; });
+                }
+            } catch (_) { /* Request headers may be immutable guard */ }
+        }
+
+        // 从 init.headers 合并（会覆盖同名的）
         if (init && init.headers) {
             if (init.headers instanceof Headers) {
                 init.headers.forEach((v, k) => { reqHeaders[k] = v; });

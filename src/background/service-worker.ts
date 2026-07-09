@@ -10,7 +10,7 @@
  * TODO: 后续考虑按需清理过期会话、导出历史管理
  */
 
-import type { BackgroundToContentMessage, ContentToBackgroundMessage, RecordingSession } from '@shared/types';
+import type { BackgroundToContentMessage, ContentToBackgroundMessage, NetworkLog, RecordingSession } from '@shared/types';
 
 import type { JiraConfig } from '../platforms/jira';
 import type { ZentaoConfig } from '../platforms/zentao';
@@ -37,7 +37,123 @@ let activeRecordingOrigin = '';
 let activeSessionId = '';
 let isPaused = false;
 
+const STORAGE_KEY_SETTINGS = 'bugreplay_settings';
+
+/** 读取录制相关配置 */
+async function getRecordingSettings(): Promise<{
+    maskInputs: boolean;
+    mouseSample: number;
+    scrollSample: number;
+    maxDuration: number;
+}> {
+    try {
+        const stored = await browser.storage.local.get(STORAGE_KEY_SETTINGS);
+        const s = stored[STORAGE_KEY_SETTINGS] as Record<string, unknown> | undefined;
+        return {
+            maskInputs: (s?.maskInputs as boolean) ?? true,
+            mouseSample: (s?.mouseSample as number) ?? 50,
+            scrollSample: (s?.scrollSample as number) ?? 150,
+            maxDuration: (s?.maxDuration as number) ?? 30,
+        };
+    }
+    catch {
+        return { maskInputs: true, mouseSample: 50, scrollSample: 150, maxDuration: 30 };
+    }
+}
+
 console.log(`[${EXTENSION_NAME}] Service Worker initialized`);
+
+// ============================================================
+// webRequest 拦截 — 捕获完整请求/响应头（不受 CORS 限制）
+// ============================================================
+
+interface WebRequestHeaderInfo {
+    url: string;
+    method: string;
+    requestHeaders: Record<string, string>;
+    responseHeaders: Record<string, string>;
+    status: number;
+    statusText: string;
+    startTime: number;
+}
+
+/** requestId → 头信息 */
+const webRequestHeaders = new Map<string, WebRequestHeaderInfo>();
+
+/** 初始化空的头信息条目 */
+function initHeaderEntry(details: chrome.webRequest.WebRequestHeadersDetails): WebRequestHeaderInfo {
+    return {
+        url: details.url,
+        method: details.method,
+        requestHeaders: {},
+        responseHeaders: {},
+        status: 0,
+        statusText: '',
+        startTime: details.timeStamp,
+    };
+}
+
+chrome.webRequest.onBeforeSendHeaders.addListener(
+    (details) => {
+        if (details.tabId < 0 || !activeRecordingTabIds.has(details.tabId)) return;
+
+        const entry = initHeaderEntry(details);
+        if (details.requestHeaders) {
+            for (const h of details.requestHeaders) {
+                entry.requestHeaders[h.name] = h.value || '';
+            }
+        }
+        webRequestHeaders.set(details.requestId, entry);
+    },
+    { urls: ['<all_urls>'] },
+    ['requestHeaders'],
+);
+
+chrome.webRequest.onHeadersReceived.addListener(
+    (details) => {
+        const entry = webRequestHeaders.get(details.requestId);
+        if (!entry) return;
+
+        if (details.responseHeaders) {
+            for (const h of details.responseHeaders) {
+                entry.responseHeaders[h.name] = h.value || '';
+            }
+        }
+        entry.status = details.statusCode;
+        entry.statusText = details.statusLine || '';
+    },
+    { urls: ['<all_urls>'] },
+    ['responseHeaders'],
+);
+
+/** 用 webRequest 捕获的完整头信息丰富 NetworkLog 列表 */
+function enrichNetworkLogs(logs: NetworkLog[]): void {
+    // 构建 URL+时间 → webRequest entry 的索引
+    const wrEntries = [...webRequestHeaders.values()];
+
+    for (const log of logs) {
+        // 匹配：相同 URL，且 startTime 相差在 500ms 内
+        const match = wrEntries.find(
+            e => e.url === log.url && Math.abs(e.startTime - log.startTime) < 500,
+        );
+        if (match) {
+            // 合并请求头（webRequest 的优先，因为它更完整）
+            log.requestHeaders = { ...log.requestHeaders, ...match.requestHeaders };
+            // 响应头：直接用 webRequest 的（跨域也能拿到完整头）
+            log.responseHeaders = match.responseHeaders;
+            // 状态码/文本也用 webRequest 的（更准确）
+            if (match.status > 0) {
+                log.status = match.status;
+                log.statusText = match.statusText;
+            }
+        }
+    }
+}
+
+/** 清理指定 session 期间积累的 webRequest 数据 */
+function clearWebRequestHeaders(): void {
+    webRequestHeaders.clear();
+}
 
 // ============================================================
 // 跨标签页录制：监听新标签页
@@ -228,9 +344,15 @@ async function handleMessage(
                 activeSessionId = '';
 
                 console.log(`[${EXTENSION_NAME}] SW: sending RECORDING_STARTED to tab ${tabId}, origin=${activeRecordingOrigin}`);
-                await sendMessageToTab(tabId, { action: BackgroundToContentAction.RECORDING_STARTED });
+                const recSettings = await getRecordingSettings();
+                await sendMessageToTab(tabId, {
+                    action: BackgroundToContentAction.RECORDING_STARTED,
+                    payload: recSettings,
+                });
                 activeRecordingTabIds = new Set([tabId]);
                 isPaused = false;
+                // 🔧 新录制开始，清空上次可能残留的 webRequest 数据
+                clearWebRequestHeaders();
                 console.log(`[${EXTENSION_NAME}] SW: RECORDING_STARTED sent successfully`);
             }
             catch (err: unknown) {
@@ -245,26 +367,76 @@ async function handleMessage(
             const data = payload as RecordingSession | { sessionId: string } | undefined;
 
             if (data && 'sessionId' in data && !('events' in data)) {
-                const key = `temp_session_${data.sessionId}`;
-                const stored = await browser.storage.local.get(key);
-                const session = stored[key] as RecordingSession | undefined;
-                if (session) {
-                    await storageManager.saveSession(session);
-                    await browser.storage.local.remove(key);
+                const sessionId = data.sessionId;
+                const metaKey = `temp_session_${sessionId}`;
+                const stored = await browser.storage.local.get(metaKey);
+                const metadata = stored[metaKey] as (RecordingSession & { chunkCount?: number }) | undefined;
+
+                if (metadata) {
+                    // 🔧 合并所有 chunk 数据
+                    const chunkCount: number = metadata.chunkCount ?? 0;
+                    const mergedSession: RecordingSession = {
+                        ...metadata,
+                        events: [],
+                        networkLogs: [],
+                        consoleLogs: [],
+                        pageEvents: [],
+                    };
+
+                    // 收集所有要清理的 key
+                    const keysToRemove: string[] = [metaKey];
+
+                    for (let i = 0; i < chunkCount; i++) {
+                        const chunkKey = `temp_session_chunk_${sessionId}_${i}`;
+                        keysToRemove.push(chunkKey);
+                        const chunkStored = await browser.storage.local.get(chunkKey);
+                        const chunk = chunkStored[chunkKey] as {
+                            events?: typeof mergedSession.events;
+                            networkLogs?: typeof mergedSession.networkLogs;
+                            consoleLogs?: typeof mergedSession.consoleLogs;
+                            pageEvents?: typeof mergedSession.pageEvents;
+                        } | undefined;
+
+                        if (chunk) {
+                            if (chunk.events) mergedSession.events.push(...chunk.events);
+                            if (chunk.networkLogs) mergedSession.networkLogs.push(...chunk.networkLogs);
+                            if (chunk.consoleLogs) mergedSession.consoleLogs.push(...chunk.consoleLogs);
+                            if (chunk.pageEvents) mergedSession.pageEvents.push(...chunk.pageEvents);
+                        }
+                    }
+
+                    console.log(
+                        `[${EXTENSION_NAME}] Merged ${chunkCount} chunks: `
+                        + `events=${mergedSession.events.length} `
+                        + `network=${mergedSession.networkLogs.length} `
+                        + `console=${mergedSession.consoleLogs.length}`,
+                    );
+
+                    // 🔧 用 webRequest 捕获的完整头信息丰富 NetworkLog
+                    enrichNetworkLogs(mergedSession.networkLogs);
+                    clearWebRequestHeaders();
+
+                    await storageManager.saveSession(mergedSession);
+                    await browser.storage.local.remove(keysToRemove);
+
                     activeRecordingTabIds.clear();
                     activeRecordingOrigin = '';
                     activeSessionId = '';
                     isPaused = false;
-                    console.log(`[${EXTENSION_NAME}] Session saved: ${session.id}`);
+                    console.log(`[${EXTENSION_NAME}] Session saved: ${mergedSession.id}`);
 
                     browser.runtime.sendMessage({
                         action: BackgroundToContentAction.RECORDING_STOPPED,
-                        payload: { sessionId: session.id },
+                        payload: { sessionId: mergedSession.id },
                     }).catch(() => {});
                 }
             }
             else if (data && 'events' in data) {
                 const session = data as RecordingSession;
+                // 🔧 用 webRequest 捕获的完整头信息丰富 NetworkLog
+                enrichNetworkLogs(session.networkLogs);
+                clearWebRequestHeaders();
+
                 await storageManager.saveSession(session);
                 activeRecordingTabIds.clear();
                 activeRecordingOrigin = '';
@@ -365,6 +537,14 @@ async function handleMessage(
             };
         }
 
+        case ContentToBackgroundAction.DELETE_ALL_SESSIONS: {
+            await storageManager.clearAll();
+            return {
+                action: BackgroundToContentAction.SESSIONS_CLEARED,
+                requestId,
+            };
+        }
+
         case ContentToBackgroundAction.UPDATE_SESSION_META: {
             const { sessionId, updates } = payload as {
                 sessionId: string;
@@ -419,7 +599,7 @@ async function handleMessage(
                 }
 
                 // 2. 构建 .rrt 包
-                const rrtPackage = buildRRTPackage(session);
+                const rrtPackage = await buildRRTPackage(session);
 
                 // 3. 根据平台提交
                 let result;

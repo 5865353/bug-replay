@@ -14,17 +14,34 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
                 <h3 class="card-title">
                     Jira
                 </h3>
-                <label class="toggle"><input type="checkbox" :checked="settings.jiraEnabled" @change="emit('update:jiraEnabled', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
+                <label class="toggle"><input
+                    type="checkbox" :checked="settings.jiraEnabled"
+                    @change="emit('update:jiraEnabled', ($event.target as HTMLInputElement).checked)"
+                ><span
+                    class="slider"
+                /></label>
             </div>
             <template v-if="settings.jiraEnabled">
                 <label class="lbl">{{ LABEL_JIRA_URL }}</label>
-                <input class="inp" :value="settings.jiraBaseUrl" :placeholder="PLACEHOLDER_JIRA_URL" @input="emit('update:jiraBaseUrl', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" :value="settings.jiraBaseUrl" :placeholder="PLACEHOLDER_JIRA_URL"
+                    @input="emit('update:jiraBaseUrl', ($event.target as HTMLInputElement).value)"
+                >
                 <label class="lbl">{{ LABEL_JIRA_EMAIL }}</label>
-                <input class="inp" :value="settings.jiraEmail" :placeholder="PLACEHOLDER_JIRA_EMAIL" @input="emit('update:jiraEmail', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" :value="settings.jiraEmail" :placeholder="PLACEHOLDER_JIRA_EMAIL"
+                    @input="emit('update:jiraEmail', ($event.target as HTMLInputElement).value)"
+                >
                 <label class="lbl">{{ LABEL_JIRA_TOKEN }}</label>
-                <input class="inp" type="password" :value="settings.jiraApiToken" :placeholder="PLACEHOLDER_JIRA_TOKEN" @input="emit('update:jiraApiToken', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" type="password" :value="settings.jiraApiToken" :placeholder="PLACEHOLDER_JIRA_TOKEN"
+                    @input="emit('update:jiraApiToken', ($event.target as HTMLInputElement).value)"
+                >
                 <label class="lbl">{{ LABEL_JIRA_PROJECT }}</label>
-                <input class="inp" :value="settings.jiraProjectKey" :placeholder="PLACEHOLDER_JIRA_PROJECT" @input="emit('update:jiraProjectKey', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" :value="settings.jiraProjectKey" :placeholder="PLACEHOLDER_JIRA_PROJECT"
+                    @input="emit('update:jiraProjectKey', ($event.target as HTMLInputElement).value)"
+                >
                 <p class="hint">
                     {{ HINT_JIRA_TOKEN }} <a :href="JIRA_TOKEN_URL" target="_blank">{{ JIRA_TOKEN_URL }}</a>
                 </p>
@@ -39,15 +56,31 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
                 <h3 class="card-title">
                     禅道
                 </h3>
-                <label class="toggle"><input type="checkbox" :checked="settings.zentaoEnabled" @change="emit('update:zentaoEnabled', ($event.target as HTMLInputElement).checked)"><span class="slider" /></label>
+                <label class="toggle"><input
+                    type="checkbox" :checked="settings.zentaoEnabled"
+                    @change="emit('update:zentaoEnabled', ($event.target as HTMLInputElement).checked)"
+                ><span
+                    class="slider"
+                /></label>
             </div>
             <template v-if="settings.zentaoEnabled">
                 <label class="lbl">{{ LABEL_ZENTAO_URL }}</label>
-                <input class="inp" :value="settings.zentaoBaseUrl" :placeholder="PLACEHOLDER_ZENTAO_URL" @input="emit('update:zentaoBaseUrl', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" :value="settings.zentaoBaseUrl" :placeholder="PLACEHOLDER_ZENTAO_URL"
+                    @input="emit('update:zentaoBaseUrl', ($event.target as HTMLInputElement).value)"
+                >
                 <label class="lbl">{{ LABEL_ZENTAO_TOKEN }}</label>
-                <input class="inp" type="password" :value="settings.zentaoApiToken" :placeholder="PLACEHOLDER_ZENTAO_TOKEN" @input="emit('update:zentaoApiToken', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" type="password" :value="settings.zentaoApiToken"
+                    :placeholder="PLACEHOLDER_ZENTAO_TOKEN"
+                    @input="emit('update:zentaoApiToken', ($event.target as HTMLInputElement).value)"
+                >
                 <label class="lbl">{{ LABEL_ZENTAO_PRODUCT }}</label>
-                <input class="inp" type="number" :value="settings.zentaoProductId" :placeholder="PLACEHOLDER_ZENTAO_PRODUCT" @input="emit('update:zentaoProductId', ($event.target as HTMLInputElement).value)">
+                <input
+                    class="inp" type="number" :value="settings.zentaoProductId"
+                    :placeholder="PLACEHOLDER_ZENTAO_PRODUCT"
+                    @input="emit('update:zentaoProductId', ($event.target as HTMLInputElement).value)"
+                >
                 <p class="hint">
                     {{ HINT_ZENTAO_TOKEN }}
                 </p>
@@ -97,7 +130,9 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
     text-transform: uppercase;
     letter-spacing: .4px;
 
-    &:first-of-type { margin-top: 0; }
+    &:first-of-type {
+        margin-top: 0;
+    }
 }
 
 .inp {
@@ -112,8 +147,13 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
     box-sizing: border-box;
     transition: border-color .15s;
 
-    &::placeholder { color: #505060; }
-    &:focus { border-color: #5b8def; }
+    &::placeholder {
+        color: #505060;
+    }
+
+    &:focus {
+        border-color: #5b8def;
+    }
 }
 
 .hint {
@@ -167,7 +207,9 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .toggle {
@@ -204,7 +246,7 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
     }
 }
 
-.toggle input:checked + .slider {
+.toggle input:checked+.slider {
     background: rgba(91, 141, 239, .3);
 
     &::before {

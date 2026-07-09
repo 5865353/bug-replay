@@ -9,6 +9,8 @@ import {
     DEFAULT_SETTINGS,
     JIRA_VERIFY_PATH,
     STORAGE_KEY_SETTINGS,
+    TOAST_AI_OK,
+    TOAST_AI_FAIL,
     TOAST_NETWORK_ERROR,
     TOAST_SAVED,
     TOAST_VERIFY_FAIL,
@@ -73,5 +75,47 @@ export function useSettings() {
         }
     }
 
-    return { settings, isVerifying, isSaving, save, verifyConnection };
+    // ---- 验证 AI 连接 ----
+    async function verifyAiConnection(): Promise<void> {
+        isVerifying.value = true;
+        const { aiProvider, aiApiKey, aiBaseUrl, aiModel } = settings.value;
+        try {
+            if (!aiProvider || !aiApiKey) {
+                showToast({ message: '请先选择 AI 提供商并填写 API Key', duration: 3000 });
+                return;
+            }
+            const baseUrl = aiBaseUrl.replace(/\/+$/, '');
+            const resp = await fetch(`${baseUrl}/chat/completions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${aiApiKey}`,
+                },
+                body: JSON.stringify({
+                    model: aiModel,
+                    messages: [{ role: 'user', content: 'ping' }],
+                    max_tokens: 1,
+                }),
+            });
+            if (resp.ok) {
+                showToast({ message: TOAST_AI_OK, duration: 2000 });
+            }
+            else {
+                const errData = await resp.json().catch(() => ({}));
+                const errMsg = (errData as { error?: { message?: string } })?.error?.message || `HTTP ${resp.status}`;
+                showToast({ message: TOAST_AI_FAIL(errMsg), duration: 3000 });
+            }
+        }
+        catch (err: unknown) {
+            showToast({
+                message: `连接失败: ${err instanceof Error ? err.message : TOAST_NETWORK_ERROR}`,
+                duration: 3000,
+            });
+        }
+        finally {
+            isVerifying.value = false;
+        }
+    }
+
+    return { settings, isVerifying, isSaving, save, verifyConnection, verifyAiConnection };
 }
