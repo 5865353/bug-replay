@@ -60,14 +60,33 @@ export class AnnotationOverlay {
 
     updateTime(currentTime: number): void {
         if (!this.visible || !this.canvas) return;
-        const active = this.annotations.filter(a => a.timestamp <= currentTime);
+
+        // 筛选：已创建 且 未删除（或尚未到删除时间）
+        const active = this.annotations.filter(
+            a => a.timestamp <= currentTime && (!a.deletedAt || a.deletedAt > currentTime),
+        );
+
+        // 需要移除的标注（到了 deletedAt 时间点）
+        const toRemove = this.annotations.filter(
+            a => a.deletedAt && a.deletedAt <= currentTime && a.timestamp <= currentTime,
+        );
+        const removeIds = new Set(toRemove.map(a => a.id));
 
         // 回退时重置（seeking backward / replay）
-        if (active.length < this.renderedIds.size) {
+        if (active.length < this.renderedIds.size || removeIds.size > 0) {
+            // 如果有标注需要移除（deletedAt 到期），或 active 数量减少，执行完全重绘
             this.renderedIds.clear();
             this.mouseTrail = null;
             this.canvas.clear();
             this.canvas.backgroundColor = 'transparent';
+
+            // 重新绘制所有 active 标注
+            for (const ann of active) {
+                this.renderedIds.add(ann.id);
+                this.renderAnnotation(ann, false);
+            }
+            this.canvas.renderAll();
+            return;
         }
 
         const newIds: string[] = [];
@@ -177,7 +196,7 @@ export class AnnotationOverlay {
             const elapsed = now - startTime;
             const progress = Math.min(elapsed / duration, 1);
             // ease-out cubic
-            const t = 1 - Math.pow(1 - progress, 3);
+            const t = 1 - (1 - progress) ** 3;
 
             const objects = canvas.getObjects();
             let allDone = true;
@@ -194,7 +213,8 @@ export class AnnotationOverlay {
 
             if (allDone) {
                 this.animFrameId = null;
-            } else {
+            }
+            else {
                 this.animFrameId = requestAnimationFrame(animate);
             }
         };

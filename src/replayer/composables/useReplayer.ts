@@ -427,6 +427,7 @@ export function useRePlayer() {
         return annotations.map(a => ({
             ...a,
             timestamp: a.timestamp - recordingBaseTime,
+            deletedAt: a.deletedAt != null ? a.deletedAt - recordingBaseTime : undefined,
         }));
     }
 

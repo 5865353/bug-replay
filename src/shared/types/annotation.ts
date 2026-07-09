@@ -13,6 +13,8 @@ export interface AnnotationBase {
     type: AnnotationToolType;
     /** 创建时间戳 (ms)，用于回放时按时间轴叠加显示 */
     timestamp: number;
+    /** 删除时间戳 (ms)，有值表示已删除，回放时到该时间点后隐藏 */
+    deletedAt?: number;
     /** 自动步骤编号（如 "Step 1", "Step 2"） */
     stepNumber?: number;
     /** 所属录制会话 ID */

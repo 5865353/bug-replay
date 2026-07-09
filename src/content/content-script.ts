@@ -156,8 +156,32 @@ function useContentScript() {
     });
     const annotator = useAnnotator({
         sessionId: '',
-        onChange: (annotations) => {
-            if (currentSession) currentSession.annotations = annotations;
+        onChange: (newAnnotations) => {
+            if (!currentSession) return;
+
+            const now = Date.now();
+            const newIds = new Set(newAnnotations.map(a => a.id));
+
+            // 标记被删除的标注（之前存在、但现在不在画布上、且尚未标记删除）
+            for (const existing of currentSession.annotations) {
+                if (!existing.deletedAt && !newIds.has(existing.id)) {
+                    existing.deletedAt = now;
+                }
+            }
+
+            // 新增或更新标注（文本编辑、位置移动等属性变更也需反映）
+            for (const ann of newAnnotations) {
+                const idx = currentSession.annotations.findIndex(a => a.id === ann.id);
+                if (idx >= 0) {
+                    // 已存在 → 更新属性（保留原 timestamp，覆盖 data 等可变字段）
+                    const preserved = currentSession.annotations[idx]!;
+                    preserved.data = ann.data;
+                    preserved.type = ann.type;
+                    preserved.stepNumber = ann.stepNumber;
+                } else {
+                    currentSession.annotations.push(ann);
+                }
+            }
         },
     });
 
@@ -210,8 +234,29 @@ function useContentScript() {
             // Recreate annotator with proper hooks
             const newAnnotator = useAnnotator({
                 sessionId: currentSession.id,
-                onChange: (annotations) => {
-                    if (currentSession) currentSession.annotations = annotations;
+                onChange: (newAnnotations) => {
+                    if (!currentSession) return;
+
+                    const now = Date.now();
+                    const newIds = new Set(newAnnotations.map(a => a.id));
+
+                    for (const existing of currentSession.annotations) {
+                        if (!existing.deletedAt && !newIds.has(existing.id)) {
+                            existing.deletedAt = now;
+                        }
+                    }
+
+                    for (const ann of newAnnotations) {
+                        const idx = currentSession.annotations.findIndex(a => a.id === ann.id);
+                        if (idx >= 0) {
+                            const preserved = currentSession.annotations[idx]!;
+                            preserved.data = ann.data;
+                            preserved.type = ann.type;
+                            preserved.stepNumber = ann.stepNumber;
+                        } else {
+                            currentSession.annotations.push(ann);
+                        }
+                    }
                 },
                 onPause: () => {
                     recorder.pause();
@@ -253,7 +298,8 @@ function useContentScript() {
             await flushSessionToStorage();
 
             const session = await recorder.stop();
-            session.annotations = annotator.getAnnotations();
+            // 🔧 不再用 getAnnotations() 覆盖：onChange 回调已通过 diff 逻辑
+            // 在 currentSession.annotations 中累积了完整的 创建/删除 事件时间线
             annotator.hide();
 
             // 🔧 保存 session 元数据（不含大数组）+ chunk 数量，供后台合并

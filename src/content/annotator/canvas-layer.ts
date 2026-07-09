@@ -50,7 +50,9 @@ export class CanvasLayer {
     private canvas: Canvas | null = null;
     private wrapperEl: HTMLDivElement | null = null;
     private sessionId = '';
-    private annotationMetadata = new WeakMap<FabricObject, { type: AnnotationToolType; stepNumber?: number; createdAt: number }>();
+    private annotationMetadata = new WeakMap<FabricObject, { type: AnnotationToolType; stepNumber?: number; createdAt: number; annotationId: string }>();
+    /** 箭头线 → 三角形附属对象的映射（用于删除时联动清除） */
+    private arrowTriangles = new WeakMap<FabricObject, FabricObject>();
     private stepCounter = 0;
 
     // 回调
@@ -177,7 +179,8 @@ export class CanvasLayer {
         this.canvas!.add(tri);
 
         this.trackObject(line, 'arrow');
-        // 三角形不单独跟踪，避免序列化时产生脏数据（它只是 line 的视觉附属）
+        // 记录三角形附属关系，以便删除箭头时联动清除
+        this.arrowTriangles.set(line, tri);
         this.canvas!.setActiveObject(line);
         this.canvas!.requestRenderAll();
         this.notifyChange();
@@ -244,13 +247,12 @@ export class CanvasLayer {
     // 撤销 / 清除 / 选中状态
     // ============================================================
 
-    /** 撤销最后一个对象 */
+    /** 撤销最后一个对象（含箭头三角形联动） */
     undoLast(): boolean {
         const objects = this.canvas!.getObjects();
         if (objects.length === 0) return false;
         const last = objects[objects.length - 1]!;
-        this.canvas!.remove(last);
-        this.annotationMetadata.delete(last);
+        this.removeObject(last);
         this.notifyChange();
         return true;
     }
@@ -259,6 +261,7 @@ export class CanvasLayer {
     clearAll(): void {
         this.canvas!.clear();
         this.annotationMetadata = new WeakMap();
+        this.arrowTriangles = new WeakMap();
         this.notifyChange();
     }
 
@@ -267,16 +270,27 @@ export class CanvasLayer {
         return !!this.canvas?.getActiveObject();
     }
 
-    /** 删除选中对象 */
+    /** 删除选中对象（含箭头三角形联动） */
     deleteSelected(): void {
         const obj = this.canvas?.getActiveObject();
         if (obj) {
-            this.canvas!.remove(obj);
-            this.annotationMetadata.delete(obj);
+            this.removeObject(obj);
             this.canvas!.discardActiveObject();
             this.canvas!.requestRenderAll();
             this.notifyChange();
         }
+    }
+
+    /** 移除对象及其附属（如箭头的三角形），清理元数据 */
+    private removeObject(obj: FabricObject): void {
+        // 联动删除箭头三角形
+        const tri = this.arrowTriangles.get(obj);
+        if (tri) {
+            this.canvas!.remove(tri);
+            this.arrowTriangles.delete(obj);
+        }
+        this.canvas!.remove(obj);
+        this.annotationMetadata.delete(obj);
     }
 
     /** 取消选中 */
@@ -340,10 +354,12 @@ export class CanvasLayer {
         this.annotationMetadata = new WeakMap();
 
         for (const ann of annotations) {
+            // 跳过已删除的标注
+            if (ann.deletedAt) continue;
             const obj = this.annotationToFabric(ann);
             if (obj) {
                 this.canvas!.add(obj);
-                this.trackObject(obj, ann.type, ann.stepNumber);
+                this.trackObject(obj, ann.type, ann.stepNumber, ann.id);
             }
         }
 
@@ -354,19 +370,29 @@ export class CanvasLayer {
     // 私有方法
     // ============================================================
 
-    /** 跟踪对象元数据，自动分配步骤编号，记录绘制时刻 */
-    private trackObject(obj: FabricObject, type: AnnotationToolType, stepNumber?: number): void {
+    /** 跟踪对象元数据，自动分配步骤编号，记录绘制时刻和稳定 ID */
+    private trackObject(
+        obj: FabricObject,
+        type: AnnotationToolType,
+        stepNumber?: number,
+        annotationId?: string,
+    ): void {
         const num = stepNumber ?? ++this.stepCounter;
-        this.annotationMetadata.set(obj, { type, stepNumber: num, createdAt: Date.now() });
+        this.annotationMetadata.set(obj, {
+            type,
+            stepNumber: num,
+            createdAt: Date.now(),
+            annotationId: annotationId ?? generateUUID(),
+        });
     }
 
     /** Fabric 对象 → Annotation */
     private fabricToAnnotation(
         obj: FabricObject,
-        meta: { type: AnnotationToolType; stepNumber?: number; createdAt?: number },
+        meta: { type: AnnotationToolType; stepNumber?: number; createdAt?: number; annotationId?: string },
     ): Annotation | null {
         const base = {
-            id: generateUUID(),
+            id: meta.annotationId ?? generateUUID(),
             timestamp: meta.createdAt ?? Date.now(),
             sessionId: this.sessionId,
             stepNumber: meta.stepNumber,
@@ -408,13 +434,16 @@ export class CanvasLayer {
             }
             case 'text': {
                 const t = obj as IText;
+                // Fabric.js v6 中 IText.text 可能是 string[]，需要 join
+                const rawText = t.text;
+                const textStr = Array.isArray(rawText) ? rawText.join('') : (rawText ?? '');
                 return {
                     ...base,
                     type: 'text',
                     data: {
                         x: t.left!,
                         y: t.top!,
-                        text: t.text ?? '',
+                        text: textStr,
                         fontSize: t.fontSize ?? DEFAULT_ANNOTATION_CONFIG.fontSize,
                         fontFamily: t.fontFamily ?? DEFAULT_ANNOTATION_CONFIG.fontFamily,
                         color: String(t.fill ?? DEFAULT_ANNOTATION_CONFIG.textColor),
