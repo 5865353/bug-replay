@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "description": "浏览器 Bug 复现录制回放插件 — 一键录制现场，.rrt 离线回放",
     "author": "BugReplay Team",
-    "license": "MIT",
+    "license": "CC-BY-NC-SA-4.0",
     "scripts": {
         "dev": "vite --mode development",
         "build": "vite build --mode production",
