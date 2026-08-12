@@ -8,7 +8,7 @@
  * 用法：node scripts/check-case.mjs
  */
 import { execSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -44,8 +44,10 @@ for (const dir of ['src', 'scripts']) {
         if (!FILE_EXTS.has(path.extname(file)))
             continue;
         const content = readFileSync(file, 'utf8');
-        let m;
-        while ((m = reImport.exec(content))) {
+        while (true) {
+            const m = reImport.exec(content);
+            if (!m)
+                break;
             const spec = m[1];
             if (!spec.startsWith('.'))
                 continue;
