@@ -1,7 +1,7 @@
 {
     "name": "bug-replay",
     "type": "module",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "浏览器 Bug 复现录制回放插件 — 一键录制现场，.rrt 离线回放",
     "author": "BugReplay Team",
     "license": "CC-BY-NC-SA-4.0",
@@ -10,7 +10,12 @@
         "build": "vite build --mode production",
         "type-check": "vue-tsc --noEmit",
         "lint": "eslint .",
-        "lint:fix": "eslint . --fix"
+        "lint:fix": "eslint . --fix",
+        "package": "node scripts/package.mjs",
+        "release": "standard-version",
+        "release:patch": "standard-version --release-as patch",
+        "release:minor": "standard-version --release-as minor",
+        "release:major": "standard-version --release-as major"
     },
     "dependencies": {
         "fabric": "^6.9.1",
@@ -32,9 +37,11 @@
         "@unocss/transformer-directives": "^0.58.5",
         "@vant/auto-import-resolver": "^1.3.0",
         "@vitejs/plugin-vue": "^5.0.4",
+        "archiver": "^7.0.1",
         "eslint": "^9.29.0",
         "eslint-plugin-format": "1.0.1",
         "sass": "^1.71.1",
+        "standard-version": "^9.5.0",
         "typescript": "^5.5.0",
         "unocss": "^0.58.5",
         "unplugin-vue-components": "^32.1.0",
