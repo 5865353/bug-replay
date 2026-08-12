@@ -67,4 +67,13 @@ export default antfu(
             'antfu/if-newline': 'off',
         },
     },
+
+    {
+        // YAML（docker-compose、GitHub Actions）遵循各自惯例（2 空格缩进/双引号），关闭 antfu 的 yaml 风格检查
+        files: ['**/*.yml', '**/*.yaml'],
+        rules: {
+            'yaml/indent': 'off',
+            'yaml/quotes': 'off',
+        },
+    },
 );

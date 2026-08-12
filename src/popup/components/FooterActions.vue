@@ -12,6 +12,9 @@ const props = defineProps<{
 
 const hasActive = computed(() => props.activeSessionId !== null);
 
+/** 当前扩展版本号（manifest 统一由 package.json 注入） */
+const version = browser.runtime.getManifest().version || '';
+
 function checkSelected(): string | null {
     if (!props.activeSessionId) {
         showToast({ message: '请先选择一条录制记录', position: 'top' });
@@ -80,6 +83,9 @@ async function copyToClipboard() {
                 <span class="footer-btn-label">复制</span>
             </div>
         </div>
+        <div class="footer-version">
+            BugReplay v{{ version }}
+        </div>
     </div>
 </template>
 
@@ -94,6 +100,13 @@ async function copyToClipboard() {
 .footer-row {
   display: flex;
   gap: 0;
+}
+
+.footer-version {
+  text-align: center;
+  font-size: 11px;
+  color: #c0c0c0;
+  padding-top: 8px;
 }
 
 .footer-btn {

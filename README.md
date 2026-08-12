@@ -1,8 +1,8 @@
-# 🐛 BugReplay
+# <img src="public/icons/icon-128.png" width="36" height="36" alt="BugReplay" style="vertical-align:middle" /> BugReplay
 
-> 浏览器 Bug 复现录制回放插件 — 一键录制现场，`.rrt` 离线回放，100% 还原案发现场。
+> 🎬 一键录制 Bug 现场，`.rrt` 离线回放，100% 还原案发现场 —— 让 QA 少写文字、开发秒懂根因。
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-CC--BY--NC--SA--4.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-5.4-646CFF)](https://vitejs.dev/)
 [![Manifest](https://img.shields.io/badge/Manifest-V3-green)](https://developer.chrome.com/docs/extensions/mv3/)
@@ -20,6 +20,18 @@
 | QA 测试人员 | 一键录制，自动采集全部上下文，无需手动截图/描述 |
 | 开发人员 | 离线回放，完整还原 DOM + 网络 + 控制台，精准定位根因 |
 | 团队管理者 | 缩短 Bug 生命周期，提升交付质量 |
+
+---
+
+## 🎬 演示
+
+> 📷 TODO：替换为产品截图 / 演示 GIF（录制、标注、回放各一张）
+
+<!-- 示例（把图片放到 docs/screenshots/ 后取消注释）：
+<img src="docs/screenshots/recording.png" alt="录制" width="720" />
+<img src="docs/screenshots/annotation.png" alt="标注" width="720" />
+<img src="docs/screenshots/replayer.png" alt="回放" width="720" />
+-->
 
 ---
 
@@ -46,6 +58,21 @@
 - **时间轴**：播放/暂停、拖拽跳转、0.5x~4x 速度控制、键盘快捷键
 - **侧边栏**：控制台面板 + 网络请求面板，支持搜索过滤、点击展开详情
 - **标注图层**：按时间轴精准叠加，可切换显示/隐藏
+
+### 📦 导出 & 提交
+- 一键导出 `.rrt`（JSON）离线脚本，支持复制到剪贴板
+- 直接提交到 **Jira / 禅道**，可选产品与项目
+- **AI 生成 Bug 描述**：自动分析录制内容，生成复现步骤 / 预期结果 / 实际结果
+
+---
+
+## 🧩 平台支持
+
+| 平台 | 能力 | 说明 |
+|------|------|------|
+| **Jira** | 创建 Bug + 上传附件 | REST API / API Token |
+| **禅道** | 创建 Bug + 上传附件 | REST API v1/v2，支持选择产品与项目 |
+| **AI 助手** | 自动生成 Bug 描述 | 兼容 OpenAI 风格 Chat Completions API |
 
 ---
 
@@ -136,35 +163,25 @@ bug-replay/
 
 ## 🚀 快速开始
 
-### 环境要求
-
-- **Node.js** >= 18
-- **pnpm** >= 8
-
-### 安装依赖
+### 方式一：源码构建后加载（推荐）
 
 ```bash
 pnpm install
-```
-
-### 开发构建
-
-```bash
-pnpm dev
-```
-
-### 生产构建
-
-```bash
 pnpm build
 ```
-
-### 加载扩展
 
 1. 打开 Chrome，访问 `chrome://extensions/`
 2. 开启 **开发者模式**
 3. 点击 **加载已解压的扩展程序**
 4. 选择项目 `dist/` 目录
+
+### 方式二：本地开发
+
+```bash
+pnpm dev        # 开发构建（热更新）
+```
+
+> 环境要求：Node.js >= 18，pnpm >= 8
 
 ---
 
@@ -203,6 +220,25 @@ pnpm build
 
 ---
 
-## 📄 License
+## � Roadmap
 
-MIT © BugReplay Team
+- [ ] 操作文档站（VitePress）
+- [ ] 版本化发布 + Chrome 商店上架
+- [ ] UI/UX 打磨、单元测试、CI
+- [ ] 更多平台集成、AI 深度分析
+
+> 详见 [TODO.md](./TODO.md)
+
+---
+
+## 💬 反馈 & 交流
+
+- 有问题或建议 → 到 **GitHub Issues** 提交反馈
+- 觉得不错 → 点个 ⭐ **Star** 支持一下！
+- 关注公众号 **「BugReplay」**（TODO：替换为二维码 / 名称），获取使用技巧与更新动态
+
+---
+
+## �📄 License
+
+[CC BY-NC-SA 4.0](LICENSE) © BugReplay Team

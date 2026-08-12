@@ -33,13 +33,15 @@ interface TimelineGroup {
 }
 
 const filteredEvents = computed<PageEvent[]>(() => {
-    if (activeFilter.value === 'all') return props.pageEvents || [];
+    if (activeFilter.value === 'all')
+        return props.pageEvents || [];
     return (props.pageEvents || []).filter(ev => ev.type === activeFilter.value);
 });
 
 const groupedPageEvents = computed<TimelineGroup[]>(() => {
     const events = filteredEvents.value;
-    if (events.length === 0) return [];
+    if (events.length === 0)
+        return [];
     const groups: TimelineGroup[] = [];
     let current: TimelineGroup | null = null;
 
@@ -160,7 +162,9 @@ function handleEventClick(timestamp: number) {
                                         <span class="tl-url-label">从</span>
                                         <span class="tl-url">{{ ev.data.from }}</span>
                                     </div>
-                                    <div class="tl-url-arrow">⬇</div>
+                                    <div class="tl-url-arrow">
+                                        ⬇
+                                    </div>
                                     <div class="tl-url-row">
                                         <span class="tl-url-label">到</span>
                                         <span class="tl-url to">{{ ev.data.to }}</span>
@@ -189,7 +193,7 @@ function handleEventClick(timestamp: number) {
                                         <span v-if="ev.data.action === 'set' && ev.data.newValue" class="tl-eq">=</span>
                                     </div>
                                     <div v-if="ev.data.action === 'set' && ev.data.newValue" class="tl-val">
-                                        {{ ev.data.newValue.length > 100 ? ev.data.newValue.slice(0, 100) + '...' : ev.data.newValue }}
+                                        {{ ev.data.newValue.length > 100 ? `${ev.data.newValue.slice(0, 100)}...` : ev.data.newValue }}
                                     </div>
                                     <div v-else-if="ev.data.action === 'remove'" class="tl-val removed">
                                         已删除

@@ -9,8 +9,8 @@ import {
     DEFAULT_SETTINGS,
     JIRA_VERIFY_PATH,
     STORAGE_KEY_SETTINGS,
-    TOAST_AI_OK,
     TOAST_AI_FAIL,
+    TOAST_AI_OK,
     TOAST_NETWORK_ERROR,
     TOAST_SAVED,
     TOAST_VERIFY_FAIL,
@@ -74,7 +74,7 @@ export function useSettings() {
                             token = loginData.token;
                         }
                         else {
-                            showToast({ message: TOAST_VERIFY_FAIL(401) + `: ${loginData.message || '账号或密码错误'}`, duration: 3000 });
+                            showToast({ message: `${TOAST_VERIFY_FAIL(401)}: ${loginData.message || '账号或密码错误'}`, duration: 3000 });
                             return;
                         }
                     }

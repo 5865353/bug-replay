@@ -1,9 +1,11 @@
 import { defineManifest } from '@crxjs/vite-plugin';
+import pkg from './package.json';
 
 export default defineManifest({
     manifest_version: 3,
     name: 'BugReplay',
-    version: '1.0.0',
+    // 版本号统一来自 package.json，发布时只需改一处
+    version: pkg.version,
     description: '一键录制 Bug 现场，生成 .rrt 离线回放文件，100% 还原案发现场',
     author: {
         email: '',

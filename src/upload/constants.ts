@@ -16,10 +16,22 @@ export type UploadSettings = Pick<
 >;
 
 export const DEFAULT_SETTINGS: UploadSettings = {
-    jiraEnabled: false, zentaoEnabled: false,
-    jiraBaseUrl: '', jiraEmail: '', jiraApiToken: '', jiraProjectKey: '',
-    zentaoBaseUrl: '', zentaoAccount: '', zentaoPassword: '', zentaoApiToken: '', zentaoProductId: '', zentaoProjectId: '',
-    aiProvider: '', aiApiKey: '', aiBaseUrl: '', aiModel: '',
+    jiraEnabled: false,
+    zentaoEnabled: false,
+    jiraBaseUrl: '',
+    jiraEmail: '',
+    jiraApiToken: '',
+    jiraProjectKey: '',
+    zentaoBaseUrl: '',
+    zentaoAccount: '',
+    zentaoPassword: '',
+    zentaoApiToken: '',
+    zentaoProductId: '',
+    zentaoProjectId: '',
+    aiProvider: '',
+    aiApiKey: '',
+    aiBaseUrl: '',
+    aiModel: '',
 };
 
 // ============================================================

@@ -178,7 +178,8 @@ function useContentScript() {
                     preserved.data = ann.data;
                     preserved.type = ann.type;
                     preserved.stepNumber = ann.stepNumber;
-                } else {
+                }
+                else {
                     currentSession.annotations.push(ann);
                 }
             }
@@ -253,7 +254,8 @@ function useContentScript() {
                             preserved.data = ann.data;
                             preserved.type = ann.type;
                             preserved.stepNumber = ann.stepNumber;
-                        } else {
+                        }
+                        else {
                             currentSession.annotations.push(ann);
                         }
                     }

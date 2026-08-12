@@ -18,7 +18,9 @@ function formatDuration(ms: number): string {
         <van-empty v-if="annotations.length === 0" description="暂无标注关键帧" :image-size="50" />
         <div v-else class="keyframe-list">
             <div v-for="(ann, i) in annotations" :key="i" class="kf-item">
-                <van-tag type="primary" size="medium">{{ i + 1 }}</van-tag>
+                <van-tag type="primary" size="medium">
+                    {{ i + 1 }}
+                </van-tag>
                 <span class="kf-icon">
                     {{ ann.type === 'rect' ? '⬜' : ann.type === 'arrow' ? '➡' : ann.type === 'text' ? '📝' : '✏️' }}
                 </span>

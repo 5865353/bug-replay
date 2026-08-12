@@ -23,7 +23,8 @@ const pageUrl = computed(() => {
     try {
         const u = props.sessionInfo.environment?.url;
         return u ? new URL(u).hostname : '';
-    } catch { return ''; }
+    }
+    catch { return ''; }
 });
 </script>
 
@@ -39,9 +40,15 @@ const pageUrl = computed(() => {
             <span class="meta-item">📅 {{ recordDate }}</span>
         </div>
         <div class="card-stats">
-            <div class="stat-item"><span class="stat-label">网络</span><br><span class="stat-value">{{ sessionInfo.networkLogs?.length || 0 }}</span></div>
-            <div class="stat-item"><span class="stat-label">控制台</span><br><span class="stat-value">{{ sessionInfo.consoleLogs?.length || 0 }}</span></div>
-            <div class="stat-item"><span class="stat-label">标注</span><br><span class="stat-value">{{ sessionInfo.annotations?.length || 0 }}</span></div>
+            <div class="stat-item">
+                <span class="stat-label">网络</span><br><span class="stat-value">{{ sessionInfo.networkLogs?.length || 0 }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">控制台</span><br><span class="stat-value">{{ sessionInfo.consoleLogs?.length || 0 }}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">标注</span><br><span class="stat-value">{{ sessionInfo.annotations?.length || 0 }}</span>
+            </div>
         </div>
     </section>
 </template>
