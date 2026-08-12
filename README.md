@@ -25,13 +25,12 @@
 
 ## 🎬 演示
 
-> 📷 TODO：替换为产品截图 / 演示 GIF（录制、标注、回放各一张）
+> 一键录制 Bug 现场 → 标注问题 → 离线回放 → 一键提交禅道
 
-<!-- 示例（把图片放到 docs/screenshots/ 后取消注释）：
-<img src="docs/screenshots/recording.png" alt="录制" width="720" />
-<img src="docs/screenshots/annotation.png" alt="标注" width="720" />
-<img src="docs/screenshots/replayer.png" alt="回放" width="720" />
--->
+<img src="docs/screenshots/output.gif" alt="开始录制" width="720" />
+<img src="docs/screenshots/output1.gif" alt="标注问题" width="720" />
+<img src="docs/screenshots/output2.gif" alt="离线回放" width="720" />
+<img src="docs/screenshots/output4.gif" alt="提交禅道" width="720" />
 
 ---
 
@@ -219,7 +218,7 @@ pnpm dev        # 开发构建（热更新）
 
 ---
 
-## � Roadmap
+##  Roadmap
 
 - [ ] 操作文档站（VitePress）
 - [ ] 版本化发布 + Chrome 商店上架
@@ -234,10 +233,9 @@ pnpm dev        # 开发构建（热更新）
 
 - 有问题或建议 → 到 **GitHub Issues** 提交反馈
 - 觉得不错 → 点个 ⭐ **Star** 支持一下！
-- 关注公众号 **「BugReplay」**（TODO：替换为二维码 / 名称），获取使用技巧与更新动态
 
 ---
 
-## �📄 License
+## 📄 License
 
 [CC BY-NC-SA 4.0](LICENSE) © BugReplay Team
