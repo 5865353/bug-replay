@@ -27,6 +27,14 @@ export default defineConfig({
         }),
         crx({ manifest }),
     ],
+    css: {
+        preprocessorOptions: {
+            scss: {
+                // 使用 Sass 现代 API，避免 legacy-js-api 弃用警告
+                api: 'modern-compiler',
+            },
+        },
+    },
     publicDir: path.resolve(__dirname, 'public'),
     build: {
         outDir: 'dist',

@@ -38,6 +38,13 @@ const progressPercent = computed(() =>
     props.totalTime > 0 ? (props.currentTime / props.totalTime) * 100 : 0,
 );
 
+// 播放完成状态：用于将播放按钮切换为“重播”
+const isFinished = computed(() =>
+    props.totalTime > 0
+    && props.currentTime >= props.totalTime
+    && !props.isPlaying,
+);
+
 function seekFromEvent(e: MouseEvent) {
     if (!progressBar.value || props.totalTime <= 0)
         return;
@@ -115,8 +122,13 @@ function openFile() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7" /><polyline points="18 17 13 12 18 7" /></svg>
                 </button>
 
-                <button class="play-btn" :title="isPlaying ? '暂停' : '播放'" @click="emit('playPause')">
+                <button
+                    class="play-btn"
+                    :title="isPlaying ? '暂停' : (isFinished ? '重播' : '播放')"
+                    @click="isFinished ? emit('replay') : emit('playPause')"
+                >
                     <svg v-if="isPlaying" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                    <svg v-else-if="isFinished" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                     <svg v-else width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20" /></svg>
                 </button>
 
@@ -173,10 +185,6 @@ function openFile() {
                     @click="emit('toggleMouseTrail')"
                 >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" /><path d="M13 13l6 6" /></svg>
-                </button>
-
-                <button class="action-btn" title="重播" @click="emit('replay')">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                 </button>
 
                 <button class="action-btn" title="复制 RRT" @click="emit('copyToClipboard')">

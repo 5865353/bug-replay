@@ -2,22 +2,28 @@
 import browser from 'webextension-polyfill';
 
 defineProps<{ title: string; description: string; tags: string; hasAi: boolean; generatingAi: boolean }>();
-defineEmits<{ 'update:title': [value: string]; 'update:description': [value: string]; 'update:tags': [value: string]; generateAi: [] }>();
+defineEmits<{ 'update:title': [value: string]; 'update:description': [value: string]; 'update:tags': [value: string]; 'generateAi': [] }>();
 
-function openSettings() { browser.runtime.openOptionsPage(); }
+function openSettings() {
+    browser.runtime.openOptionsPage();
+}
 </script>
 
 <template>
     <!-- 标题 -->
     <section class="card">
-        <h3 class="section-title">Bug 标题</h3>
+        <h3 class="section-title">
+            Bug 标题
+        </h3>
         <input :value="title" class="inp" placeholder="简要描述 Bug 现象" @input="$emit('update:title', ($event.target as HTMLInputElement).value)">
     </section>
 
     <!-- 描述 + AI -->
     <section class="card">
         <div class="desc-header">
-            <h3 class="section-title section-title--tight">详细描述</h3>
+            <h3 class="section-title section-title--tight">
+                详细描述
+            </h3>
             <button v-if="hasAi" class="ai-btn" :disabled="generatingAi" @click="$emit('generateAi')">
                 {{ generatingAi ? '⚡ 生成中...' : '🤖 AI 生成' }}
             </button>
@@ -30,28 +36,14 @@ function openSettings() { browser.runtime.openOptionsPage(); }
 
     <!-- 标签 -->
     <section class="card">
-        <h3 class="section-title">🏷 标签</h3>
+        <h3 class="section-title">
+            🏷 标签
+        </h3>
         <input :value="tags" class="inp" placeholder="用逗号分隔，如：UI, 登录, P0" @input="$emit('update:tags', ($event.target as HTMLInputElement).value)">
     </section>
 </template>
 
 <style lang="scss" scoped>
-.card {
-    background: #272732;
-    border: 1px solid #32323e;
-    border-radius: 10px;
-    padding: 16px;
-}
-
-.section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #b0b0c4;
-    margin: 0 0 10px;
-
-    &--tight { margin-bottom: 0; }
-}
-
 .desc-header {
     display: flex;
     align-items: center;
@@ -59,47 +51,27 @@ function openSettings() { browser.runtime.openOptionsPage(); }
     margin-bottom: 12px;
 }
 
-.inp {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #3a3a4e;
-    border-radius: 8px;
-    background: #1e1e28;
-    color: #d0d0dc;
-    font-size: 14px;
-    outline: none;
-    box-sizing: border-box;
-
-    &::placeholder { color: #505060; }
-    &:focus { border-color: #5b8def; }
-}
-
 .ta {
     resize: vertical;
     min-height: 120px;
 }
 
-.hint {
-    font-size: 12px;
-    color: #6b6b80;
-    margin-top: 8px;
-
-    a { color: #7ba4f5; }
-}
-
 .ai-btn {
-    padding: 5px 14px;
-    border: 1px solid rgba(91, 141, 239, .3);
+    padding: 5px 12px;
+    border: 1px solid rgba(91, 141, 239, 0.35);
     border-radius: 6px;
-    background: rgba(91, 141, 239, .08);
+    background: transparent;
     color: #7ba4f5;
     font-size: 12px;
     cursor: pointer;
-    transition: .15s;
+    transition: background 0.15s;
 
-    &:hover { background: rgba(91, 141, 239, .15); }
+    &:hover {
+        background: rgba(91, 141, 239, 0.08);
+    }
+
     &:disabled {
-        opacity: .5;
+        opacity: 0.5;
         cursor: not-allowed;
     }
 }

@@ -53,6 +53,36 @@ export {
 } from './rrt-package';
 
 // ============================================================
+// 禅道平台类型
+// ============================================================
+
+/** 禅道产品（提交 Bug 时用于选择目标产品） */
+export interface ZentaoProduct {
+    id: number;
+    name: string;
+}
+
+/** 禅道产品列表查询结果 */
+export interface ZentaoProductsResult {
+    success: boolean;
+    products?: ZentaoProduct[];
+    error?: string;
+}
+
+/** 禅道项目（提交 Bug 时用于选择目标项目） */
+export interface ZentaoProject {
+    id: number;
+    name: string;
+}
+
+/** 禅道项目列表查询结果 */
+export interface ZentaoProjectsResult {
+    success: boolean;
+    projects?: ZentaoProject[];
+    error?: string;
+}
+
+// ============================================================
 // 消息协议类型（Content Script ↔ Service Worker）
 // ============================================================
 
@@ -64,6 +94,8 @@ export enum ContentToBackgroundAction {
     RESUME_RECORDING = 'RESUME_RECORDING',
     EXPORT_RRT = 'EXPORT_RRT',
     SUBMIT_TO_PLATFORM = 'SUBMIT_TO_PLATFORM',
+    GET_ZENTAO_PRODUCTS = 'GET_ZENTAO_PRODUCTS',
+    GET_ZENTAO_PROJECTS = 'GET_ZENTAO_PROJECTS',
     GET_SESSIONS = 'GET_SESSIONS',
     GET_SESSION = 'GET_SESSION',
     DELETE_SESSION = 'DELETE_SESSION',
@@ -87,6 +119,8 @@ export enum BackgroundToContentAction {
     RECORDING_PAUSED = 'RECORDING_PAUSED',
     RECORDING_RESUMED = 'RECORDING_RESUMED',
     EXPORT_READY = 'EXPORT_READY',
+    ZENTAO_PRODUCTS = 'ZENTAO_PRODUCTS',
+    ZENTAO_PROJECTS = 'ZENTAO_PROJECTS',
     SESSIONS_LIST = 'SESSIONS_LIST',
     SESSION_DATA = 'SESSION_DATA',
     SESSION_DELETED = 'SESSION_DELETED',

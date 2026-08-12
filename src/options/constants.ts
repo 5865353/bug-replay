@@ -32,8 +32,11 @@ export interface Settings {
     jiraProjectKey: string;
     zentaoEnabled: boolean;
     zentaoBaseUrl: string;
+    zentaoAccount: string;
+    zentaoPassword: string;
     zentaoApiToken: string;
     zentaoProductId: string;
+    zentaoProjectId: string;
     // AI 平台
     aiProvider: string;
     aiApiKey: string;
@@ -57,8 +60,11 @@ export const DEFAULT_SETTINGS: Settings = {
     jiraProjectKey: '',
     zentaoEnabled: false,
     zentaoBaseUrl: '',
+    zentaoAccount: '',
+    zentaoPassword: '',
     zentaoApiToken: '',
     zentaoProductId: '',
+    zentaoProjectId: '',
     aiProvider: '',
     aiApiKey: '',
     aiBaseUrl: '',
@@ -137,8 +143,11 @@ export const PLACEHOLDER_JIRA_EMAIL = 'your-email@example.com';
 export const PLACEHOLDER_JIRA_TOKEN = '从 Atlassian 账户设置获取';
 export const PLACEHOLDER_JIRA_PROJECT = '如 PROJ';
 export const PLACEHOLDER_ZENTAO_URL = 'https://zentao.example.com';
-export const PLACEHOLDER_ZENTAO_TOKEN = '从禅道个人设置获取';
-export const PLACEHOLDER_ZENTAO_PRODUCT = '数字产品 ID';
+export const PLACEHOLDER_ZENTAO_ACCOUNT = 'admin';
+export const PLACEHOLDER_ZENTAO_PASSWORD = '登录密码';
+export const PLACEHOLDER_ZENTAO_TOKEN = '留空则使用账号密码自动登录';
+export const PLACEHOLDER_ZENTAO_PRODUCT = '可选，留空则提交时选择';
+export const PLACEHOLDER_ZENTAO_PROJECT = '可选，留空则提交时选择';
 
 // ============================================================
 // Tab 标题
@@ -158,8 +167,11 @@ export const LABEL_JIRA_EMAIL = '邮箱';
 export const LABEL_JIRA_TOKEN = 'API Token';
 export const LABEL_JIRA_PROJECT = '项目 Key';
 export const LABEL_ZENTAO_URL = '实例 URL';
+export const LABEL_ZENTAO_ACCOUNT = '账号';
+export const LABEL_ZENTAO_PASSWORD = '密码';
 export const LABEL_ZENTAO_TOKEN = 'API Token';
-export const LABEL_ZENTAO_PRODUCT = '产品 ID';
+export const LABEL_ZENTAO_PRODUCT = '默认产品 ID';
+export const LABEL_ZENTAO_PROJECT = '默认项目 ID';
 export const LABEL_AI_KEY = 'API Key';
 export const LABEL_AI_URL = '接口地址';
 export const LABEL_AI_MODEL = '模型';
@@ -172,6 +184,7 @@ export const LABEL_SAVE = '保存设置';
 
 export const JIRA_VERIFY_PATH = '/rest/api/3/myself';
 export const ZENTAO_VERIFY_PATH = '/api.php/v1/user';
+export const ZENTAO_LOGIN_PATH = '/api.php/v2/users/login';
 
 // ============================================================
 // Jira Token 获取地址
@@ -184,7 +197,9 @@ export const JIRA_TOKEN_URL = 'https://id.atlassian.com/manage-profile/security/
 // ============================================================
 
 export const HINT_JIRA_TOKEN = `API Token 获取地址：${JIRA_TOKEN_URL}`;
-export const HINT_ZENTAO_TOKEN = 'API Token 获取路径：禅道后台 → 个人设置 → API 密钥';
+export const HINT_ZENTAO_TOKEN = '推荐使用账号密码自动登录。也可手动填写 API Token（禅道后台 → 个人设置 → API 密钥）';
+export const HINT_ZENTAO_PRODUCT = '留空则提交 Bug 时从禅道拉取产品列表让你选择；填写则作为默认选中的产品';
+export const HINT_ZENTAO_PROJECT = '留空则提交 Bug 时从禅道拉取项目列表让你选择；填写则作为默认选中的项目。注意：仅选择项目后，Bug 才会关联到禅道项目的 Bug 列表中；选择项目时会通过 v2 接口提交。';
 export const HINT_AI_DESC = '配置 AI 服务后，可在提交 Bug 时自动生成描述内容';
 
 // ============================================================

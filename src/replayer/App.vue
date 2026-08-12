@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Pane, Splitpanes } from 'splitpanes';
 import { showToast } from 'vant';
+import browser from 'webextension-polyfill';
 import { useExport } from '../shared/composables/useExport';
 import BottomPanel from './components/BottomPanel.vue';
 import PlayerStage from './components/PlayerStage.vue';
@@ -14,6 +15,7 @@ const {
     currentPackage,
     hasLoaded,
     metadataTitle,
+    sessionId,
     currentTime,
     totalTime,
     isPlaying,
@@ -72,11 +74,25 @@ async function handleCopyToClipboard() {
 function handleTimelineSeek(time: number) {
     seekTo(time);
 }
+
+function openUpload() {
+    if (!sessionId) {
+        showToast({ message: '本地文件回放无法上传，请从录制列表进入回放', position: 'top' });
+        return;
+    }
+    const base = browser.runtime.getURL('src/upload/index.html');
+    const title = encodeURIComponent(metadataTitle.value);
+    browser.tabs.create({ url: `${base}?sessionId=${sessionId}&title=${title}` });
+}
 </script>
 
 <template>
     <div class="replayer-shell">
-        <RePlayerHeader :title="metadataTitle" />
+        <RePlayerHeader
+            :title="metadataTitle"
+            :session-id="sessionId"
+            @upload="openUpload"
+        />
 
         <div class="flex-1 h-0">
             <Splitpanes class="default-theme" horizontal>

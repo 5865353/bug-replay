@@ -57,8 +57,11 @@ const tabs = [
                 @update:jira-project-key="settings.jiraProjectKey = $event"
                 @update:zentao-enabled="settings.zentaoEnabled = $event"
                 @update:zentao-base-url="settings.zentaoBaseUrl = $event"
+                @update:zentao-account="settings.zentaoAccount = $event"
+                @update:zentao-password="settings.zentaoPassword = $event"
                 @update:zentao-api-token="settings.zentaoApiToken = $event"
                 @update:zentao-product-id="settings.zentaoProductId = $event"
+                @update:zentao-project-id="settings.zentaoProjectId = $event"
                 @verify="verifyConnection"
             />
             <AiPlatformSettings

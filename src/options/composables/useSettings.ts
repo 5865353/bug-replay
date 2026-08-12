@@ -16,6 +16,7 @@ import {
     TOAST_VERIFY_FAIL,
     TOAST_VERIFY_JIRA_OK,
     TOAST_VERIFY_ZENTAO_OK,
+    ZENTAO_LOGIN_PATH,
     ZENTAO_VERIFY_PATH,
 } from '../constants';
 
@@ -47,7 +48,7 @@ export function useSettings() {
     // ---- 验证连接 ----
     async function verifyConnection(platform: 'jira' | 'zentao'): Promise<void> {
         isVerifying.value = true;
-        const { jiraBaseUrl, jiraEmail, jiraApiToken, zentaoBaseUrl, zentaoApiToken } = settings.value;
+        const { jiraBaseUrl, jiraEmail, jiraApiToken, zentaoBaseUrl, zentaoAccount, zentaoPassword, zentaoApiToken } = settings.value;
         try {
             if (platform === 'jira') {
                 const resp = await fetch(
@@ -57,9 +58,40 @@ export function useSettings() {
                 showToast({ message: resp.ok ? TOAST_VERIFY_JIRA_OK : TOAST_VERIFY_FAIL(resp.status), duration: resp.ok ? 2000 : 3000 });
             }
             else {
+                const baseUrl = zentaoBaseUrl.replace(/\/+$/, '');
+                let token = zentaoApiToken;
+
+                // 优先用账号密码登录换取 Token
+                if (!token && zentaoAccount && zentaoPassword) {
+                    const loginResp = await fetch(`${baseUrl}${ZENTAO_LOGIN_PATH}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({ account: zentaoAccount, password: zentaoPassword }),
+                    });
+                    if (loginResp.ok) {
+                        const loginData = await loginResp.json();
+                        if (loginData.status === 'success' && loginData.token) {
+                            token = loginData.token;
+                        }
+                        else {
+                            showToast({ message: TOAST_VERIFY_FAIL(401) + `: ${loginData.message || '账号或密码错误'}`, duration: 3000 });
+                            return;
+                        }
+                    }
+                    else {
+                        showToast({ message: TOAST_VERIFY_FAIL(loginResp.status), duration: 3000 });
+                        return;
+                    }
+                }
+
+                if (!token) {
+                    showToast({ message: '请填写账号密码或 API Token', duration: 3000 });
+                    return;
+                }
+
                 const resp = await fetch(
-                    `${zentaoBaseUrl.replace(/\/+$/, '')}${ZENTAO_VERIFY_PATH}`,
-                    { headers: { Token: zentaoApiToken, Accept: 'application/json' } },
+                    `${baseUrl}${ZENTAO_VERIFY_PATH}`,
+                    { headers: { Token: token, Accept: 'application/json' } },
                 );
                 showToast({ message: resp.ok ? TOAST_VERIFY_ZENTAO_OK : TOAST_VERIFY_FAIL(resp.status), duration: resp.ok ? 2000 : 3000 });
             }

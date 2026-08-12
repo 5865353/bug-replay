@@ -11,6 +11,8 @@ export interface SubmitResult {
     issueId?: string;
     issueUrl?: string;
     error?: string;
+    /** 非致命告警（如附件上传失败，但不影响主流程） */
+    warning?: string;
 }
 
 export abstract class BasePlatform {

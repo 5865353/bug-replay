@@ -47,49 +47,51 @@ const pageUrl = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.card {
-    background: #272732;
-    border: 1px solid #32323e;
-    border-radius: 10px;
-    padding: 16px;
-}
-
 .card-header {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .card-icon {
     font-size: 14px;
-    font-weight: 600;
     color: #7ba4f5;
 }
 
 .card-title {
     font-size: 14px;
     font-weight: 600;
-    color: #b0b0c4;
+    color: #cdd6f4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .card-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 12px;
     font-size: 12px;
+    color: #5f5f72;
 }
-
-.meta-item { color: #606070; }
 
 .card-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    font-size: 12px;
+    gap: 8px;
 }
 
-.stat-label { color: #6b6b80; }
-.stat-value { color: #d0d0dc; }
+.stat-label {
+    font-size: 11px;
+    color: #5f5f72;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e4e4ee;
+    font-variant-numeric: tabular-nums;
+}
 </style>

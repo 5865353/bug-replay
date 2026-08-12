@@ -34,6 +34,9 @@ export function useRePlayer() {
 
     const metadataTitle = computed(() => currentPackage.value?.metadata?.title || '回放');
 
+    // 当前回放的会话 ID（来自 URL 参数；本地文件回放时为 null）
+    const sessionId = new URLSearchParams(window.location.search).get('sessionId') || '';
+
     /** 读取用户回放配置并应用 */
     async function applyReplaySettings() {
         try {
@@ -152,8 +155,6 @@ export function useRePlayer() {
 
     // 自动检查 URL 参数中的 sessionId，并设置观察器
     onMounted(() => {
-        const params = new URLSearchParams(window.location.search);
-        const sessionId = params.get('sessionId');
         if (sessionId) {
             loadFromSessionId(sessionId);
         }
@@ -625,6 +626,7 @@ export function useRePlayer() {
         devtoolsVisible,
         // Computed
         metadataTitle,
+        sessionId,
         // Actions
         loadFile,
         togglePlayPause,

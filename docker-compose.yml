@@ -1,0 +1,77 @@
+# ============================================================
+# BugReplay 开发环境 — 禅道 Docker 部署
+# ============================================================
+# 使用方法:
+#   1. 安装 Docker Desktop: https://www.docker.com/products/docker-desktop/
+#   2. 启动: docker compose up -d
+#   3. 访问: http://localhost:8080
+#   4. 停止: docker compose down
+#   5. 清理数据: docker compose down -v
+#
+# 禅道默认账号: admin / 123456
+# MySQL 账号: root / root123
+# ============================================================
+
+services:
+  # ---- 禅道 (Zentao) ----
+  zentao:
+    image: easysoft/zentao:latest
+    container_name: zentao
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      # 数据库配置
+      MYSQL_HOST: zentao-mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DB: zentao
+      MYSQL_USER: zentao
+      MYSQL_PASSWORD: zentao123
+      # PHP 配置
+      PHP_MAX_EXECUTION_TIME: "300"
+      PHP_POST_MAX_SIZE: "200M"
+      PHP_UPLOAD_MAX_FILESIZE: "200M"
+    volumes:
+      - zentao_data:/www/zentaopms/www/data
+      - zentao_tmp:/www/zentaopms/tmp
+    depends_on:
+      zentao-mysql:
+        condition: service_healthy
+    networks:
+      - zentao-net
+
+  # ---- MySQL 数据库 ----
+  zentao-mysql:
+    image: mysql:8.0
+    container_name: zentao-mysql
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: zentao
+      MYSQL_USER: zentao
+      MYSQL_PASSWORD: zentao123
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max_allowed_packet=200M
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - zentao-net
+
+volumes:
+  zentao_data:
+  zentao_tmp:
+  mysql_data:
+
+networks:
+  zentao-net:
+    driver: bridge

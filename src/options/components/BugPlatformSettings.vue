@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import type { Settings } from '../constants';
-import { HINT_JIRA_TOKEN, HINT_ZENTAO_TOKEN, JIRA_TOKEN_URL, LABEL_JIRA_EMAIL, LABEL_JIRA_PROJECT, LABEL_JIRA_TOKEN, LABEL_JIRA_URL, LABEL_VERIFY, LABEL_ZENTAO_PRODUCT, LABEL_ZENTAO_TOKEN, LABEL_ZENTAO_URL, PLACEHOLDER_JIRA_EMAIL, PLACEHOLDER_JIRA_PROJECT, PLACEHOLDER_JIRA_TOKEN, PLACEHOLDER_JIRA_URL, PLACEHOLDER_ZENTAO_PRODUCT, PLACEHOLDER_ZENTAO_TOKEN, PLACEHOLDER_ZENTAO_URL } from '../constants';
+import {
+    HINT_JIRA_TOKEN, HINT_ZENTAO_PRODUCT, HINT_ZENTAO_PROJECT, HINT_ZENTAO_TOKEN, JIRA_TOKEN_URL,
+    LABEL_JIRA_EMAIL, LABEL_JIRA_PROJECT, LABEL_JIRA_TOKEN, LABEL_JIRA_URL, LABEL_VERIFY,
+    LABEL_ZENTAO_ACCOUNT, LABEL_ZENTAO_PASSWORD, LABEL_ZENTAO_PRODUCT, LABEL_ZENTAO_PROJECT, LABEL_ZENTAO_TOKEN, LABEL_ZENTAO_URL,
+    PLACEHOLDER_JIRA_EMAIL, PLACEHOLDER_JIRA_PROJECT, PLACEHOLDER_JIRA_TOKEN, PLACEHOLDER_JIRA_URL,
+    PLACEHOLDER_ZENTAO_ACCOUNT, PLACEHOLDER_ZENTAO_PASSWORD, PLACEHOLDER_ZENTAO_PRODUCT, PLACEHOLDER_ZENTAO_PROJECT, PLACEHOLDER_ZENTAO_TOKEN, PLACEHOLDER_ZENTAO_URL,
+} from '../constants';
 
 defineProps<{ settings: Settings; isVerifying: boolean }>();
-const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseUrl': [v: string]; 'update:jiraEmail': [v: string]; 'update:jiraApiToken': [v: string]; 'update:jiraProjectKey': [v: string]; 'update:zentaoEnabled': [v: boolean]; 'update:zentaoBaseUrl': [v: string]; 'update:zentaoApiToken': [v: string]; 'update:zentaoProductId': [v: string]; 'verify': [p: 'jira' | 'zentao'] }>();
+const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseUrl': [v: string]; 'update:jiraEmail': [v: string]; 'update:jiraApiToken': [v: string]; 'update:jiraProjectKey': [v: string]; 'update:zentaoEnabled': [v: boolean]; 'update:zentaoBaseUrl': [v: string]; 'update:zentaoAccount': [v: string]; 'update:zentaoPassword': [v: string]; 'update:zentaoApiToken': [v: string]; 'update:zentaoProductId': [v: string]; 'update:zentaoProjectId': [v: string]; 'verify': [p: 'jira' | 'zentao'] }>();
 </script>
 
 <template>
@@ -69,6 +75,17 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
                     class="inp" :value="settings.zentaoBaseUrl" :placeholder="PLACEHOLDER_ZENTAO_URL"
                     @input="emit('update:zentaoBaseUrl', ($event.target as HTMLInputElement).value)"
                 >
+                <label class="lbl">{{ LABEL_ZENTAO_ACCOUNT }}</label>
+                <input
+                    class="inp" :value="settings.zentaoAccount" :placeholder="PLACEHOLDER_ZENTAO_ACCOUNT"
+                    @input="emit('update:zentaoAccount', ($event.target as HTMLInputElement).value)"
+                >
+                <label class="lbl">{{ LABEL_ZENTAO_PASSWORD }}</label>
+                <input
+                    class="inp" type="password" :value="settings.zentaoPassword"
+                    :placeholder="PLACEHOLDER_ZENTAO_PASSWORD"
+                    @input="emit('update:zentaoPassword', ($event.target as HTMLInputElement).value)"
+                >
                 <label class="lbl">{{ LABEL_ZENTAO_TOKEN }}</label>
                 <input
                     class="inp" type="password" :value="settings.zentaoApiToken"
@@ -83,6 +100,18 @@ const emit = defineEmits<{ 'update:jiraEnabled': [v: boolean]; 'update:jiraBaseU
                 >
                 <p class="hint">
                     {{ HINT_ZENTAO_TOKEN }}
+                </p>
+                <label class="lbl">{{ LABEL_ZENTAO_PROJECT }}</label>
+                <input
+                    class="inp" type="number" :value="settings.zentaoProjectId"
+                    :placeholder="PLACEHOLDER_ZENTAO_PROJECT"
+                    @input="emit('update:zentaoProjectId', ($event.target as HTMLInputElement).value)"
+                >
+                <p class="hint">
+                    {{ HINT_ZENTAO_PROJECT }}
+                </p>
+                <p class="hint">
+                    {{ HINT_ZENTAO_PRODUCT }}
                 </p>
                 <button class="btn-verify" :disabled="isVerifying" @click="emit('verify', 'zentao')">
                     <span v-if="isVerifying" class="spinner" /> {{ isVerifying ? '验证中...' : LABEL_VERIFY }}

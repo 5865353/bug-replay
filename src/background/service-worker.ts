@@ -81,7 +81,7 @@ interface WebRequestHeaderInfo {
 const webRequestHeaders = new Map<string, WebRequestHeaderInfo>();
 
 /** 初始化空的头信息条目 */
-function initHeaderEntry(details: chrome.webRequest.WebRequestHeadersDetails): WebRequestHeaderInfo {
+function initHeaderEntry(details: chrome.webRequest.OnBeforeSendHeadersDetails): WebRequestHeaderInfo {
     return {
         url: details.url,
         method: details.method,
@@ -94,7 +94,7 @@ function initHeaderEntry(details: chrome.webRequest.WebRequestHeadersDetails): W
 }
 
 chrome.webRequest.onBeforeSendHeaders.addListener(
-    (details) => {
+    (details): chrome.webRequest.BlockingResponse | undefined => {
         if (details.tabId < 0 || !activeRecordingTabIds.has(details.tabId)) return;
 
         const entry = initHeaderEntry(details);
@@ -110,7 +110,7 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
 );
 
 chrome.webRequest.onHeadersReceived.addListener(
-    (details) => {
+    (details): chrome.webRequest.BlockingResponse | undefined => {
         const entry = webRequestHeaders.get(details.requestId);
         if (!entry) return;
 
@@ -580,6 +580,51 @@ async function handleMessage(
             return { action: BackgroundToContentAction.EXPORT_READY, payload: { sessionId }, requestId };
         }
 
+        case ContentToBackgroundAction.GET_ZENTAO_PRODUCTS: {
+            const config = payload as ZentaoConfig;
+            try {
+                const zentao = new ZentaoPlatform(config);
+                const result = await zentao.getProducts();
+                return {
+                    action: BackgroundToContentAction.ZENTAO_PRODUCTS,
+                    payload: result,
+                    requestId,
+                };
+            }
+
+            catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.error('[BugReplay] GET_ZENTAO_PRODUCTS error:', msg);
+                return {
+                    action: BackgroundToContentAction.ZENTAO_PRODUCTS,
+                    payload: { success: false, error: `获取产品列表异常: ${msg}` },
+                    requestId,
+                };
+            }
+        }
+
+        case ContentToBackgroundAction.GET_ZENTAO_PROJECTS: {
+            const config = payload as ZentaoConfig;
+            try {
+                const zentao = new ZentaoPlatform(config);
+                const result = await zentao.getProjects();
+                return {
+                    action: BackgroundToContentAction.ZENTAO_PROJECTS,
+                    payload: result,
+                    requestId,
+                };
+            }
+            catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : String(err);
+                console.error('[BugReplay] GET_ZENTAO_PROJECTS error:', msg);
+                return {
+                    action: BackgroundToContentAction.ZENTAO_PROJECTS,
+                    payload: { success: false, error: `获取项目列表异常: ${msg}` },
+                    requestId,
+                };
+            }
+        }
+
         case ContentToBackgroundAction.SUBMIT_TO_PLATFORM: {
             const { sessionId, platform, config } = payload as {
                 sessionId: string;
@@ -627,6 +672,7 @@ async function handleMessage(
                             sessionId,
                             externalIssueId: result.issueId,
                             issueUrl: result.issueUrl,
+                            warning: result.warning,
                         },
                         requestId,
                     };
