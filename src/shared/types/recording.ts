@@ -39,10 +39,10 @@ export interface RecordingSession {
     tags: string[];
     /** Bug 描述（用户填写） */
     description?: string;
-    /** 关联的外部 Bug ID（提交到 Jira/禅道 后回填） */
+    /** 关联的外部 Bug ID（提交到禅道后回填） */
     externalIssueId?: string;
     /** 关联的外部平台名称 */
-    externalPlatform?: 'jira' | 'zentao';
+    externalPlatform?: 'zentao';
 }
 
 /** 页面事件（录制过程中 URL / Storage / Cookie 变更） */

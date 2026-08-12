@@ -50,7 +50,7 @@ function showCookies() {
             </van-tab>
 
             <van-tab title="关键帧">
-                <KeyframesTab :annotations="package.annotations" />
+                <KeyframesTab :annotations="package.annotations" @seek="emit('seek', $event)" />
             </van-tab>
         </van-tabs>
     </div>

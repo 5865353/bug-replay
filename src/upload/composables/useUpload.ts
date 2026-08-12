@@ -17,7 +17,6 @@ export function useUpload() {
 
     const settings = ref<UploadSettings>({ ...DEFAULT_SETTINGS });
     const sessionInfo = ref<RecordingSession | null>(null);
-    const platform = ref<'jira' | 'zentao' | ''>('');
     const title = ref(initialTitle);
     const description = ref('');
     const tags = ref('');
@@ -36,10 +35,11 @@ export function useUpload() {
 
     const hasAi = computed(() => !!settings.value.aiProvider && !!settings.value.aiApiKey);
     const canSubmit = computed(() =>
-        !!platform.value
+        settings.value.zentaoEnabled
         && title.value.trim().length > 0
         && !submitting.value
-        && (platform.value !== 'zentao' || (selectedProductId.value !== null && selectedProjectId.value !== null)));
+        && selectedProductId.value !== null
+        && selectedProjectId.value !== null);
 
     /** 构建禅道配置（提交时使用用户选择的产品 ID） */
     function buildZentaoConfig(): Record<string, unknown> {
@@ -148,21 +148,12 @@ export function useUpload() {
         }
     });
 
-    watch(platform, (p) => {
-        if (p === 'zentao' && zentaoProducts.value.length === 0) {
-            loadZentaoProducts();
-        }
-    });
-
     onMounted(async () => {
         try {
             const s = await browser.storage.local.get('bugreplay_settings');
             if (s.bugreplay_settings) Object.assign(settings.value, s.bugreplay_settings);
-            if (settings.value.jiraEnabled) platform.value = 'jira';
-            else if (settings.value.zentaoEnabled) platform.value = 'zentao';
-
-            // 默认禅道时预加载产品列表
-            if (platform.value === 'zentao' && settings.value.zentaoBaseUrl) {
+            // 默认禅道：预加载产品列表
+            if (settings.value.zentaoEnabled && settings.value.zentaoBaseUrl) {
                 loadZentaoProducts();
             }
 
@@ -202,13 +193,17 @@ export function useUpload() {
             .filter(Boolean);
     }
 
-    async function generateDescription(): Promise<void> {
+    async function generateDescription(prompt?: string): Promise<void> {
         if (!hasAi.value || !sessionInfo.value) return;
         generatingAi.value = true;
         try {
             // 将录制内容（控制台/网络/页面跳转/环境）构建为 AI 上下文
             // 内部按“优先级 + 预算 + 抽样 + 截断”优化，避免脚本过大超出模型上下文
-            const ctx = buildAIContext(sessionInfo.value);
+            let ctx = buildAIContext(sessionInfo.value);
+            // 用户补充说明（复现前提、期望表现等）附加到上下文
+            if (prompt) {
+                ctx += `\n\n## 用户补充说明\n${prompt}`;
+            }
 
             const resp = await fetch(`${settings.value.aiBaseUrl}/chat/completions`, {
                 method: 'POST',
@@ -239,9 +234,7 @@ export function useUpload() {
         if (!canSubmit.value) return;
         submitting.value = true;
         try {
-            const cfg: Record<string, unknown> = platform.value === 'jira'
-                ? { baseUrl: settings.value.jiraBaseUrl, email: settings.value.jiraEmail, apiToken: settings.value.jiraApiToken, projectKey: settings.value.jiraProjectKey }
-                : buildZentaoConfig();
+            const cfg: Record<string, unknown> = buildZentaoConfig();
 
             // 先将标题/描述/标签写回 session
             await browser.runtime.sendMessage({
@@ -258,7 +251,7 @@ export function useUpload() {
 
             const resp = await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.SUBMIT_TO_PLATFORM,
-                payload: { sessionId, platform: platform.value, config: cfg },
+                payload: { sessionId, platform: 'zentao', config: cfg },
             }) as BackgroundToContentMessage;
 
             if (resp.action === BackgroundToContentAction.SESSION_UPDATED) {
@@ -288,7 +281,6 @@ export function useUpload() {
     return {
         settings,
         sessionInfo,
-        platform,
         title,
         description,
         tags,

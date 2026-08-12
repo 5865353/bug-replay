@@ -12,7 +12,6 @@
 
 import type { BackgroundToContentMessage, ContentToBackgroundMessage, NetworkLog, RecordingSession } from '@shared/types';
 
-import type { JiraConfig } from '../platforms/jira';
 import type { ZentaoConfig } from '../platforms/zentao';
 import { EXTENSION_NAME } from '@shared/constants';
 import {
@@ -22,7 +21,6 @@ import {
 
 } from '@shared/types';
 import browser from 'webextension-polyfill';
-import { JiraPlatform } from '../platforms/jira';
 import { ZentaoPlatform } from '../platforms/zentao';
 import { buildRRTPackage, copyRRTToClipboard, downloadRRTFile } from './rrt-builder';
 import { StorageManager } from './storage-manager';
@@ -626,10 +624,9 @@ async function handleMessage(
         }
 
         case ContentToBackgroundAction.SUBMIT_TO_PLATFORM: {
-            const { sessionId, platform, config } = payload as {
+            const { sessionId, config } = payload as {
                 sessionId: string;
-                platform: 'jira' | 'zentao';
-                config: JiraConfig | ZentaoConfig;
+                config: ZentaoConfig;
             };
 
             try {
@@ -646,23 +643,15 @@ async function handleMessage(
                 // 2. 构建 .rrt 包
                 const rrtPackage = await buildRRTPackage(session);
 
-                // 3. 根据平台提交
-                let result;
-
-                if (platform === 'jira') {
-                    const jira = new JiraPlatform(config as JiraConfig);
-                    result = await jira.submitBug(rrtPackage);
-                }
-                else {
-                    const zentao = new ZentaoPlatform(config as ZentaoConfig);
-                    result = await zentao.submitBug(rrtPackage);
-                }
+                // 3. 提交到禅道
+                const zentao = new ZentaoPlatform(config);
+                const result = await zentao.submitBug(rrtPackage);
 
                 if (result.success) {
                     // 回写关联的外部 Issue ID 和平台
                     if (result.issueId) {
                         session.externalIssueId = result.issueId;
-                        session.externalPlatform = platform;
+                        session.externalPlatform = 'zentao';
                         await storageManager.saveSession(session);
                     }
 

@@ -5,6 +5,10 @@ defineProps<{
     annotations: Annotation[];
 }>();
 
+const emit = defineEmits<{
+    seek: [time: number];
+}>();
+
 function formatDuration(ms: number): string {
     const s = Math.floor(ms / 1000);
     const m = Math.floor(s / 60);
@@ -17,7 +21,13 @@ function formatDuration(ms: number): string {
     <div class="panel-content">
         <van-empty v-if="annotations.length === 0" description="暂无标注关键帧" :image-size="50" />
         <div v-else class="keyframe-list">
-            <div v-for="(ann, i) in annotations" :key="i" class="kf-item">
+            <div
+                v-for="(ann, i) in annotations"
+                :key="ann.id"
+                class="kf-item"
+                title="点击跳转到该标注时间点"
+                @click="emit('seek', ann.timestamp)"
+            >
                 <van-tag type="primary" size="medium">
                     {{ i + 1 }}
                 </van-tag>

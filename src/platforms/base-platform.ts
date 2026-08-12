@@ -1,7 +1,7 @@
 /**
  * src/platforms/base-platform.ts — 第三方平台抽象基类
  *
- * 定义统一的 Bug 提交流程接口，方便扩展 Jira / 禅道 / GitLab 等
+ * 定义统一的 Bug 提交流程接口，方便扩展禅道 / GitLab 等
  */
 
 import type { RRTPackage } from '@shared/types';

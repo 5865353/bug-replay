@@ -50,11 +50,6 @@ const tabs = [
             />
             <BugPlatformSettings
                 v-show="activeTab === TAB_BUG_PLATFORM" :settings="settings" :is-verifying="isVerifying"
-                @update:jira-enabled="settings.jiraEnabled = $event"
-                @update:jira-base-url="settings.jiraBaseUrl = $event"
-                @update:jira-email="settings.jiraEmail = $event"
-                @update:jira-api-token="settings.jiraApiToken = $event"
-                @update:jira-project-key="settings.jiraProjectKey = $event"
                 @update:zentao-enabled="settings.zentaoEnabled = $event"
                 @update:zentao-base-url="settings.zentaoBaseUrl = $event"
                 @update:zentao-account="settings.zentaoAccount = $event"

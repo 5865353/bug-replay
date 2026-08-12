@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import browser from 'webextension-polyfill';
 import BugForm from './components/BugForm.vue';
-import PlatformSelector from './components/PlatformSelector.vue';
 import SessionInfoCard from './components/SessionInfoCard.vue';
 import ZentaoTargetSelect from './components/ZentaoTargetSelect.vue';
 import { useUpload } from './composables/useUpload';
@@ -8,7 +8,6 @@ import { useUpload } from './composables/useUpload';
 const {
     settings,
     sessionInfo,
-    platform,
     title,
     description,
     tags,
@@ -33,6 +32,10 @@ const {
 function closePage() {
     window.close();
 }
+
+function openSettings() {
+    browser.runtime.openOptionsPage();
+}
 </script>
 
 <template>
@@ -45,7 +48,7 @@ function closePage() {
                 <h1 class="header-title">
                     提交 Bug 报告
                 </h1>
-                <span class="header-sub">将录制现场一键提交到 Bug 平台</span>
+                <span class="header-sub">将录制现场一键提交到禅道</span>
             </div>
         </header>
 
@@ -64,18 +67,29 @@ function closePage() {
             <!-- 正常内容 -->
             <template v-else>
                 <SessionInfoCard v-if="sessionInfo" :session-info="sessionInfo" />
-                <PlatformSelector v-model:platform="platform" :settings="settings" />
-                <ZentaoTargetSelect
-                    v-if="platform === 'zentao'"
-                    v-model:selected-product-id="selectedProductId"
-                    v-model:selected-project-id="selectedProjectId"
-                    :projects="zentaoProjects" :loading-projects="loadingProjects" :projects-error="projectsError"
-                    :products="zentaoProducts" :loading="loadingProducts" :error="productsError"
-                />
-                <BugForm
-                    v-model:title="title" v-model:description="description" v-model:tags="tags" :has-ai="hasAi"
-                    :generating-ai="generatingAi" @generate-ai="generateDescription"
-                />
+
+                <!-- 未配置禅道：提示去设置 -->
+                <section v-if="!settings.zentaoEnabled" class="panel">
+                    <div class="panel-group">
+                        <p class="hint">
+                            ⚠ 未配置禅道，请先在<a href="#" @click.prevent="openSettings">设置</a>中启用
+                        </p>
+                    </div>
+                </section>
+
+                <!-- 主表单面板 -->
+                <section v-else class="panel">
+                    <ZentaoTargetSelect
+                        v-model:selected-product-id="selectedProductId"
+                        v-model:selected-project-id="selectedProjectId"
+                        :projects="zentaoProjects" :loading-projects="loadingProjects" :projects-error="projectsError"
+                        :products="zentaoProducts" :loading="loadingProducts" :error="productsError"
+                    />
+                    <BugForm
+                        v-model:title="title" v-model:description="description" v-model:tags="tags" :has-ai="hasAi"
+                        :generating-ai="generatingAi" @generate-ai="generateDescription"
+                    />
+                </section>
             </template>
         </main>
 
@@ -85,7 +99,7 @@ function closePage() {
             </button>
             <button class="btn-submit" :disabled="!canSubmit" @click="submit">
                 {{
-                    submitting ? '提交中...' : `提交到 ${platform === 'jira' ? 'Jira' : platform === 'zentao' ? '禅道' : '平台'}`
+                    submitting ? '提交中...' : '提交到禅道'
                 }}
             </button>
         </footer>
@@ -220,23 +234,33 @@ function closePage() {
 
 <style lang="scss">
 /* ===== 上传页全局基础样式（App.vue 与各表单子组件共用） ===== */
-.card {
-    position: relative;
-    background: #1f1f28;
+.panel {
+    background: #1c1c25;
     border: 1px solid #2a2a36;
-    border-radius: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.panel-group {
     padding: 16px;
+
+    &:not(:last-child) {
+        border-bottom: 1px solid #262632;
+    }
 }
 
-.section-title {
-    font-size: 13px;
+.field-label {
+    display: block;
+    font-size: 12px;
     font-weight: 600;
-    color: #8f8fa5;
-    margin: 0 0 10px;
+    color: #8a8aa0;
+    margin-bottom: 8px;
 }
 
-.section-title--tight {
-    margin-bottom: 0;
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .inp {
@@ -244,7 +268,7 @@ function closePage() {
     padding: 10px 12px;
     border: 1px solid #2e2e3c;
     border-radius: 8px;
-    background: #17171f;
+    background: #14141b;
     color: #e4e4ee;
     font-size: 14px;
     outline: none;

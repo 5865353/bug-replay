@@ -29,7 +29,7 @@ const pageUrl = computed(() => {
 </script>
 
 <template>
-    <section class="card">
+    <section class="panel">
         <div class="card-header">
             <span class="card-icon">📋</span>
             <span class="card-title">{{ sessionInfo.title }}</span>
@@ -54,6 +54,10 @@ const pageUrl = computed(() => {
 </template>
 
 <style lang="scss" scoped>
+.panel {
+    padding: 14px 16px;
+}
+
 .card-header {
     display: flex;
     align-items: center;

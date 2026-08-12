@@ -9,19 +9,13 @@ import type { Settings } from '@/options/constants';
 // ============================================================
 export type UploadSettings = Pick<
     Settings,
-    | 'jiraEnabled' | 'zentaoEnabled'
-    | 'jiraBaseUrl' | 'jiraEmail' | 'jiraApiToken' | 'jiraProjectKey'
+    | 'zentaoEnabled'
     | 'zentaoBaseUrl' | 'zentaoAccount' | 'zentaoPassword' | 'zentaoApiToken' | 'zentaoProductId' | 'zentaoProjectId'
     | 'aiProvider' | 'aiApiKey' | 'aiBaseUrl' | 'aiModel'
 >;
 
 export const DEFAULT_SETTINGS: UploadSettings = {
-    jiraEnabled: false,
     zentaoEnabled: false,
-    jiraBaseUrl: '',
-    jiraEmail: '',
-    jiraApiToken: '',
-    jiraProjectKey: '',
     zentaoBaseUrl: '',
     zentaoAccount: '',
     zentaoPassword: '',
