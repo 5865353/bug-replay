@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.2](https://gitee.com/ro5353/bug-replay/compare/v1.0.1...v1.0.2) (2026-08-13)
+
+
+### Features
+
+* 更新 README.md，添加演示 GIF 和录屏工具建议 ([7469a13](https://gitee.com/ro5353/bug-replay/commit/7469a13cd8406f9e2373748546bc143d6571191d))
+
 ### 1.0.1 (2026-08-12)
 
 
