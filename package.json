@@ -1,7 +1,7 @@
 {
     "name": "bug-replay",
     "type": "module",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "浏览器 Bug 复现录制回放插件 — 一键录制现场，.rrt 离线回放",
     "author": "BugReplay Team",
     "license": "CC-BY-NC-SA-4.0",

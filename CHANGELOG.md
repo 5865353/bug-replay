@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.3](https://gitee.com/ro5353/bug-replay/compare/v1.0.2...v1.0.3) (2026-08-13)
+
+
+### Features
+
+* 新增CRX打包与禅道附件回放支持，优化多项细节 ([656df16](https://gitee.com/ro5353/bug-replay/commit/656df16c0b2fc5e472ca407cd3347d63dcb4e4c9))
+
 ### [1.0.2](https://gitee.com/ro5353/bug-replay/compare/v1.0.1...v1.0.2) (2026-08-13)
 
 
