@@ -11,7 +11,7 @@ const activeTab = ref(TAB_BASIC);
 const tabs = [
     { key: TAB_BASIC, icon: '⚙️', label: TAB_TITLE_BASIC },
     { key: TAB_BUG_PLATFORM, icon: '🐛', label: TAB_TITLE_BUG },
-    { key: TAB_AI_PLATFORM, icon: '🤖', label: TAB_TITLE_AI },
+    { key: TAB_AI_PLATFORM, icon: '🤖', label: TAB_TITLE_AI }
 ];
 </script>
 

@@ -22,7 +22,7 @@ const collapsedGroups = ref<Record<number, boolean>>({});
 function toggleGroup(idx: number) {
     collapsedGroups.value = {
         ...collapsedGroups.value,
-        [idx]: !collapsedGroups.value[idx],
+        [idx]: !collapsedGroups.value[idx]
     };
 }
 
@@ -60,10 +60,10 @@ const groupedPageEvents = computed<TimelineGroup[]>(() => {
 
 // ---- 事件计数 ----
 const urlChangeCount = computed(() =>
-    (props.pageEvents || []).filter(ev => ev.type === 'url_change').length,
+    (props.pageEvents || []).filter(ev => ev.type === 'url_change').length
 );
 const storageChangeCount = computed(() =>
-    (props.pageEvents || []).filter(ev => ev.type === 'storage_change').length,
+    (props.pageEvents || []).filter(ev => ev.type === 'storage_change').length
 );
 
 // ---- 格式化 ----

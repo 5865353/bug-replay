@@ -25,8 +25,13 @@ import {
     PM_SOURCE_NETWORK,
     PM_SOURCE_PAGE_EVENT,
     PM_TARGET_ORIGIN,
-    STORAGE_KEY_PREFIX,
+    STORAGE_KEY_PREFIX
 } from './constants';
+import {
+    handlePlayZentaoAttachment,
+    handleQueryZentaoAttachments,
+    startZentaoReplay
+} from './zentao/useZentaoReplay';
 
 // ============================================================
 // 页面主世界拦截器（注入 <script> 到页面 DOM）
@@ -51,7 +56,7 @@ function sendInterceptorControl(action: typeof PM_ACTION_START | typeof PM_ACTIO
 }
 
 // 监听注入脚本发回的 postMessage（网络 + 页面事件）
-window.addEventListener('message', (event) => {
+window.addEventListener('message', event => {
     if (event.source !== window) return;
 
     if (event.data?.source === PM_SOURCE_NETWORK) {
@@ -101,7 +106,7 @@ function useContentScript() {
             events: currentSession.events.splice(0),
             networkLogs: currentSession.networkLogs.splice(0),
             consoleLogs: currentSession.consoleLogs.splice(0),
-            pageEvents: currentSession.pageEvents.splice(0),
+            pageEvents: currentSession.pageEvents.splice(0)
         };
 
         // 跳过空 flush
@@ -118,7 +123,7 @@ function useContentScript() {
         console.log(
             `[${EXTENSION_NAME}] Flushed chunk #${chunkIndex - 1}: `
             + `events=${chunk.events.length} network=${chunk.networkLogs.length} `
-            + `console=${chunk.consoleLogs.length} pageEvents=${chunk.pageEvents.length}`,
+            + `console=${chunk.consoleLogs.length} pageEvents=${chunk.pageEvents.length}`
         );
     }
 
@@ -128,11 +133,11 @@ function useContentScript() {
             chunkIndex = 0;
 
             // 网络日志回调
-            networkLogCallback = (log) => {
+            networkLogCallback = log => {
                 if (currentSession) currentSession.networkLogs.push(log);
             };
             // 页面事件回调
-            pageEventCallback = (ev) => {
+            pageEventCallback = ev => {
                 if (currentSession) currentSession.pageEvents.push(ev);
             };
             // flush 缓冲区
@@ -149,14 +154,14 @@ function useContentScript() {
         },
         /** rrweb 事件数达到阈值时触发 flush */
         onEventThreshold: () => {
-            flushSessionToStorage().catch((err) => {
+            flushSessionToStorage().catch(err => {
                 console.error(`[${EXTENSION_NAME}] Flush failed:`, err);
             });
-        },
+        }
     });
     const annotator = useAnnotator({
         sessionId: '',
-        onChange: (newAnnotations) => {
+        onChange: newAnnotations => {
             if (!currentSession) return;
 
             const now = Date.now();
@@ -183,23 +188,25 @@ function useContentScript() {
                     currentSession.annotations.push(ann);
                 }
             }
-        },
+        }
     });
 
     // ---- 消息处理 ----
 
     function init(): void {
-        browser.runtime.onMessage.addListener((message: unknown) => {
+        browser.runtime.onMessage.addListener((message: unknown): Promise<unknown> | void => {
             const msg = message as BackgroundToContentMessage;
             console.log(`[${EXTENSION_NAME}] CS received: ${msg.action}`);
-            handleMessage(msg);
-            return undefined;
+            return handleMessage(msg);
         });
+
+        // 禅道 Bug 页面：检测 .rrt 附件并注入「BugReplay 回放」按钮
+        startZentaoReplay();
 
         console.log(`[${EXTENSION_NAME}] Content script initialized`);
     }
 
-    async function handleMessage(message: BackgroundToContentMessage): Promise<void> {
+    async function handleMessage(message: BackgroundToContentMessage): Promise<unknown> {
         switch (message.action) {
             case BackgroundToContentAction.RECORDING_STARTED:
                 await startRecording(message.payload);
@@ -215,7 +222,18 @@ function useContentScript() {
                 recorder.resume();
                 annotator.setResumed();
                 break;
+            case BackgroundToContentAction.QUERY_ZENTAO_ATTACHMENTS:
+                return {
+                    action: BackgroundToContentAction.ZENTAO_ATTACHMENTS_RESULT,
+                    payload: handleQueryZentaoAttachments()
+                };
+            case BackgroundToContentAction.PLAY_ZENTAO_ATTACHMENT:
+                return {
+                    action: BackgroundToContentAction.ZENTAO_PLAY_RESULT,
+                    payload: await handlePlayZentaoAttachment()
+                };
         }
+        return undefined;
     }
 
     async function startRecording(settings?: unknown): Promise<void> {
@@ -227,7 +245,7 @@ function useContentScript() {
 
             // 🔧 启动定时 flush（每 30 秒）
             flushTimer = setInterval(() => {
-                flushSessionToStorage().catch((err) => {
+                flushSessionToStorage().catch(err => {
                     console.error(`[${EXTENSION_NAME}] Periodic flush failed:`, err);
                 });
             }, FLUSH_INTERVAL_MS);
@@ -235,7 +253,7 @@ function useContentScript() {
             // Recreate annotator with proper hooks
             const newAnnotator = useAnnotator({
                 sessionId: currentSession.id,
-                onChange: (newAnnotations) => {
+                onChange: newAnnotations => {
                     if (!currentSession) return;
 
                     const now = Date.now();
@@ -270,7 +288,7 @@ function useContentScript() {
                 },
                 onStop: async () => {
                     await stopRecording();
-                },
+                }
             });
 
             // Replace annotator instance
@@ -308,12 +326,12 @@ function useContentScript() {
             const { events: _e, networkLogs: _n, consoleLogs: _c, pageEvents: _p, ...metadata } = session;
             const metaKey = `${STORAGE_KEY_PREFIX}${session.id}`;
             await browser.storage.local.set({
-                [metaKey]: { ...metadata, chunkCount: chunkIndex },
+                [metaKey]: { ...metadata, chunkCount: chunkIndex }
             });
 
             await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.STOP_RECORDING,
-                payload: { sessionId: session.id },
+                payload: { sessionId: session.id }
             });
 
             currentSession = null;

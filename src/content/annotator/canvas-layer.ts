@@ -33,7 +33,7 @@ import {
     TEXT_PADDING,
     TEXT_PLACEHOLDER,
     TOUCH_ACTION_NONE,
-    Z_INDEX_CANVAS,
+    Z_INDEX_CANVAS
 } from '../constants';
 
 // 注册 Fabric 类以支持 fromJSON 反序列化
@@ -91,7 +91,7 @@ export class CanvasLayer {
             selection: false,
             preserveObjectStacking: true,
             stopContextMenu: true,
-            renderOnAddRemove: true,
+            renderOnAddRemove: true
         });
 
         // Fabric 创建 .canvas-container 包裹 canvas，设为 pointer-events: none
@@ -140,7 +140,7 @@ export class CanvasLayer {
             rx: RECT_CORNER_RADIUS,
             ry: RECT_CORNER_RADIUS,
             selectable: true,
-            evented: true,
+            evented: true
         });
         this.canvas!.add(rect);
         this.trackObject(rect, 'rect');
@@ -156,7 +156,7 @@ export class CanvasLayer {
             stroke: color,
             strokeWidth: DEFAULT_ANNOTATION_CONFIG.strokeWidth,
             selectable: true,
-            evented: true,
+            evented: true
         });
         this.canvas!.add(line);
 
@@ -168,13 +168,13 @@ export class CanvasLayer {
         const tri = new Polygon([
             { x: px, y: py },
             { x: px - h * Math.cos(angle - ARROW_HEAD_ANGLE), y: py - h * Math.sin(angle - ARROW_HEAD_ANGLE) },
-            { x: px - h * Math.cos(angle + ARROW_HEAD_ANGLE), y: py - h * Math.sin(angle + ARROW_HEAD_ANGLE) },
+            { x: px - h * Math.cos(angle + ARROW_HEAD_ANGLE), y: py - h * Math.sin(angle + ARROW_HEAD_ANGLE) }
         ], {
             fill: color,
             stroke: color,
             strokeWidth: ARROW_HEAD_STROKE_WIDTH,
             selectable: false,
-            evented: false,
+            evented: false
         });
         this.canvas!.add(tri);
 
@@ -200,7 +200,7 @@ export class CanvasLayer {
             padding: TEXT_PADDING,
             selectable: true,
             evented: true,
-            editable: true,
+            editable: true
         });
         this.canvas!.add(itext);
         this.trackObject(itext, 'text');
@@ -375,27 +375,27 @@ export class CanvasLayer {
         obj: FabricObject,
         type: AnnotationToolType,
         stepNumber?: number,
-        annotationId?: string,
+        annotationId?: string
     ): void {
         const num = stepNumber ?? ++this.stepCounter;
         this.annotationMetadata.set(obj, {
             type,
             stepNumber: num,
             createdAt: Date.now(),
-            annotationId: annotationId ?? generateUUID(),
+            annotationId: annotationId ?? generateUUID()
         });
     }
 
     /** Fabric 对象 → Annotation */
     private fabricToAnnotation(
         obj: FabricObject,
-        meta: { type: AnnotationToolType; stepNumber?: number; createdAt?: number; annotationId?: string },
+        meta: { type: AnnotationToolType; stepNumber?: number; createdAt?: number; annotationId?: string }
     ): Annotation | null {
         const base = {
             id: meta.annotationId ?? generateUUID(),
             timestamp: meta.createdAt ?? Date.now(),
             sessionId: this.sessionId,
-            stepNumber: meta.stepNumber,
+            stepNumber: meta.stepNumber
         };
 
         switch (meta.type) {
@@ -411,8 +411,8 @@ export class CanvasLayer {
                         height: r.height! * (r.scaleY ?? 1),
                         strokeColor: String(r.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
                         strokeWidth: r.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
-                        fillColor: String(r.fill ?? ''),
-                    },
+                        fillColor: String(r.fill ?? '')
+                    }
                 };
             }
             case 'arrow': {
@@ -428,8 +428,8 @@ export class CanvasLayer {
                         endX: l.x2 ?? 0,
                         endY: l.y2 ?? 0,
                         color: String(l.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
-                        lineWidth: l.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
-                    },
+                        lineWidth: l.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth
+                    }
                 };
             }
             case 'text': {
@@ -447,8 +447,8 @@ export class CanvasLayer {
                         fontSize: t.fontSize ?? DEFAULT_ANNOTATION_CONFIG.fontSize,
                         fontFamily: t.fontFamily ?? DEFAULT_ANNOTATION_CONFIG.fontFamily,
                         color: String(t.fill ?? DEFAULT_ANNOTATION_CONFIG.textColor),
-                        backgroundColor: String(t.backgroundColor ?? ''),
-                    },
+                        backgroundColor: String(t.backgroundColor ?? '')
+                    }
                 };
             }
             case 'freehand': {
@@ -463,8 +463,8 @@ export class CanvasLayer {
                     data: {
                         points: points.length > 0 ? points : [{ x: obj.left!, y: obj.top! }],
                         color: String(obj.stroke ?? DEFAULT_ANNOTATION_CONFIG.strokeColor),
-                        lineWidth: obj.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth,
-                    },
+                        lineWidth: obj.strokeWidth ?? DEFAULT_ANNOTATION_CONFIG.strokeWidth
+                    }
                 };
             }
         }
@@ -485,7 +485,7 @@ export class CanvasLayer {
                     rx: 4,
                     ry: 4,
                     selectable: true,
-                    evented: true,
+                    evented: true
                 });
             }
             case 'arrow': {
@@ -494,20 +494,20 @@ export class CanvasLayer {
                     stroke: color,
                     strokeWidth: lineWidth,
                     selectable: true,
-                    evented: true,
+                    evented: true
                 });
                 const angle = Math.atan2(endY - startY, endX - startX);
                 const h = 14;
                 const tri = new Polygon([
                     { x: endX, y: endY },
                     { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
-                    { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
+                    { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) }
                 ], {
                     fill: color,
                     stroke: color,
                     strokeWidth: 2,
                     selectable: false,
-                    evented: false,
+                    evented: false
                 });
                 this.canvas!.add(line);
                 this.canvas!.add(tri);
@@ -524,7 +524,7 @@ export class CanvasLayer {
                     padding: 6,
                     selectable: true,
                     evented: true,
-                    editable: false, // 回放时不可编辑
+                    editable: false // 回放时不可编辑
                 });
             }
             case 'freehand': {
@@ -544,7 +544,7 @@ export class CanvasLayer {
                     strokeWidth: lineWidth,
                     fill: '',
                     selectable: true,
-                    evented: true,
+                    evented: true
                 });
             }
         }

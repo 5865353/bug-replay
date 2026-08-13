@@ -16,7 +16,7 @@ import {
     PLACEHOLDER_ZENTAO_PRODUCT,
     PLACEHOLDER_ZENTAO_PROJECT,
     PLACEHOLDER_ZENTAO_TOKEN,
-    PLACEHOLDER_ZENTAO_URL,
+    PLACEHOLDER_ZENTAO_URL
 } from '../constants';
 
 defineProps<{ settings: Settings; isVerifying: boolean }>();

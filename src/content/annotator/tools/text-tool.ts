@@ -9,7 +9,7 @@ import type { Canvas, TPointerEventInfo } from 'fabric';
 import {
     CURSOR_DEFAULT,
     CURSOR_TEXT,
-    FABRIC_EVENT_MOUSE_DOWN,
+    FABRIC_EVENT_MOUSE_DOWN
 } from '../../constants';
 import { BaseTool } from './base-tool';
 

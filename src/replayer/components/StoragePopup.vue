@@ -24,7 +24,7 @@ const cookieRows = computed<CookieRow[]>(() => {
         domain: c.domain || '',
         path: c.path || '/',
         secure: c.secure || false,
-        httpOnly: c.httpOnly || false,
+        httpOnly: c.httpOnly || false
     }));
 });
 

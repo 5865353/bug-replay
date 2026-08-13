@@ -40,7 +40,7 @@ export function useAnnotator(hooks: AnnotatorHooks) {
             }
         },
         onUndo: () => undo(),
-        onClearAll: () => clearAll(),
+        onClearAll: () => clearAll()
     });
 
     function switchTool(type: AnnotationToolType | null): void {
@@ -123,6 +123,6 @@ export function useAnnotator(hooks: AnnotatorHooks) {
         clearAll,
         getAnnotations,
         toolbar,
-        canvasLayer,
+        canvasLayer
     };
 }

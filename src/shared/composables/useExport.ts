@@ -24,7 +24,7 @@ import browser from 'webextension-polyfill';
 export async function exportSessionRRT(sessionId: string): Promise<void> {
     await browser.runtime.sendMessage({
         action: ContentToBackgroundAction.EXPORT_RRT,
-        payload: { sessionId },
+        payload: { sessionId }
     });
 }
 
@@ -32,7 +32,7 @@ export async function exportSessionRRT(sessionId: string): Promise<void> {
 export async function copySessionRRTToClipboard(sessionId: string): Promise<void> {
     await browser.runtime.sendMessage({
         action: ContentToBackgroundAction.EXPORT_RRT,
-        payload: { sessionId, clipboard: true },
+        payload: { sessionId, clipboard: true }
     });
 }
 

@@ -19,7 +19,7 @@ export class StorageManager {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-            request.onupgradeneeded = (event) => {
+            request.onupgradeneeded = event => {
                 const db = (event.target as IDBOpenDBRequest).result;
                 if (!db.objectStoreNames.contains(STORE_SESSIONS)) {
                     db.createObjectStore(STORE_SESSIONS, { keyPath: 'id' });
@@ -107,3 +107,6 @@ export class StorageManager {
         });
     }
 }
+
+/** 全局共享的存储管理器实例 */
+export const storageManager = new StorageManager();

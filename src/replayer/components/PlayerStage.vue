@@ -56,7 +56,7 @@ function onClickDropZone() {
                 点击或拖放 .rrt 文件
             </div>
             <div class="drop-zone-hint">
-                支持 .rrt / .json 格式的录制回放文件
+                支持 .rrt / .rrt.json / .rrt.txt / .json 格式的录制回放文件
             </div>
             <van-button round type="primary" size="small" class="mt-3">
                 选择文件
@@ -64,7 +64,7 @@ function onClickDropZone() {
             <input
                 ref="fileInput"
                 type="file"
-                accept=".rrt,.json"
+                accept=".rrt,.json,.txt"
                 class="hidden"
                 @change="emit('fileSelected', $event)"
             >

@@ -11,7 +11,7 @@ export function useRecording() {
     async function initStatus() {
         try {
             const response: BackgroundToContentMessage = await browser.runtime.sendMessage({
-                action: ContentToBackgroundAction.GET_RECORDING_STATUS,
+                action: ContentToBackgroundAction.GET_RECORDING_STATUS
             });
             if (response.action === BackgroundToContentAction.RECORDING_STATUS) {
                 const status = response.payload as { isRecording: boolean; isPaused: boolean };

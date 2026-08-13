@@ -16,7 +16,7 @@ import {
     PREVIEW_DASH_ARRAY,
     PREVIEW_FILL_OPACITY,
     PREVIEW_STROKE_WIDTH,
-    RECT_MIN_SIZE,
+    RECT_MIN_SIZE
 } from '../../constants';
 import { BaseTool } from './base-tool';
 
@@ -68,7 +68,7 @@ export class RectTool extends BaseTool {
             strokeWidth: PREVIEW_STROKE_WIDTH,
             strokeDashArray: [...PREVIEW_DASH_ARRAY],
             selectable: false,
-            evented: false,
+            evented: false
         });
         this.fc!.add(this.preview);
     };
@@ -82,7 +82,7 @@ export class RectTool extends BaseTool {
             left: Math.min(this.startX, ptr.x),
             top: Math.min(this.startY, ptr.y),
             width: Math.abs(w),
-            height: Math.abs(h),
+            height: Math.abs(h)
         });
         this.fc!.requestRenderAll();
     };

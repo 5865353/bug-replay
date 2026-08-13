@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { RecordingSessionSummary } from '@shared/types';
-import { ContentToBackgroundAction } from '@shared/types';
+import type { RecordingSessionSummary, ZentaoRrtAttachment } from '@shared/types';
+import { BackgroundToContentAction, ContentToBackgroundAction } from '@shared/types';
 import { showToast } from 'vant';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
 
 const props = defineProps<{
@@ -11,6 +11,10 @@ const props = defineProps<{
 }>();
 
 const hasActive = computed(() => props.activeSessionId !== null);
+
+/** 当前禅道 Bug 页面的 .rrt 附件信息（非禅道页面或无附件时为 null） */
+const zentaoRrt = ref<ZentaoRrtAttachment | null>(null);
+const zentaoChecking = ref(false);
 
 /** 当前扩展版本号（manifest 统一由 package.json 注入） */
 const version = browser.runtime.getManifest().version || '';
@@ -23,12 +27,66 @@ function checkSelected(): string | null {
     return props.activeSessionId;
 }
 
-async function openReplayer() {
-    const id = checkSelected();
-    if (!id)
+async function queryZentaoAttachments(): Promise<void> {
+    try {
+        const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id)
+            return;
+        const resp = await browser.tabs.sendMessage(tab.id, {
+            action: BackgroundToContentAction.QUERY_ZENTAO_ATTACHMENTS
+        }) as { payload?: { hasRrt: boolean; attachments: ZentaoRrtAttachment[] } } | undefined;
+        const atts = resp?.payload?.attachments;
+        if (resp?.payload?.hasRrt && atts?.length) {
+            zentaoRrt.value = atts[0]!;
+        }
+    }
+    catch {
+        // 非禅道页面 / content script 未加载时忽略
+    }
+    finally {
+        zentaoChecking.value = false;
+    }
+}
+
+async function playZentaoAttachment(): Promise<void> {
+    // 非禅道页面（或无 .rrt 附件）时回退为打开回放页
+    if (!zentaoRrt.value) {
+        await openReplayer();
         return;
+    }
+    zentaoChecking.value = true;
+    try {
+        const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id)
+            return;
+        const resp = await browser.tabs.sendMessage(tab.id, {
+            action: BackgroundToContentAction.PLAY_ZENTAO_ATTACHMENT
+        }) as { payload?: { ok: boolean; error?: string } } | undefined;
+        if (resp?.payload?.ok) {
+            // 回放页由后台打开，关闭当前 popup
+            window.close();
+        }
+        else {
+            showToast({ message: resp?.payload?.error || '禅道附件回放失败', position: 'top' });
+        }
+    }
+    catch {
+        showToast({ message: '无法连接页面，请刷新禅道页面后重试', position: 'top' });
+    }
+    finally {
+        zentaoChecking.value = false;
+    }
+}
+
+onMounted(() => {
+    zentaoChecking.value = true;
+    queryZentaoAttachments();
+});
+
+async function openReplayer() {
+    // 回放页始终可打开（支持直接拖入本地 .rrt 文件回放），不依赖当前选择
     const base = browser.runtime.getURL('src/replayer/index.html');
-    browser.tabs.create({ url: `${base}?sessionId=${id}` });
+    browser.tabs.create({ url: base });
 }
 
 function openUpload() {
@@ -58,9 +116,10 @@ async function copyToClipboard() {
 <template>
     <div class="footer-bar">
         <div class="footer-row">
-            <div class="footer-btn" :class="{ 'footer-btn-disabled': !hasActive }" @click="openReplayer">
+            <div class="footer-btn" :class="{ 'is-busy': zentaoChecking && zentaoRrt }" @click="playZentaoAttachment">
                 <div class="footer-btn-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)">
-                    <van-icon name="play-circle-o" size="18" color="#7c3aed" />
+                    <van-loading v-if="zentaoChecking && zentaoRrt" size="18" color="#7c3aed" />
+                    <van-icon v-else name="play-circle-o" size="18" color="#7c3aed" />
                 </div>
                 <span class="footer-btn-label">回放</span>
             </div>
@@ -127,6 +186,11 @@ async function copyToClipboard() {
 
 .footer-btn-disabled {
   opacity: 0.4;
+  pointer-events: none;
+}
+
+.footer-btn.is-busy {
+  opacity: 0.6;
   pointer-events: none;
 }
 

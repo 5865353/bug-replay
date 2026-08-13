@@ -42,8 +42,8 @@ export class RRWebRecorder {
         maskInputTypes: ['password'],
         sampling: {
             mousemove: 50,
-            scroll: 150,
-        },
+            scroll: 150
+        }
     };
 
     constructor(options: RRWebRecorderOptions) {
@@ -52,16 +52,16 @@ export class RRWebRecorder {
             ...options,
             sampling: {
                 ...RRWebRecorder.DEFAULTS.sampling,
-                ...options.sampling,
+                ...options.sampling
             },
             maskSelectors: [
                 ...RRWebRecorder.DEFAULTS.maskSelectors,
-                ...(options.maskSelectors ?? []),
+                ...(options.maskSelectors ?? [])
             ],
             maskInputTypes: [
                 ...RRWebRecorder.DEFAULTS.maskInputTypes,
-                ...(options.maskInputTypes ?? []),
-            ],
+                ...(options.maskInputTypes ?? [])
+            ]
         } as Required<RRWebRecorderOptions>;
     }
 
@@ -72,7 +72,7 @@ export class RRWebRecorder {
         this.eventCount = 0;
 
         const stopFunction = record({
-            emit: (event) => {
+            emit: event => {
                 this.eventCount++;
                 this.options.onEvent(event as rrwebEvent);
             },
@@ -84,21 +84,21 @@ export class RRWebRecorder {
                 text: this.options.maskInputTypes.includes('text'),
                 email: this.options.maskInputTypes.includes('email'),
                 tel: this.options.maskInputTypes.includes('tel'),
-                number: this.options.maskInputTypes.includes('number'),
+                number: this.options.maskInputTypes.includes('number')
             },
             // 屏蔽指定选择器
             maskTextSelector: this.options.maskSelectors.join(','),
             // 采样策略（减少事件量）
             sampling: {
                 mousemove: this.options.sampling.mousemove,
-                scroll: this.options.sampling.scroll,
+                scroll: this.options.sampling.scroll
             },
             // 内联样式表（确保回放时样式正确）
             inlineStylesheet: true,
             // 收集 iframe 内容
             collectFonts: true,
             // 不录制 Canvas 元素（减少数据量）
-            recordCanvas: false,
+            recordCanvas: false
         });
 
         this.stopFn = stopFunction as unknown as (() => void) | null;

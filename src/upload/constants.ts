@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: UploadSettings = {
     aiProvider: '',
     aiApiKey: '',
     aiBaseUrl: '',
-    aiModel: '',
+    aiModel: ''
 };
 
 // ============================================================

@@ -32,7 +32,7 @@ const {
     toggleAnnotations,
     toggleMouseTrail,
     toggleDevtools,
-    replay,
+    replay
 } = useRePlayer();
 
 function onDropFile(file: File) {
@@ -48,7 +48,7 @@ function onFileSelected(event: Event) {
 
 // ---- 导出 ----
 const { exportRRT, copyToClipboard } = useExport({
-    currentPackage,
+    currentPackage
 });
 
 async function handleExportRRT() {

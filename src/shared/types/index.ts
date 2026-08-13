@@ -12,16 +12,16 @@ export type {
     ArrowAnnotation,
     FreehandAnnotation,
     RectAnnotation,
-    TextAnnotation,
+    TextAnnotation
 } from './annotation';
 export {
     ANNOTATION_COLORS,
-    DEFAULT_ANNOTATION_CONFIG,
+    DEFAULT_ANNOTATION_CONFIG
 } from './annotation';
 
 export type {
     ConsoleLevel,
-    ConsoleLog,
+    ConsoleLog
 } from './console';
 export { CAPTURE_STACK_LEVELS, CONSOLE_LEVEL_COLORS } from './console';
 
@@ -29,27 +29,27 @@ export type { CookieEntry, EnvironmentSnapshot } from './environment';
 
 export type {
     HttpMethod,
-    NetworkLog,
+    NetworkLog
 } from './network';
 export { MAX_RESPONSE_BODY_SIZE, SENSITIVE_HEADERS } from './network';
 
 export type {
     PageEvent,
     RecordingSession,
-    RecordingStatus,
+    RecordingStatus
 } from './recording';
 
 export type {
     ReplayState,
     RRTPackage,
     RRTPackageMetadata,
-    rrwebEvent,
+    rrwebEvent
 } from './rrt-package';
 export {
     REPLAY_SPEEDS,
     RRT_FILE_EXTENSION,
     RRT_FORMAT_VERSION,
-    RRT_MIME_TYPE,
+    RRT_MIME_TYPE
 } from './rrt-package';
 
 // ============================================================
@@ -82,6 +82,18 @@ export interface ZentaoProjectsResult {
     error?: string;
 }
 
+/** 禅道 Bug 附件中的 .rrt 录制文件（供页面/popup 回放按钮使用） */
+export interface ZentaoRrtAttachment {
+    /** 附件 ID（fileID） */
+    id: string;
+    /** 附件文件名（含扩展名，如 xx.rrt / xx.rrt.json） */
+    filename: string;
+    /** 附件下载绝对地址 */
+    url: string;
+    /** 附件大小展示文本（如 "4.92KB"） */
+    sizeText?: string;
+}
+
 // ============================================================
 // 消息协议类型（Content Script ↔ Service Worker）
 // ============================================================
@@ -102,6 +114,10 @@ export enum ContentToBackgroundAction {
     DELETE_ALL_SESSIONS = 'DELETE_ALL_SESSIONS',
     UPDATE_SESSION_META = 'UPDATE_SESSION_META',
     GET_RECORDING_STATUS = 'GET_RECORDING_STATUS',
+    /** 导入 .rrt 附件内容为回放会话（禅道附件回放） */
+    IMPORT_RRT = 'IMPORT_RRT',
+    /** 后台直接下载附件内容（helper 不可用时的回退通道） */
+    DOWNLOAD_ATTACHMENT = 'DOWNLOAD_ATTACHMENT'
 }
 
 /** Content Script → Service Worker 消息体 */
@@ -127,7 +143,19 @@ export enum BackgroundToContentAction {
     SESSIONS_CLEARED = 'SESSIONS_CLEARED',
     SESSION_UPDATED = 'SESSION_UPDATED',
     RECORDING_STATUS = 'RECORDING_STATUS',
-    ERROR = 'ERROR',
+    /** Popup/后台 → Content Script：查询当前禅道页面的 .rrt 附件列表 */
+    QUERY_ZENTAO_ATTACHMENTS = 'QUERY_ZENTAO_ATTACHMENTS',
+    /** Popup → Content Script：触发禅道 .rrt 附件下载并回放 */
+    PLAY_ZENTAO_ATTACHMENT = 'PLAY_ZENTAO_ATTACHMENT',
+    /** Content Script → 调用方：禅道附件查询结果 */
+    ZENTAO_ATTACHMENTS_RESULT = 'ZENTAO_ATTACHMENTS_RESULT',
+    /** Content Script → 调用方：禅道附件回放触发结果 */
+    ZENTAO_PLAY_RESULT = 'ZENTAO_PLAY_RESULT',
+    /** Background → Content Script：.rrt 附件已导入回放会话 */
+    IMPORTED_RRT = 'IMPORTED_RRT',
+    /** Background → Content Script：附件后台下载结果 */
+    DOWNLOAD_ATTACHMENT_RESULT = 'DOWNLOAD_ATTACHMENT_RESULT',
+    ERROR = 'ERROR'
 }
 
 /** Service Worker → Content Script 消息体 */

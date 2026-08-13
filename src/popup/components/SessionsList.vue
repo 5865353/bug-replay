@@ -21,7 +21,7 @@ function handleDeleteAll() {
         title: '全部删除',
         message: `确定要删除全部 ${props.sessions.length} 条录制记录吗？此操作不可撤销。`,
         confirmButtonText: '全部删除',
-        confirmButtonColor: '#ee4141',
+        confirmButtonColor: '#ee4141'
     }).then(() => {
         emit('deleteAll');
     }).catch(() => {});

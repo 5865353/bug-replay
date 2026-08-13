@@ -14,7 +14,7 @@ import { CAPTURE_STACK_LEVELS } from '@shared/types';
 import {
     captureStackTrace,
     generateUUID,
-    serializeConsoleArgs,
+    serializeConsoleArgs
 } from '@shared/utils';
 import { CONSOLE_LEVELS } from '../constants';
 
@@ -93,7 +93,7 @@ export class ConsoleInterceptor {
             level,
             args: serializeConsoleArgs(args),
             timestamp: Date.now(),
-            rrwebEventIndex: this.rrwebEventCount,
+            rrwebEventIndex: this.rrwebEventCount
         };
 
         // 仅 warn/error 级别采集调用栈

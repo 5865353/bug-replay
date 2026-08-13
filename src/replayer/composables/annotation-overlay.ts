@@ -51,7 +51,7 @@ export class AnnotationOverlay {
             height: ch,
             selection: false,
             renderOnAddRemove: false,
-            backgroundColor: 'transparent',
+            backgroundColor: 'transparent'
         });
         this.canvas.renderAll();
 
@@ -63,12 +63,12 @@ export class AnnotationOverlay {
 
         // 筛选：已创建 且 未删除（或尚未到删除时间）
         const active = this.annotations.filter(
-            a => a.timestamp <= currentTime && (!a.deletedAt || a.deletedAt > currentTime),
+            a => a.timestamp <= currentTime && (!a.deletedAt || a.deletedAt > currentTime)
         );
 
         // 需要移除的标注（到了 deletedAt 时间点）
         const toRemove = this.annotations.filter(
-            a => a.deletedAt && a.deletedAt <= currentTime && a.timestamp <= currentTime,
+            a => a.deletedAt && a.deletedAt <= currentTime && a.timestamp <= currentTime
         );
         const removeIds = new Set(toRemove.map(a => a.id));
 
@@ -129,7 +129,7 @@ export class AnnotationOverlay {
 
         const pathStr = trail.reduce(
             (acc, p, i) => acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`),
-            '',
+            ''
         );
 
         this.mouseTrail = new Path(pathStr, {
@@ -138,7 +138,7 @@ export class AnnotationOverlay {
             fill: '',
             opacity: 0.4,
             selectable: false,
-            evented: false,
+            evented: false
         });
 
         this.canvas.add(this.mouseTrail);
@@ -257,7 +257,7 @@ export class AnnotationOverlay {
                     evented: false,
                     opacity,
                     scaleX: scale,
-                    scaleY: scale,
+                    scaleY: scale
                 });
                 break;
             case 'arrow': {
@@ -267,7 +267,7 @@ export class AnnotationOverlay {
                     strokeWidth: lineWidth,
                     selectable: false,
                     evented: false,
-                    opacity,
+                    opacity
                 });
                 this.canvas!.add(line);
 
@@ -276,14 +276,14 @@ export class AnnotationOverlay {
                 const tri = new Polygon([
                     { x: endX, y: endY },
                     { x: endX - h * Math.cos(angle - Math.PI / 6), y: endY - h * Math.sin(angle - Math.PI / 6) },
-                    { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) },
+                    { x: endX - h * Math.cos(angle + Math.PI / 6), y: endY - h * Math.sin(angle + Math.PI / 6) }
                 ], {
                     fill: color,
                     stroke: color,
                     strokeWidth: 2,
                     selectable: false,
                     evented: false,
-                    opacity,
+                    opacity
                 });
                 this.canvas!.add(tri);
                 break;
@@ -301,7 +301,7 @@ export class AnnotationOverlay {
                     evented: false,
                     opacity,
                     scaleX: scale,
-                    scaleY: scale,
+                    scaleY: scale
                 });
                 break;
             case 'freehand': {
@@ -314,8 +314,8 @@ export class AnnotationOverlay {
                         fill: '',
                         selectable: false,
                         evented: false,
-                        opacity,
-                    },
+                        opacity
+                    }
                 );
                 this.canvas!.add(path);
                 break;

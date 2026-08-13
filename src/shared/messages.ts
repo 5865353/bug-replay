@@ -6,7 +6,7 @@ import type {
     BackgroundToContentAction,
     BackgroundToContentMessage,
     ContentToBackgroundAction,
-    ContentToBackgroundMessage,
+    ContentToBackgroundMessage
 } from './types';
 
 import browser from 'webextension-polyfill';
@@ -23,12 +23,12 @@ export function generateRequestId(): string {
  */
 export function createContentMessage(
     action: ContentToBackgroundAction,
-    payload?: unknown,
+    payload?: unknown
 ): ContentToBackgroundMessage {
     return {
         action,
         payload,
-        requestId: generateRequestId(),
+        requestId: generateRequestId()
     };
 }
 
@@ -38,12 +38,12 @@ export function createContentMessage(
 export function createBackgroundMessage(
     action: BackgroundToContentAction,
     payload?: unknown,
-    requestId?: string,
+    requestId?: string
 ): BackgroundToContentMessage {
     return {
         action,
         payload,
-        requestId,
+        requestId
     };
 }
 
@@ -52,7 +52,7 @@ export function createBackgroundMessage(
  */
 export async function sendToBackground(
     action: ContentToBackgroundAction,
-    payload?: unknown,
+    payload?: unknown
 ): Promise<BackgroundToContentMessage> {
     const message = createContentMessage(action, payload);
     return browser.runtime.sendMessage(message);
@@ -64,7 +64,7 @@ export async function sendToBackground(
 export async function sendToContentScript(
     tabId: number,
     action: BackgroundToContentAction,
-    payload?: unknown,
+    payload?: unknown
 ): Promise<void> {
     const message = createBackgroundMessage(action, payload);
     await browser.tabs.sendMessage(tabId, message);

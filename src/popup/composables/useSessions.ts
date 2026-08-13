@@ -9,7 +9,7 @@ export function useSessions() {
     async function loadSessions() {
         try {
             const response = await browser.runtime.sendMessage({
-                action: ContentToBackgroundAction.GET_SESSIONS,
+                action: ContentToBackgroundAction.GET_SESSIONS
             });
             const typedResponse = response as BackgroundToContentMessage;
 
@@ -26,14 +26,14 @@ export function useSessions() {
     async function deleteSession(sessionId: string) {
         await browser.runtime.sendMessage({
             action: ContentToBackgroundAction.DELETE_SESSION,
-            payload: { sessionId },
+            payload: { sessionId }
         });
         await loadSessions();
     }
 
     async function deleteAllSessions() {
         await browser.runtime.sendMessage({
-            action: ContentToBackgroundAction.DELETE_ALL_SESSIONS,
+            action: ContentToBackgroundAction.DELETE_ALL_SESSIONS
         });
         await loadSessions();
     }

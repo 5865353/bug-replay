@@ -29,7 +29,7 @@ export class EnvironmentCollector {
             cookies: await EnvironmentCollector.collectCookies(),
             localStorage: EnvironmentCollector.collectStorage(localStorage),
             sessionStorage: EnvironmentCollector.collectStorage(sessionStorage),
-            timestamp: Date.now(),
+            timestamp: Date.now()
         };
     }
 
@@ -45,13 +45,13 @@ export class EnvironmentCollector {
                 expires: c.expirationDate,
                 secure: c.secure,
                 httpOnly: c.httpOnly,
-                sameSite: c.sameSite as CookieEntry['sameSite'],
+                sameSite: c.sameSite as CookieEntry['sameSite']
             }));
         }
         catch {
             // fallback: 仅 name=value
             const result: CookieEntry[] = [];
-            document.cookie.split(';').forEach((cookie) => {
+            document.cookie.split(';').forEach(cookie => {
                 const [key, ...vp] = cookie.trim().split('=');
                 if (key) {
                     result.push({
@@ -60,7 +60,7 @@ export class EnvironmentCollector {
                         domain: '',
                         path: '/',
                         secure: false,
-                        httpOnly: false,
+                        httpOnly: false
                     });
                 }
             });
@@ -72,7 +72,7 @@ export class EnvironmentCollector {
      * 采集 Storage（LocalStorage / SessionStorage）
      */
     private static collectStorage(
-        storage: Storage,
+        storage: Storage
     ): Record<string, string> {
         const data: Record<string, string> = {};
         try {

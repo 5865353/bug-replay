@@ -92,7 +92,7 @@ function buildNetworkSection(requests: NetworkLog[]): string {
         const resp = req.responseBody ? ` resp:${truncate(req.responseBody, MAX_BODY_LENGTH)}` : '';
         const err = req.error ? ` err:${req.error}` : '';
         lines.push(
-            `- [${req.method}] ${req.status} ${truncate(req.url, 140)} ${req.duration}ms${err}${body}${resp}`,
+            `- [${req.method}] ${req.status} ${truncate(req.url, 140)} ${req.duration}ms${err}${body}${resp}`
         );
     };
 
@@ -109,7 +109,7 @@ function buildPageEventSection(events: PageEvent[]): string {
     const urls = events.filter(e => e.type === 'url_change');
     if (!urls.length)
         return '';
-    const lines = sample(urls, PAGE_EVENT_LIMIT).map((e) => {
+    const lines = sample(urls, PAGE_EVENT_LIMIT).map(e => {
         const d = e.data as { from?: string; to?: string };
         const from = d.from ? truncate(d.from, 120) : '?';
         const to = d.to ? truncate(d.to, 120) : '?';
@@ -124,7 +124,7 @@ function buildEnvSection(session: RecordingSession): string {
     const lines = [
         '## 环境信息',
         `- 页面 URL: ${env?.url || '未知'}`,
-        `- 页面标题: ${session.title || '未知'}`,
+        `- 页面标题: ${session.title || '未知'}`
     ];
     if (env?.userAgent)
         lines.push(`- 浏览器: ${truncate(env.userAgent, 140)}`);
@@ -149,7 +149,7 @@ export function buildAIContext(session: RecordingSession): string {
     const sections = [
         { text: buildConsoleSection(session.consoleLogs || []), priority: 4 },
         { text: buildNetworkSection(session.networkLogs || []), priority: 3 },
-        { text: buildPageEventSection(session.pageEvents || []), priority: 2 },
+        { text: buildPageEventSection(session.pageEvents || []), priority: 2 }
     ]
         .filter(s => s.text)
         .sort((a, b) => b.priority - a.priority);

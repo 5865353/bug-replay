@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import browser from 'webextension-polyfill';
 
 const props = defineProps<{ title: string; description: string; tags: string; hasAi: boolean; generatingAi: boolean }>();
@@ -8,6 +8,13 @@ const emit = defineEmits<{ 'update:title': [value: string]; 'update:description'
 // AI 生成：内联展开面板（不再使用弹窗）
 const aiOpen = ref(false);
 const aiPrompt = ref('');
+
+// AI 生成完成（无论成败）后自动收起内联面板，结果会填充到下方描述框
+watch(() => props.generatingAi, val => {
+    if (!val) {
+        aiOpen.value = false;
+    }
+});
 
 function toggleAi() {
     if (props.generatingAi)

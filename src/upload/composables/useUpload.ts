@@ -10,6 +10,14 @@ import browser from 'webextension-polyfill';
 import { buildAIContext } from '../ai-context';
 import { AI_SYSTEM_PROMPT, DEFAULT_SETTINGS, TOAST_AI_FAIL, TOAST_AI_OK, TOAST_NETWORK_ERROR } from '../constants';
 
+/** 提交结果状态（供 App.vue 弹窗展示） */
+export interface UploadSubmitResult {
+    success: boolean;
+    issueUrl?: string;
+    warning?: string;
+    error?: string;
+}
+
 export function useUpload() {
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get('sessionId') || '';
@@ -32,6 +40,7 @@ export function useUpload() {
     const selectedProjectId = ref<number | null>(null);
     const loadingProjects = ref(false);
     const projectsError = ref('');
+    const submitResult = ref<UploadSubmitResult | null>(null);
 
     const hasAi = computed(() => !!settings.value.aiProvider && !!settings.value.aiApiKey);
     const canSubmit = computed(() =>
@@ -49,7 +58,7 @@ export function useUpload() {
             password: settings.value.zentaoPassword,
             apiToken: settings.value.zentaoApiToken,
             productId: selectedProductId.value ?? (Number(settings.value.zentaoProductId) || 0),
-            projectId: selectedProjectId.value ?? (Number(settings.value.zentaoProjectId) || 0),
+            projectId: selectedProjectId.value ?? (Number(settings.value.zentaoProjectId) || 0)
         };
     }
 
@@ -66,7 +75,7 @@ export function useUpload() {
         try {
             const resp = await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.GET_ZENTAO_PRODUCTS,
-                payload: buildZentaoConfig(),
+                payload: buildZentaoConfig()
             }) as BackgroundToContentMessage;
 
             if (resp.action === BackgroundToContentAction.ZENTAO_PRODUCTS) {
@@ -95,7 +104,6 @@ export function useUpload() {
         }
     }
 
-    // 切换到禅道时自动加载产品列表
     /** 从禅道拉取项目列表 */
     async function loadZentaoProjects(): Promise<void> {
         if (!settings.value.zentaoBaseUrl) {
@@ -109,7 +117,7 @@ export function useUpload() {
         try {
             const resp = await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.GET_ZENTAO_PROJECTS,
-                payload: buildZentaoConfig(),
+                payload: buildZentaoConfig()
             }) as BackgroundToContentMessage;
 
             if (resp.action === BackgroundToContentAction.ZENTAO_PROJECTS) {
@@ -138,7 +146,7 @@ export function useUpload() {
     }
 
     // 切换产品时重新加载项目列表
-    watch(selectedProductId, (id) => {
+    watch(selectedProductId, id => {
         if (id !== null) {
             loadZentaoProjects();
         }
@@ -160,7 +168,7 @@ export function useUpload() {
             if (sessionId) {
                 const resp = await browser.runtime.sendMessage({
                     action: ContentToBackgroundAction.GET_SESSION,
-                    payload: { sessionId },
+                    payload: { sessionId }
                 }) as BackgroundToContentMessage;
 
                 if (resp.action === BackgroundToContentAction.SESSION_DATA && resp.payload) {
@@ -210,8 +218,8 @@ export function useUpload() {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.value.aiApiKey}` },
                 body: JSON.stringify({
                     model: settings.value.aiModel,
-                    messages: [{ role: 'system', content: AI_SYSTEM_PROMPT }, { role: 'user', content: ctx }],
-                }),
+                    messages: [{ role: 'system', content: AI_SYSTEM_PROMPT }, { role: 'user', content: ctx }]
+                })
             });
             if (!resp.ok) {
                 const err = await resp.text().catch(() => '');
@@ -230,6 +238,11 @@ export function useUpload() {
         }
     }
 
+    /** 清除提交结果（重新提交时重置弹窗状态） */
+    function resetSubmitResult(): void {
+        submitResult.value = null;
+    }
+
     async function submit(): Promise<void> {
         if (!canSubmit.value) return;
         submitting.value = true;
@@ -244,27 +257,24 @@ export function useUpload() {
                     updates: {
                         title: title.value.trim(),
                         description: description.value.trim(),
-                        tags: parseTags(),
-                    },
-                },
+                        tags: parseTags()
+                    }
+                }
             });
 
             const resp = await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.SUBMIT_TO_PLATFORM,
-                payload: { sessionId, platform: 'zentao', config: cfg },
+                payload: { sessionId, platform: 'zentao', config: cfg }
             }) as BackgroundToContentMessage;
 
             if (resp.action === BackgroundToContentAction.SESSION_UPDATED) {
                 const r = resp.payload as { issueUrl?: string; warning?: string };
-                if (r.warning) {
-                    // 附件等非致命告警：延长展示时间，避免页面过早关闭
-                    showToast({ message: r.warning, position: 'top', duration: 6000 });
-                    setTimeout(() => window.close(), 6000);
-                }
-                else {
-                    showToast({ message: r.issueUrl ? `已提交: ${r.issueUrl}` : '提交成功', duration: 4000 });
-                    setTimeout(() => window.close(), 2000);
-                }
+                // 不再使用 toast + 自动关闭，改为弹窗展示，由用户确认后关闭页面
+                submitResult.value = {
+                    success: true,
+                    issueUrl: r.issueUrl,
+                    warning: r.warning
+                };
             }
             else {
                 showToast({ message: `提交失败: ${resp.payload || '未知错误'}`, duration: 3000 });
@@ -301,6 +311,8 @@ export function useUpload() {
         loadZentaoProjects,
         loadZentaoProducts,
         generateDescription,
-        submit,
+        submitResult,
+        resetSubmitResult,
+        submit
     };
 }

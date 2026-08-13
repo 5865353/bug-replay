@@ -4,7 +4,7 @@
 
 import {
     MAX_ARG_SERIALIZE_LENGTH,
-    MAX_SERIALIZE_DEPTH,
+    MAX_SERIALIZE_DEPTH
 } from './constants';
 
 // ============================================================
@@ -15,7 +15,7 @@ import {
  * 生成简化的 UUID v4
  */
 export function generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
         const r = (Math.random() * 16) | 0;
         const v = c === 'x' ? r : (r & 0x3) | 0x8;
         return v.toString(16);
@@ -84,7 +84,7 @@ export function safeStringify(value: unknown): string {
                 return {
                     name: obj.name,
                     message: obj.message,
-                    stack: obj.stack,
+                    stack: obj.stack
                 };
             }
 
@@ -240,7 +240,7 @@ export function downloadFile(content: string, filename: string, mimeType = 'appl
  */
 export function filterSensitiveKeys(
     obj: Record<string, string>,
-    sensitiveKeys: string[],
+    sensitiveKeys: string[]
 ): Record<string, string> {
     const filtered: Record<string, string> = {};
     const lowerSensitiveKeys = sensitiveKeys.map(k => k.toLowerCase());

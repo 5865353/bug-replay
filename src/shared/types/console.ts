@@ -27,7 +27,7 @@ export const CONSOLE_LEVEL_COLORS: Record<ConsoleLevel, string> = {
     info: '#3B82F6', // 蓝色
     warn: '#F59E0B', // 黄色
     error: '#EF4444', // 红色
-    debug: '#8B5CF6', // 紫色
+    debug: '#8B5CF6' // 紫色
 };
 
 /** 需要采集调用栈的日志级别 */

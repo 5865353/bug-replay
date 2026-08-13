@@ -58,7 +58,7 @@ export const DEFAULT_SETTINGS: Settings = {
     aiProvider: '',
     aiApiKey: '',
     aiBaseUrl: '',
-    aiModel: '',
+    aiModel: ''
 };
 
 // ============================================================
@@ -70,14 +70,14 @@ export const MAX_DURATION_OPTIONS = [
     { value: 10, label: '10 分钟' },
     { value: 15, label: '15 分钟' },
     { value: 30, label: '30 分钟' },
-    { value: 60, label: '60 分钟' },
+    { value: 60, label: '60 分钟' }
 ] as const;
 
 export const REPLAY_SPEED_OPTIONS = [
     { value: 0.5, label: '0.5×' },
     { value: 1, label: '1×' },
     { value: 2, label: '2×' },
-    { value: 4, label: '4×' },
+    { value: 4, label: '4×' }
 ] as const;
 
 // ============================================================
@@ -100,7 +100,7 @@ export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
     { value: 'together', label: 'Together AI', baseUrl: 'https://api.together.xyz/v1', defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
     { value: 'qwen', label: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', defaultModel: 'qwen-plus' },
     { value: 'ollama', label: 'Ollama (本地)', baseUrl: 'http://localhost:11434/v1', defaultModel: 'llama3' },
-    { value: 'custom', label: '自定义', baseUrl: '', defaultModel: '' },
+    { value: 'custom', label: '自定义', baseUrl: '', defaultModel: '' }
 ];
 
 // ============================================================

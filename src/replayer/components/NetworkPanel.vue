@@ -38,7 +38,7 @@ const visibleLogs = computed(() => {
     if (searchQuery.value) {
         const q = searchQuery.value.toLowerCase();
         list = list.filter(l =>
-            l.url.toLowerCase().includes(q) || l.method.toLowerCase().includes(q),
+            l.url.toLowerCase().includes(q) || l.method.toLowerCase().includes(q)
         );
     }
 
@@ -79,7 +79,7 @@ const visibleLogs = computed(() => {
 });
 
 const selectedLog = computed(() =>
-    selectedIndex.value !== null ? visibleLogs.value[selectedIndex.value] : null,
+    selectedIndex.value !== null ? visibleLogs.value[selectedIndex.value] : null
 );
 
 function selectRow(i: number) {

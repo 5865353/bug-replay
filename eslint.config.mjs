@@ -21,7 +21,7 @@ export default antfu(
     },
 
     {
-        files: ['**/*.ts', '**/*.js'],
+        files: ['**/*.ts', '**/*.js', '**/*.vue'],
         languageOptions: {
             globals: {
                 window: 'readonly',
@@ -65,6 +65,9 @@ export default antfu(
             }],
             'ts/no-non-null-assertion': 'off',
             'antfu/if-newline': 'off',
+            'style/semi': ['error', 'always'],
+            'style/comma-dangle': ['error', 'never'],
+            'style/arrow-parens': ['error', 'as-needed'],
         },
     },
 

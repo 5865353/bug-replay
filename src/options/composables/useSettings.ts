@@ -15,7 +15,7 @@ import {
     TOAST_VERIFY_FAIL,
     TOAST_VERIFY_ZENTAO_OK,
     ZENTAO_LOGIN_PATH,
-    ZENTAO_VERIFY_PATH,
+    ZENTAO_VERIFY_PATH
 } from '../constants';
 
 export function useSettings() {
@@ -56,7 +56,7 @@ export function useSettings() {
                 const loginResp = await fetch(`${baseUrl}${ZENTAO_LOGIN_PATH}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify({ account: zentaoAccount, password: zentaoPassword }),
+                    body: JSON.stringify({ account: zentaoAccount, password: zentaoPassword })
                 });
                 if (loginResp.ok) {
                     const loginData = await loginResp.json();
@@ -81,14 +81,14 @@ export function useSettings() {
 
             const resp = await fetch(
                 `${baseUrl}${ZENTAO_VERIFY_PATH}`,
-                { headers: { Token: token, Accept: 'application/json' } },
+                { headers: { Token: token, Accept: 'application/json' } }
             );
             showToast({ message: resp.ok ? TOAST_VERIFY_ZENTAO_OK : TOAST_VERIFY_FAIL(resp.status), duration: resp.ok ? 2000 : 3000 });
         }
         catch (err: unknown) {
             showToast({
                 message: `连接失败: ${err instanceof Error ? err.message : TOAST_NETWORK_ERROR}`,
-                duration: 3000,
+                duration: 3000
             });
         }
         finally {
@@ -110,13 +110,13 @@ export function useSettings() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${aiApiKey}`,
+                    'Authorization': `Bearer ${aiApiKey}`
                 },
                 body: JSON.stringify({
                     model: aiModel,
                     messages: [{ role: 'user', content: 'ping' }],
-                    max_tokens: 1,
-                }),
+                    max_tokens: 1
+                })
             });
             if (resp.ok) {
                 showToast({ message: TOAST_AI_OK, duration: 2000 });
@@ -130,7 +130,7 @@ export function useSettings() {
         catch (err: unknown) {
             showToast({
                 message: `连接失败: ${err instanceof Error ? err.message : TOAST_NETWORK_ERROR}`,
-                duration: 3000,
+                duration: 3000
             });
         }
         finally {

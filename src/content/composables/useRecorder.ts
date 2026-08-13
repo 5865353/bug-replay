@@ -72,7 +72,7 @@ export function useRecorder(hooks: RecorderHooks = {}) {
 
         // Start sub-modules
         rrwebRecorder = new RRWebRecorder({
-            onEvent: (event) => {
+            onEvent: event => {
                 if (session) {
                     session.events.push(event);
                     eventCountSinceFlush++;
@@ -85,18 +85,18 @@ export function useRecorder(hooks: RecorderHooks = {}) {
             maskAllInputs: maskInputs,
             sampling: {
                 mousemove: mouseSample,
-                scroll: scrollSample,
-            },
+                scroll: scrollSample
+            }
         });
         await rrwebRecorder.start();
 
         consoleInterceptor = new ConsoleInterceptor({
-            onLog: (log) => {
+            onLog: log => {
                 if (session) {
                     log.rrwebEventIndex = rrwebRecorder?.eventTotal ?? 0;
                     session.consoleLogs.push(log);
                 }
-            },
+            }
         });
         consoleInterceptor.start();
 
@@ -185,7 +185,7 @@ export function useRecorder(hooks: RecorderHooks = {}) {
             annotations: [],
             pageEvents: [],
             environment: null,
-            tags: [],
+            tags: []
         };
     }
 

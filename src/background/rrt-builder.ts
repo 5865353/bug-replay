@@ -60,14 +60,14 @@ export async function buildRRTPackage(session: RecordingSession): Promise<RRTPac
             tags: session.tags,
             extensionVersion: EXTENSION_VERSION,
             createdBy: createdBy || undefined,
-            externalIssueId: session.externalIssueId,
+            externalIssueId: session.externalIssueId
         },
         environment: sanitizeEnvironment(session.environment!),
         rrwebEvents: session.events,
         networkLogs: sanitizeNetworkLogs(session.networkLogs),
         consoleLogs: sanitizeConsoleLogs(session.consoleLogs),
         annotations: session.annotations,
-        pageEvents: session.pageEvents,
+        pageEvents: session.pageEvents
     };
 }
 
@@ -87,7 +87,7 @@ export function generateRRTFilename(session: RecordingSession): string {
  * MV3 Service Worker 不支持 URL.createObjectURL / FileReader，使用 btoa
  */
 export async function downloadRRTFile(
-    session: RecordingSession,
+    session: RecordingSession
 ): Promise<void> {
     const rrtPackage = await buildRRTPackage(session);
     const jsonStr = JSON.stringify(rrtPackage, null, 2);
@@ -100,7 +100,7 @@ export async function downloadRRTFile(
     await browser.downloads.download({
         url: dataUrl,
         filename,
-        saveAs: true,
+        saveAs: true
     });
 }
 
@@ -108,7 +108,7 @@ export async function downloadRRTFile(
  * 将 RRT 数据复制到剪贴板
  */
 export async function copyRRTToClipboard(
-    session: RecordingSession,
+    session: RecordingSession
 ): Promise<void> {
     const rrtPackage = await buildRRTPackage(session);
     const jsonStr = safeStringify(rrtPackage) ?? JSON.stringify(rrtPackage);
@@ -127,13 +127,13 @@ function sanitizeNetworkLogs(logs: NetworkLog[]): NetworkLog[] {
     return logs.map(log => ({
         ...log,
         requestHeaders: filterSensitiveHeaders(log.requestHeaders),
-        responseHeaders: filterSensitiveHeaders(log.responseHeaders),
+        responseHeaders: filterSensitiveHeaders(log.responseHeaders)
     }));
 }
 
 /** 过滤 headers 中的敏感字段 */
 function filterSensitiveHeaders(
-    headers: Record<string, string>,
+    headers: Record<string, string>
 ): Record<string, string> {
     const filtered: Record<string, string> = {};
     for (const [key, value] of Object.entries(headers)) {
@@ -150,19 +150,19 @@ function filterSensitiveHeaders(
  * - (document.cookie 天然不含 HttpOnly，此处为防御性代码)
  */
 function sanitizeEnvironment(
-    env: NonNullable<RecordingSession['environment']>,
+    env: NonNullable<RecordingSession['environment']>
 ): NonNullable<RecordingSession['environment']> {
     return {
         ...env,
         cookies: env.cookies ?? {},
         localStorage: truncateStorageValues(env.localStorage ?? {}),
-        sessionStorage: truncateStorageValues(env.sessionStorage ?? {}),
+        sessionStorage: truncateStorageValues(env.sessionStorage ?? {})
     };
 }
 
 /** 截断 storage 中过长的值（> 1KB），防止敏感 token 泄露 */
 function truncateStorageValues(
-    storage: Record<string, string>,
+    storage: Record<string, string>
 ): Record<string, string> {
     const maxLen = 1024; // 1KB
     const result: Record<string, string> = {};
@@ -179,12 +179,12 @@ function truncateStorageValues(
  * 确保参数中不包含未处理的循环引用或敏感对象
  */
 function sanitizeConsoleLogs(
-    logs: RecordingSession['consoleLogs'],
+    logs: RecordingSession['consoleLogs']
 ): RecordingSession['consoleLogs'] {
     return logs.map(log => ({
         ...log,
         // args 已由 console-interceptor 使用 safeStringify 处理
         // 此处保留原值，仅做类型安全检查
-        args: log.args ?? [],
+        args: log.args ?? []
     }));
 }

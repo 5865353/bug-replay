@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { showToast } from 'vant';
 import browser from 'webextension-polyfill';
 import BugForm from './components/BugForm.vue';
 import SessionInfoCard from './components/SessionInfoCard.vue';
@@ -25,8 +26,9 @@ const {
     selectedProjectId,
     loadingProjects,
     projectsError,
+    submitResult,
     generateDescription,
-    submit,
+    submit
 } = useUpload();
 
 function closePage() {
@@ -35,6 +37,24 @@ function closePage() {
 
 function openSettings() {
     browser.runtime.openOptionsPage();
+}
+
+function openLink() {
+    if (submitResult.value?.issueUrl) {
+        window.open(submitResult.value.issueUrl, '_blank');
+    }
+}
+
+async function copyLink() {
+    const url = submitResult.value?.issueUrl;
+    if (!url) return;
+    try {
+        await navigator.clipboard.writeText(url);
+        showToast({ message: '链接已复制', duration: 1500 });
+    }
+    catch {
+        showToast({ message: '复制失败，请手动复制', duration: 1500 });
+    }
 }
 </script>
 
@@ -81,9 +101,9 @@ function openSettings() {
                 <section v-else class="panel">
                     <ZentaoTargetSelect
                         v-model:selected-product-id="selectedProductId"
-                        v-model:selected-project-id="selectedProjectId"
-                        :projects="zentaoProjects" :loading-projects="loadingProjects" :projects-error="projectsError"
-                        :products="zentaoProducts" :loading="loadingProducts" :error="productsError"
+                        v-model:selected-project-id="selectedProjectId" :projects="zentaoProjects"
+                        :loading-projects="loadingProjects" :projects-error="projectsError" :products="zentaoProducts"
+                        :loading="loadingProducts" :error="productsError"
                     />
                     <BugForm
                         v-model:title="title" v-model:description="description" v-model:tags="tags" :has-ai="hasAi"
@@ -103,6 +123,35 @@ function openSettings() {
                 }}
             </button>
         </footer>
+
+        <!-- 提交成功弹窗 -->
+        <div v-if="submitResult" class="dialog-mask">
+            <div class="dialog">
+                <div class="dialog-title">
+                    ✅ 提交成功
+                </div>
+                <div v-if="submitResult.warning" class="dialog-warning">
+                    ⚠ {{ submitResult.warning }}
+                </div>
+                <p class="dialog-desc">
+                    Bug 已成功提交到禅道，可打开或复制链接查看。
+                </p>
+                <div v-if="submitResult.issueUrl" class="dialog-link">
+                    <input class="inp" readonly :value="submitResult.issueUrl" @focus="($event.target as HTMLInputElement).select()">
+                </div>
+                <div class="dialog-actions">
+                    <button class="btn-dialog btn-dialog--ghost" @click="copyLink">
+                        复制链接
+                    </button>
+                    <button class="btn-dialog btn-dialog--ghost" @click="openLink">
+                        打开链接
+                    </button>
+                    <button class="btn-dialog btn-dialog--primary" @click="closePage">
+                        确定
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -228,6 +277,97 @@ function openSettings() {
     &:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+    }
+}
+
+/* ===== 提交成功弹窗 ===== */
+.dialog-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.dialog {
+    width: min(420px, calc(100vw - 48px));
+    padding: 24px;
+    border: 1px solid #2e2e3c;
+    border-radius: 14px;
+    background: #1c1c25;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.dialog-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #7bd88f;
+    text-align: center;
+}
+
+.dialog-warning {
+    padding: 10px 12px;
+    border: 1px solid rgba(243, 139, 168, 0.35);
+    border-radius: 8px;
+    background: rgba(243, 139, 168, 0.08);
+    color: #f38ba8;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.dialog-desc {
+    margin: 0;
+    font-size: 13px;
+    color: #8f8fa5;
+    text-align: center;
+}
+
+.dialog-link {
+    .inp {
+        font-size: 12px;
+        color: #7ba4f5;
+    }
+}
+
+.dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.btn-dialog {
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+
+    &--ghost {
+        border: 1px solid #2e2e3c;
+        background: transparent;
+        color: #8f8fa5;
+
+        &:hover {
+            color: #e4e4ee;
+            background: #23232d;
+        }
+    }
+
+    &--primary {
+        border: none;
+        background: #5b8def;
+        color: #fff;
+        font-weight: 500;
+
+        &:hover {
+            background: #6b9df5;
+        }
     }
 }
 </style>

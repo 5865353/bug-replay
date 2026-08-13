@@ -16,24 +16,24 @@ export default defineConfig({
             '@shared': path.resolve(__dirname, 'src/shared'),
             '@content': path.resolve(__dirname, 'src/content'),
             '@background': path.resolve(__dirname, 'src/background'),
-            '@replayer': path.resolve(__dirname, 'src/replayer'),
-        },
+            '@replayer': path.resolve(__dirname, 'src/replayer')
+        }
     },
     plugins: [
         vue(),
         UnoCSS(),
         Components({
-            resolvers: [VantResolver()],
+            resolvers: [VantResolver()]
         }),
-        crx({ manifest }),
+        crx({ manifest })
     ],
     css: {
         preprocessorOptions: {
             scss: {
                 // 使用 Sass 现代 API，避免 legacy-js-api 弃用警告
-                api: 'modern-compiler',
-            },
-        },
+                api: 'modern-compiler'
+            }
+        }
     },
     publicDir: path.resolve(__dirname, 'public'),
     build: {
@@ -45,8 +45,8 @@ export default defineConfig({
             input: {
                 replayer: path.resolve(__dirname, 'src/replayer/index.html'),
                 options: path.resolve(__dirname, 'src/options/index.html'),
-                upload: path.resolve(__dirname, 'src/upload/index.html'),
-            },
-        },
-    },
+                upload: path.resolve(__dirname, 'src/upload/index.html')
+            }
+        }
+    }
 });

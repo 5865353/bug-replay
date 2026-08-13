@@ -48,6 +48,22 @@ export const Z_INDEX_TOOLBAR = 2147483647;
 export const INTERCEPTOR_SCRIPT_PATH = 'src/content/recorder/page-interceptor.js' as const;
 
 // ============================================================
+// 禅道附件回放（useZentaoReplay.ts ↔ zentao-helper.js postMessage 协议）
+// ============================================================
+
+/** helper 脚本路径（manifest.config.ts 的 web_accessible_resources 需同步引用） */
+export const ZENTAO_HELPER_SCRIPT_PATH = 'src/content/zentao/zentao-helper.js' as const;
+/** helper 脚本注入用的元素 ID / 全局标记（与 zentao-helper.js 内 FLAG 保持一致） */
+export const ZENTAO_HELPER_ELEMENT_ID = '__bugreplay_zentao_helper__' as const;
+/** 禅道 postMessage 协议：source 标识 */
+export const ZENTAO_MSG_SOURCE = 'bugreplay-zentao' as const;
+/** 禅道 postMessage 协议：消息类型 */
+export const ZENTAO_MSG_PING = 'PING' as const;
+export const ZENTAO_MSG_READY = 'READY' as const;
+export const ZENTAO_MSG_DOWNLOAD = 'DOWNLOAD' as const;
+export const ZENTAO_MSG_RESULT = 'RESULT' as const;
+
+// ============================================================
 // 标注画布 (CanvasLayer) 相关常量
 // ============================================================
 

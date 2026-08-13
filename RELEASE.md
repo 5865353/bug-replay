@@ -27,7 +27,7 @@ git push --follow-tags   ② 推送到 GitHub（触发机器人）
 | **tag** `v1.0.1` | git 的快照标签，指向某个提交 | 触发自动发布的关键信号 |
 | **CHANGELOG.md** | 更新日志 | 发布时自动生成，用户看"这版改了什么" |
 | **GitHub Actions** | GitHub 的自动机器人 | 推 tag 后自动帮你构建 + 打包 + 发布 |
-| **GitHub Release** | 仓库的"下载发布页" | 用户在这里下载 zip |
+| **GitHub Release** | 仓库的"下载发布页" | 用户在这里下载 zip / crx |
 
 ---
 
@@ -70,8 +70,19 @@ git push --follow-tags
 ```
 
 ### ④ 完成
-等 1~2 分钟，打开 GitHub → 仓库 → **Releases** 页，即可看到新版本和 `bugreplay-vX.Y.Z.zip` 下载链接。
-（机器人由 `.github/workflows/release.yml` 驱动：自动 `build` → 打 zip → 创建 Release）
+等 1~2 分钟，打开 GitHub → 仓库 → **Releases** 页，即可看到新版本和 `bugreplay-vX.Y.Z.zip`、`bugreplay-vX.Y.Z.crx` 下载链接。
+（机器人由 `.github/workflows/release.yml` 驱动：自动 `build` → 打 zip + crx → 创建 Release）
+
+### ⑤ 【一次性】配置 CRX 私钥（保证扩展 ID 稳定）
+
+发版机器人会同时打包 `.crx`。`.crx` 用私钥签名，**私钥决定扩展 ID**——每次发布用同一把私钥，用户升级才不会"换了个插件"（ID 变了就得重装）。
+
+1. 本地先跑一次 `pnpm pack:crx`，会自动生成 `release/bugreplay.pem`（私钥）
+2. 打开仓库 → `Settings` → `Secrets and variables` → `Actions` → `New repository secret`
+3. **Name** 填 `CRX_PRIVATE_KEY`
+4. **Value** 粘贴 `release/bugreplay.pem` 的**完整内容**（含首尾 `-----BEGIN PRIVATE KEY-----` / `-----END PRIVATE KEY-----` 和换行）
+
+> ⚠️ 若 CI 里没配这个 secret，每次发布都会新生成私钥 → 每个版本 ID 都不同 → 用户必须重装。**务必配置**，且 `release/bugreplay.pem` 要保存好、别泄露进仓库。
 
 ---
 
@@ -85,8 +96,8 @@ pnpm release:patch
 git push
 git push --follow-tags
 
-# 3. 本地构建并打包 zip
-pnpm package          # 生成 release/bugreplay-vX.Y.Z.zip
+# 3. 本地构建并打包 zip + crx
+pnpm package          # 生成 release/bugreplay-vX.Y.Z.zip 和 .crx
 
 # 4. 手动创建 GitHub Release（需要已安装 gh CLI 并登录）
 gh release create vX.Y.Z release/bugreplay-vX.Y.Z.zip --title "vX.Y.Z" --notes "见 CHANGELOG.md"
@@ -103,7 +114,7 @@ gh release create vX.Y.Z release/bugreplay-vX.Y.Z.zip --title "vX.Y.Z" --notes "
 - [ ] `pnpm type-check` 通过
 - [ ] `pnpm build` 成功
 - [ ] 提交信息用了 `feat:` / `fix:` 前缀（决定版本号）
-- [ ] 推送 tag 后去 GitHub Releases 页确认 zip 已生成
+- [ ] 推送 tag 后去 GitHub Releases 页确认 zip / crx 已生成
 
 ---
 
@@ -122,8 +133,9 @@ git push origin :vX.Y.Z              # 远端删标签
 pnpm release:patch                   # 重新发
 ```
 
-**Q：zip 怎么给用户安装？**
-解压后：Chrome 打开 `chrome://extensions/` → 开启开发者模式 → 加载已解压的扩展程序 → 选择解压目录。
+**Q：zip / crx 怎么给用户安装？**
+- **zip**：解压后：Chrome 打开 `chrome://extensions/` → 开启开发者模式 → 加载已解压的扩展程序 → 选择解压目录。
+- **crx**：Chrome 打开 `chrome://extensions/` → 开启开发者模式 → 把 `bugreplay-vX.Y.Z.crx` 拖进页面 → 确认安装。
 
 ---
 
@@ -142,6 +154,7 @@ pnpm release:patch                   # 重新发
 | `package.json` | 版本号唯一来源 + `release` / `package` 脚本 |
 | `manifest.config.ts` | 构建时自动读取版本号 |
 | `scripts/package.mjs` | 把 `dist/` 打包成 zip |
+| `scripts/pack-crx.mjs` | 用私钥把 `dist/` 打包成 crx（私钥：`release/bugreplay.pem` 或 secret `CRX_PRIVATE_KEY`） |
 | `.github/workflows/ci.yml` | 每次 push / PR 自动 lint + type-check + build |
 | `.github/workflows/release.yml` | 推 `v*` tag 时自动构建、打包、发布 |
 | `CHANGELOG.md` | 更新日志（`standard-version` 生成） |

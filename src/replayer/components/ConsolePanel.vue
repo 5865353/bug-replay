@@ -18,7 +18,7 @@ const visibleLogs = computed(() => {
         const q = searchQuery.value.toLowerCase();
         list = list.filter(l =>
             l.args.some(a => String(a).toLowerCase().includes(q))
-            || l.level.toLowerCase().includes(q),
+            || l.level.toLowerCase().includes(q)
         );
     }
     return list;

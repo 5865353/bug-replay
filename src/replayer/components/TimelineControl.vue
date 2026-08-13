@@ -35,14 +35,14 @@ const hoverPercent = ref(0);
 const showHover = ref(false);
 
 const progressPercent = computed(() =>
-    props.totalTime > 0 ? (props.currentTime / props.totalTime) * 100 : 0,
+    props.totalTime > 0 ? (props.currentTime / props.totalTime) * 100 : 0
 );
 
 // 播放完成状态：用于将播放按钮切换为“重播”
 const isFinished = computed(() =>
     props.totalTime > 0
     && props.currentTime >= props.totalTime
-    && !props.isPlaying,
+    && !props.isPlaying
 );
 
 function seekFromEvent(e: MouseEvent) {
@@ -163,7 +163,7 @@ function openFile() {
                 <input
                     ref="fileInput"
                     type="file"
-                    accept=".rrt,.json"
+                    accept=".rrt,.json,.txt"
                     class="hidden"
                     @change="emit('fileSelected', $event)"
                 >

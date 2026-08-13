@@ -51,7 +51,7 @@ export const SENSITIVE_HEADERS = [
     'set-cookie',
     'x-api-key',
     'x-auth-token',
-    'proxy-authorization',
+    'proxy-authorization'
 ];
 
 /** 响应体最大字节数（超出截断） */

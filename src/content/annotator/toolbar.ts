@@ -49,7 +49,7 @@ import {
     TOOLBAR_BOTTOM,
     TOOLBAR_GAP,
     TOOLBAR_PADDING,
-    Z_INDEX_TOOLBAR,
+    Z_INDEX_TOOLBAR
 } from '../constants';
 
 // ============================================================
@@ -82,7 +82,7 @@ const TOOL_BUTTONS: ToolButtonConfig[] = [
     { type: 'rect', icon: 'rect', label: '矩形框选' },
     { type: 'arrow', icon: 'arrow', label: '箭头指向' },
     { type: 'text', icon: 'text', label: '文本批注' },
-    { type: 'freehand', icon: 'freehand', label: '自由画笔' },
+    { type: 'freehand', icon: 'freehand', label: '自由画笔' }
 ];
 
 // ============================================================
@@ -99,7 +99,7 @@ const SVG_ICONS: Record<string, string> = {
     text: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 7 5 4 19 4 19 7"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="8" y1="20" x2="16" y2="20"/></svg>`,
     freehand: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17c2-4 6-8 10-6s4 6 2 8c-2 3-5 1-4-2s4-5 8-4"/></svg>`,
     undo: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9 5 4"/><path d="M4 9h10a6 6 0 0 1 0 12h-4"/></svg>`,
-    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M8 6v14h8V6M10 6V4h4v4"/></svg>`,
+    trash: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M8 6v14h8V6M10 6V4h4v4"/></svg>`
 };
 
 function createSvg(name: string): HTMLElement {
@@ -345,7 +345,7 @@ export class Toolbar {
             }
         });
 
-        btn.addEventListener(DOM_EVENT_CLICK, (e) => {
+        btn.addEventListener(DOM_EVENT_CLICK, e => {
             e.stopPropagation();
             if (this.selectedTool === config.type) {
                 this.deselectAllTools();
@@ -388,7 +388,7 @@ export class Toolbar {
         btn.addEventListener(DOM_EVENT_MOUSE_LEAVE, () => {
             btn.style.background = 'transparent';
         });
-        btn.addEventListener(DOM_EVENT_CLICK, (e) => {
+        btn.addEventListener(DOM_EVENT_CLICK, e => {
             e.stopPropagation();
             onClick();
         });

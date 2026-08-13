@@ -107,7 +107,7 @@ export function useRePlayer() {
         try {
             const response = await browser.runtime.sendMessage({
                 action: ContentToBackgroundAction.GET_SESSION,
-                payload: { sessionId },
+                payload: { sessionId }
             });
             const session = (response as any).payload;
             if (!session || !session.events) throw new Error('Session data invalid');
@@ -121,14 +121,14 @@ export function useRePlayer() {
                     title: session.title,
                     duration: session.endTime ? session.endTime - session.startTime : 0,
                     tags: session.tags || [],
-                    extensionVersion: '1.0.0',
+                    extensionVersion: '1.0.0'
                 },
                 environment: session.environment || { url: '', title: '', userAgent: '', screenResolution: { width: 0, height: 0 }, viewport: { width: 0, height: 0 }, devicePixelRatio: 1, language: '', platform: '', cookies: {}, localStorage: {}, sessionStorage: {}, timestamp: 0 },
                 rrwebEvents: session.events,
                 networkLogs: session.networkLogs || [],
                 consoleLogs: session.consoleLogs || [],
                 annotations: session.annotations || [],
-                pageEvents: session.pageEvents || [],
+                pageEvents: session.pageEvents || []
             };
 
             currentPackage.value = pkg;
@@ -190,7 +190,7 @@ export function useRePlayer() {
             skipInactive: true,
             showWarning: false,
             showDebug: false,
-            mouseTail: false,
+            mouseTail: false
         });
 
         // 自定义鼠标光标 — 比 rrweb 内置光标更显眼
@@ -257,7 +257,7 @@ export function useRePlayer() {
                     mousePositions.push({
                         time: baseTime + pos.timeOffset,
                         x: pos.x,
-                        y: pos.y,
+                        y: pos.y
                     });
                 }
             }
@@ -270,7 +270,7 @@ export function useRePlayer() {
                     mousePositions.push({
                         time: ev.timestamp - recordingBaseTime,
                         x: ix,
-                        y: iy,
+                        y: iy
                     });
                 }
             }
@@ -428,7 +428,7 @@ export function useRePlayer() {
         return annotations.map(a => ({
             ...a,
             timestamp: a.timestamp - recordingBaseTime,
-            deletedAt: a.deletedAt != null ? a.deletedAt - recordingBaseTime : undefined,
+            deletedAt: a.deletedAt != null ? a.deletedAt - recordingBaseTime : undefined
         }));
     }
 
@@ -436,7 +436,7 @@ export function useRePlayer() {
         if (!recordingBaseTime) return logs;
         return logs.map(l => ({
             ...l,
-            startTime: l.startTime - recordingBaseTime,
+            startTime: l.startTime - recordingBaseTime
         }));
     }
 
@@ -444,12 +444,12 @@ export function useRePlayer() {
         if (!recordingBaseTime) return events;
         return events.map(ev => ({
             ...ev,
-            timestamp: ev.timestamp - recordingBaseTime,
+            timestamp: ev.timestamp - recordingBaseTime
         }));
     }
 
     function initAnnotations(annotations: Annotation[]): Promise<void> {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const container = document.getElementById('rrweb-player');
             if (!container) {
                 resolve();
@@ -554,7 +554,7 @@ export function useRePlayer() {
             bottomPanelMutationObserver = new MutationObserver(() => syncContentScale());
             bottomPanelMutationObserver.observe(bottomEl, {
                 attributes: true,
-                attributeFilter: ['class', 'style'],
+                attributeFilter: ['class', 'style']
             });
         }
     }
@@ -641,6 +641,6 @@ export function useRePlayer() {
         toggleMouseTrail,
         toggleDevtools,
         syncContentScale,
-        cleanup,
+        cleanup
     };
 }

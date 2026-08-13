@@ -15,7 +15,7 @@ import {
     FABRIC_EVENT_MOUSE_MOVE,
     FABRIC_EVENT_MOUSE_UP,
     PREVIEW_DASH_ARRAY,
-    PREVIEW_STROKE_WIDTH,
+    PREVIEW_STROKE_WIDTH
 } from '../../constants';
 import { BaseTool } from './base-tool';
 
@@ -83,7 +83,7 @@ export class ArrowTool extends BaseTool {
             strokeWidth: PREVIEW_STROKE_WIDTH,
             selectable: false,
             evented: false,
-            strokeDashArray: [...PREVIEW_DASH_ARRAY],
+            strokeDashArray: [...PREVIEW_DASH_ARRAY]
         });
         this.fc!.add(this.preview);
         this.fc!.requestRenderAll();

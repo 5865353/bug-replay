@@ -36,7 +36,7 @@ function handleDelete() {
         title: '删除录制',
         message: `确定要删除「${props.session.title}」吗？`,
         confirmButtonText: '删除',
-        confirmButtonColor: '#ee4141',
+        confirmButtonColor: '#ee4141'
     }).then(() => {
         emit('delete', props.session.id);
     }).catch(() => {});

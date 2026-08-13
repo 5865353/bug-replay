@@ -233,6 +233,11 @@ pnpm dev        # 开发构建（热更新）
 
 - 有问题或建议 → 到 **GitHub Issues** 提交反馈
 - 觉得不错 → 点个 ⭐ **Star** 支持一下！
+- 关注公众号 **「Visio」**，获取使用技巧与更新动态
+
+<p align="center">
+    <img src="docs/screenshots/qrcode_for_gh_29ce6c9d76bd_1280.jpg" alt="BugReplay 公众号二维码" width="240" />
+</p>
 
 ---
 

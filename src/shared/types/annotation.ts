@@ -115,7 +115,7 @@ export const ANNOTATION_COLORS = [
     '#EAB308', // 黄色
     '#22C55E', // 绿色
     '#3B82F6', // 蓝色
-    '#A855F7', // 紫色
+    '#A855F7' // 紫色
 ];
 
 /** 默认标注配置 */
@@ -127,5 +127,5 @@ export const DEFAULT_ANNOTATION_CONFIG = {
     fontFamily: 'system-ui, sans-serif',
     textColor: '#EF4444',
     textBackgroundColor: 'rgba(255, 255, 255, 0.9)',
-    lineWidth: 3,
+    lineWidth: 3
 } as const;
